@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Dorian.Modules.Payments.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\\..\\..\\BuildingBlocks\\Dorian.SharedKernel\\Dorian.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

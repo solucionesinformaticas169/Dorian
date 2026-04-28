@@ -2,9 +2,13 @@ node_modules/
 dist/
 build/
 coverage/
+.next/
+.nuxt/
 .env
 .env.*
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+**/bin/
+**/obj/
