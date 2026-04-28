@@ -1,0 +1,47 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/src/Api/Dorian.Api/Dockerfile
+    container_name: dorian-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=dorian;Username=dorian;Password=dorian_dev_password
+      ConnectionStrings__Redis: redis:6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: dorian-postgres
+    environment:
+      POSTGRES_DB: dorian
+      POSTGRES_USER: dorian
+      POSTGRES_PASSWORD: dorian_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - dorian-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dorian -d dorian"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dorian-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - dorian-redis-data:/data
+
+volumes:
+  dorian-postgres-data:
+  dorian-redis-data:

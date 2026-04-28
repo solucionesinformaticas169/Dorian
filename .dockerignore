@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.git/
+.gitignore
+README.md
+assets/
+docs/
+mobile/
+web/
+infra/
