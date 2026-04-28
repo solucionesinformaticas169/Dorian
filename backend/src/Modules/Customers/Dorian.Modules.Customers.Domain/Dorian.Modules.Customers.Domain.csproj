@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Dorian.Modules.Customers.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Dorian.SharedKernel\Dorian.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Identity\Dorian.Modules.Identity.Domain\Dorian.Modules.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Memberships\Dorian.Modules.Memberships.Domain\Dorian.Modules.Memberships.Domain.csproj" />
+  </ItemGroup>
+</Project>

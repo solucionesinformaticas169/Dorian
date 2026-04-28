@@ -40,6 +40,7 @@ app.MapHealthChecks("/health").AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapBranchEndpoints();
 app.MapMembershipEndpoints();
+app.MapCustomerEndpoints();
 app.Run();
 
 public partial class Program;

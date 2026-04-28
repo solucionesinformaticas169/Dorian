@@ -20,19 +20,12 @@ public sealed class User : AuditableEntity<Guid>
     }
 
     public string Email { get; private set; } = string.Empty;
-
     public string FullName { get; private set; } = string.Empty;
-
     public string PasswordHash { get; private set; } = string.Empty;
-
     public string? PhoneNumber { get; private set; }
-
     public Guid? BranchId { get; private set; }
-
     public bool IsActive { get; private set; }
-
     public IReadOnlyCollection<UserRole> UserRoles => _userRoles;
-
     public IReadOnlyCollection<RefreshToken> RefreshTokens => _refreshTokens;
 
     public void UpdateProfile(string fullName, string? phoneNumber)
@@ -63,6 +56,11 @@ public sealed class User : AuditableEntity<Guid>
     public void AddRefreshToken(RefreshToken refreshToken)
     {
         _refreshTokens.Add(refreshToken);
+    }
+
+    public void SetActive(bool isActive)
+    {
+        IsActive = isActive;
     }
 
     public void Deactivate()
