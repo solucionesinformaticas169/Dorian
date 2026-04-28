@@ -5,6 +5,7 @@ using Dorian.Application.Abstractions.Auth;
 using Dorian.Application.Abstractions.Persistence;
 using Dorian.Infrastructure.Persistence;
 using Dorian.Modules.Branches.Domain.Entities;
+using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Constants;
 using Dorian.Modules.Identity.Domain.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -18,8 +19,13 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     private readonly string _databaseName = $"dorian-tests-{Guid.NewGuid()}";
 
     public Guid MainBranchId { get; } = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    public Guid SecondaryBranchId { get; } = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    public Guid SeededCustomerId { get; } = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    public Guid SecondaryCustomerId { get; } = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
     public string SuperAdminEmail => "superadmin@dorian.test";
     public string BranchAdminEmail => "branchadmin@dorian.test";
+    public string ReceptionEmail => "reception@dorian.test";
+    public string CustomerEmail => "customer@dorian.test";
     public string Password => "Pass1234!";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -70,8 +76,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 new Role(SeedData.SuperAdminRoleId, RoleNames.SuperAdmin, "Platform super administrator"));
         }
 
-        var branch = new Branch(MainBranchId, "CENTRAL", "Sucursal Central", "Quito", "Av. Principal", "0999999999");
-        dbContext.Branches.Add(branch);
+        dbContext.Branches.AddRange(
+            new Branch(MainBranchId, "CENTRAL", "Sucursal Central", "Quito", "Av. Principal", "0999999999"),
+            new Branch(SecondaryBranchId, "SUR", "Sucursal Sur", "Guayaquil", "Av. Sur", "0980000000"));
 
         var superAdmin = new User(Guid.NewGuid(), SuperAdminEmail, "Super Admin", passwordHasher.Hash(Password));
         superAdmin.SetRoles([SeedData.SuperAdminRoleId]);
@@ -80,7 +87,23 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         branchAdmin.AssignToBranch(MainBranchId);
         branchAdmin.SetRoles([SeedData.BranchAdminRoleId]);
 
-        dbContext.Users.AddRange(superAdmin, branchAdmin);
+        var reception = new User(Guid.NewGuid(), ReceptionEmail, "Reception User", passwordHasher.Hash(Password));
+        reception.AssignToBranch(MainBranchId);
+        reception.SetRoles([SeedData.ReceptionRoleId]);
+
+        var customerUser = new User(Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), CustomerEmail, "Jane Customer", passwordHasher.Hash(Password));
+        customerUser.AssignToBranch(MainBranchId);
+        customerUser.SetRoles([SeedData.CustomerRoleId]);
+
+        var secondaryCustomerUser = new User(Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"), "othercustomer@dorian.test", "Other Customer", passwordHasher.Hash(Password));
+        secondaryCustomerUser.AssignToBranch(SecondaryBranchId);
+        secondaryCustomerUser.SetRoles([SeedData.CustomerRoleId]);
+
+        dbContext.Users.AddRange(superAdmin, branchAdmin, reception, customerUser, secondaryCustomerUser);
+        dbContext.Customers.AddRange(
+            new Customer(SeededCustomerId, customerUser.Id, MainBranchId, "Jane", "Customer", "ID-001", "0991111111", new DateOnly(1995, 1, 1), Gender.Female, "Mom", "0992222222", null, CustomerStatus.Active),
+            new Customer(SecondaryCustomerId, secondaryCustomerUser.Id, SecondaryBranchId, "Other", "Customer", "ID-002", "0987777777", new DateOnly(1990, 1, 1), Gender.Male, "Dad", "0986666666", null, CustomerStatus.Active));
+
         await dbContext.SaveChangesAsync();
     }
 

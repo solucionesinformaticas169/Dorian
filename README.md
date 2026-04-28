@@ -53,7 +53,7 @@ Esta primera fase crea la base del monorepo, la estructura del backend con arqui
 ## Contextos funcionales iniciales
 
 - Identity: usuarios, roles, refresh tokens y permisos.
-- Branches: sucursales y metadatos operativos.
+- Branches: sucursales y metadatos operativos.`r`n- Customers: perfil operativo de clientes, datos personales y asociacion a usuario, sucursal y membresia activa.
 - Memberships: productos de membresia, vigencia y reglas base.
 - Classes: clases grupales, cupos y reservas.
 - Promotions: campanas promocionales.
@@ -85,3 +85,4 @@ El detalle operativo esta en `infra/docker/docker-compose.yml` y la vision arqui
 - Monorepo base en construccion
 - Backend con esqueleto inicial y entidades principales
 - Infra local de desarrollo lista para continuar con casos de uso
+

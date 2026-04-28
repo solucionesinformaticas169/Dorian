@@ -14,6 +14,7 @@ El backend de Dorian comienza como un monolito modular para optimizar velocidad 
 
 - `Identity`
 - `Branches`
+- `Customers`
 - `Memberships`
 - `Classes`
 - `Promotions`
