@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Dorian.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\Dorian.SharedKernel\Dorian.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Application\Dorian.Application\Dorian.Application.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\Dorian.Modules.Identity.Domain\Dorian.Modules.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Branches\Dorian.Modules.Branches.Domain\Dorian.Modules.Branches.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Memberships\Dorian.Modules.Memberships.Domain\Dorian.Modules.Memberships.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Auditing\Dorian.Modules.Auditing.Domain\Dorian.Modules.Auditing.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.8" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,19 @@
+namespace Dorian.Application.Abstractions.Persistence;
+
+using Dorian.Modules.Auditing.Domain.Entities;
+using Dorian.Modules.Branches.Domain.Entities;
+using Dorian.Modules.Identity.Domain.Entities;
+using Dorian.Modules.Memberships.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+public interface IDorianDbContext
+{
+    DbSet<User> Users { get; }
+    DbSet<Role> Roles { get; }
+    DbSet<UserRole> UserRoles { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<Branch> Branches { get; }
+    DbSet<Membership> Memberships { get; }
+    DbSet<AuditLog> AuditLogs { get; }
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+}

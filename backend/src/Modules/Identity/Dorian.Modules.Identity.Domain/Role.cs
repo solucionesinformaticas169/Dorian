@@ -4,7 +4,11 @@ using Dorian.SharedKernel.Primitives;
 
 public sealed class Role : AuditableEntity<Guid>
 {
-    private readonly HashSet<string> _permissions = [];
+    private readonly List<UserRole> _userRoles = [];
+
+    private Role() : base(Guid.Empty)
+    {
+    }
 
     public Role(Guid id, string name, string description) : base(id)
     {
@@ -12,14 +16,9 @@ public sealed class Role : AuditableEntity<Guid>
         Description = description;
     }
 
-    public string Name { get; private set; }
+    public string Name { get; private set; } = string.Empty;
 
-    public string Description { get; private set; }
+    public string Description { get; private set; } = string.Empty;
 
-    public IReadOnlyCollection<string> Permissions => _permissions;
-
-    public void GrantPermission(string permission)
-    {
-        _permissions.Add(permission);
-    }
+    public IReadOnlyCollection<UserRole> UserRoles => _userRoles;
 }

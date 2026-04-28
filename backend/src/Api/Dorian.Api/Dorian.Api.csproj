@@ -3,15 +3,12 @@
     <RootNamespace>Dorian.Api</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\BuildingBlocks\Dorian.SharedKernel\Dorian.SharedKernel.csproj" />
-    <ProjectReference Include="..\..\Modules\Identity\Dorian.Modules.Identity.Domain\Dorian.Modules.Identity.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Branches\Dorian.Modules.Branches.Domain\Dorian.Modules.Branches.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Memberships\Dorian.Modules.Memberships.Domain\Dorian.Modules.Memberships.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Classes\Dorian.Modules.Classes.Domain\Dorian.Modules.Classes.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Promotions\Dorian.Modules.Promotions.Domain\Dorian.Modules.Promotions.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Training\Dorian.Modules.Training.Domain\Dorian.Modules.Training.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Nutrition\Dorian.Modules.Nutrition.Domain\Dorian.Modules.Nutrition.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Payments\Dorian.Modules.Payments.Domain\Dorian.Modules.Payments.Domain.csproj" />
-    <ProjectReference Include="..\..\Modules\Auditing\Dorian.Modules.Auditing.Domain\Dorian.Modules.Auditing.Domain.csproj" />
+    <ProjectReference Include="..\..\Application\Dorian.Application\Dorian.Application.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Dorian.Infrastructure\Dorian.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.8" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3" />
   </ItemGroup>
 </Project>
