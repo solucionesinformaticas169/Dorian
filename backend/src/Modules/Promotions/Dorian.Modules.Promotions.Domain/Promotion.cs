@@ -4,26 +4,64 @@ using Dorian.SharedKernel.Primitives;
 
 public sealed class Promotion : AuditableEntity<Guid>
 {
-    public Promotion(Guid id, string code, string title, PromotionDiscountType discountType, decimal value) : base(id)
+    private Promotion() : base(Guid.Empty)
     {
-        Code = code;
-        Title = title;
-        DiscountType = discountType;
-        Value = value;
-        IsActive = true;
     }
 
-    public string Code { get; private set; }
+    public Promotion(
+        Guid id,
+        Guid? branchId,
+        string title,
+        string description,
+        string? imageUrl,
+        PromotionDiscountType discountType,
+        decimal? discountValue,
+        DateTimeOffset startsAt,
+        DateTimeOffset endsAt,
+        PromotionStatus status) : base(id)
+    {
+        Update(branchId, title, description, imageUrl, discountType, discountValue, startsAt, endsAt, status);
+    }
 
-    public string Title { get; private set; }
-
+    public Guid? BranchId { get; private set; }
+    public string Title { get; private set; } = string.Empty;
+    public string Description { get; private set; } = string.Empty;
+    public string? ImageUrl { get; private set; }
     public PromotionDiscountType DiscountType { get; private set; }
+    public decimal? DiscountValue { get; private set; }
+    public DateTimeOffset StartsAt { get; private set; }
+    public DateTimeOffset EndsAt { get; private set; }
+    public PromotionStatus Status { get; private set; }
 
-    public decimal Value { get; private set; }
+    public void Update(
+        Guid? branchId,
+        string title,
+        string description,
+        string? imageUrl,
+        PromotionDiscountType discountType,
+        decimal? discountValue,
+        DateTimeOffset startsAt,
+        DateTimeOffset endsAt,
+        PromotionStatus status)
+    {
+        BranchId = branchId;
+        Title = title.Trim();
+        Description = description.Trim();
+        ImageUrl = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim();
+        DiscountType = discountType;
+        DiscountValue = discountValue;
+        StartsAt = startsAt;
+        EndsAt = endsAt;
+        Status = status;
+    }
 
-    public DateTimeOffset? ValidFromUtc { get; private set; }
+    public void Activate()
+    {
+        Status = PromotionStatus.Active;
+    }
 
-    public DateTimeOffset? ValidToUtc { get; private set; }
-
-    public bool IsActive { get; private set; }
+    public void Disable()
+    {
+        Status = PromotionStatus.Disabled;
+    }
 }

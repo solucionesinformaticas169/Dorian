@@ -43,6 +43,7 @@ app.MapClassEndpoints();
 app.MapMembershipEndpoints();
 app.MapCustomerEndpoints();
 app.MapBookingEndpoints();
+app.MapPromotionEndpoints();
 app.Run();
 
 public partial class Program;

@@ -9,6 +9,7 @@ using Dorian.Modules.Classes.Domain.Entities;
 using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Entities;
 using Dorian.Modules.Memberships.Domain.Entities;
+using Dorian.Modules.Promotions.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 public sealed class AppDbContext : DbContext, IDorianDbContext
@@ -29,6 +30,7 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<ClassSession> ClassSessions => Set<ClassSession>();
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<Promotion> Promotions => Set<Promotion>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -78,5 +80,5 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
         return logs;
     }
 
-    private static bool ShouldAudit(Type entityType) => entityType == typeof(User) || entityType == typeof(Branch) || entityType == typeof(Membership) || entityType == typeof(Customer) || entityType == typeof(ClassSession) || entityType == typeof(Booking);
+    private static bool ShouldAudit(Type entityType) => entityType == typeof(User) || entityType == typeof(Branch) || entityType == typeof(Membership) || entityType == typeof(Customer) || entityType == typeof(ClassSession) || entityType == typeof(Booking) || entityType == typeof(Promotion);
 }

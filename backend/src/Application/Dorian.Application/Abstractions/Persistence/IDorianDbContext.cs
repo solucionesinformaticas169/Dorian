@@ -6,6 +6,7 @@ using Dorian.Modules.Classes.Domain.Entities;
 using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Entities;
 using Dorian.Modules.Memberships.Domain.Entities;
+using Dorian.Modules.Promotions.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 public interface IDorianDbContext
@@ -19,6 +20,7 @@ public interface IDorianDbContext
     DbSet<Customer> Customers { get; }
     DbSet<ClassSession> ClassSessions { get; }
     DbSet<Booking> Bookings { get; }
+    DbSet<Promotion> Promotions { get; }
     DbSet<AuditLog> AuditLogs { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
