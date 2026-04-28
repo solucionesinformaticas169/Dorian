@@ -22,10 +22,14 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public Guid SecondaryBranchId { get; } = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     public Guid SeededCustomerId { get; } = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
     public Guid SecondaryCustomerId { get; } = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+    public Guid MainBranchSecondCustomerId { get; } = Guid.Parse("12121212-1212-1212-1212-121212121212");
+    public Guid TrainerUserId { get; } = Guid.Parse("13131313-1313-1313-1313-131313131313");
     public string SuperAdminEmail => "superadmin@dorian.test";
     public string BranchAdminEmail => "branchadmin@dorian.test";
     public string ReceptionEmail => "reception@dorian.test";
+    public string TrainerEmail => "trainer@dorian.test";
     public string CustomerEmail => "customer@dorian.test";
+    public string MainBranchSecondCustomerEmail => "customer2@dorian.test";
     public string Password => "Pass1234!";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -91,17 +95,26 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         reception.AssignToBranch(MainBranchId);
         reception.SetRoles([SeedData.ReceptionRoleId]);
 
+        var trainer = new User(TrainerUserId, TrainerEmail, "Main Trainer", passwordHasher.Hash(Password));
+        trainer.AssignToBranch(MainBranchId);
+        trainer.SetRoles([SeedData.TrainerRoleId]);
+
         var customerUser = new User(Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"), CustomerEmail, "Jane Customer", passwordHasher.Hash(Password));
         customerUser.AssignToBranch(MainBranchId);
         customerUser.SetRoles([SeedData.CustomerRoleId]);
+
+        var secondMainCustomerUser = new User(Guid.Parse("14141414-1414-1414-1414-141414141414"), MainBranchSecondCustomerEmail, "John Customer", passwordHasher.Hash(Password));
+        secondMainCustomerUser.AssignToBranch(MainBranchId);
+        secondMainCustomerUser.SetRoles([SeedData.CustomerRoleId]);
 
         var secondaryCustomerUser = new User(Guid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff"), "othercustomer@dorian.test", "Other Customer", passwordHasher.Hash(Password));
         secondaryCustomerUser.AssignToBranch(SecondaryBranchId);
         secondaryCustomerUser.SetRoles([SeedData.CustomerRoleId]);
 
-        dbContext.Users.AddRange(superAdmin, branchAdmin, reception, customerUser, secondaryCustomerUser);
+        dbContext.Users.AddRange(superAdmin, branchAdmin, reception, trainer, customerUser, secondMainCustomerUser, secondaryCustomerUser);
         dbContext.Customers.AddRange(
             new Customer(SeededCustomerId, customerUser.Id, MainBranchId, "Jane", "Customer", "ID-001", "0991111111", new DateOnly(1995, 1, 1), Gender.Female, "Mom", "0992222222", null, CustomerStatus.Active),
+            new Customer(MainBranchSecondCustomerId, secondMainCustomerUser.Id, MainBranchId, "John", "Customer", "ID-003", "0993333333", new DateOnly(1994, 6, 6), Gender.Male, "Sister", "0994444444", null, CustomerStatus.Active),
             new Customer(SecondaryCustomerId, secondaryCustomerUser.Id, SecondaryBranchId, "Other", "Customer", "ID-002", "0987777777", new DateOnly(1990, 1, 1), Gender.Male, "Dad", "0986666666", null, CustomerStatus.Active));
 
         await dbContext.SaveChangesAsync();
