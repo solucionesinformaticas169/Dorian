@@ -8,6 +8,7 @@ using Dorian.Modules.Branches.Domain.Entities;
 using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Constants;
 using Dorian.Modules.Identity.Domain.Entities;
+using Dorian.Modules.Promotions.Domain.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,9 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public Guid SecondaryCustomerId { get; } = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
     public Guid MainBranchSecondCustomerId { get; } = Guid.Parse("12121212-1212-1212-1212-121212121212");
     public Guid TrainerUserId { get; } = Guid.Parse("13131313-1313-1313-1313-131313131313");
+    public Guid ActiveGlobalPromotionId { get; } = Guid.Parse("15151515-1515-1515-1515-151515151515");
+    public Guid DraftBranchPromotionId { get; } = Guid.Parse("16161616-1616-1616-1616-161616161616");
+    public Guid ExpiredGlobalPromotionId { get; } = Guid.Parse("17171717-1717-1717-1717-171717171717");
     public string SuperAdminEmail => "superadmin@dorian.test";
     public string BranchAdminEmail => "branchadmin@dorian.test";
     public string ReceptionEmail => "reception@dorian.test";
@@ -116,6 +120,11 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             new Customer(SeededCustomerId, customerUser.Id, MainBranchId, "Jane", "Customer", "ID-001", "0991111111", new DateOnly(1995, 1, 1), Gender.Female, "Mom", "0992222222", null, CustomerStatus.Active),
             new Customer(MainBranchSecondCustomerId, secondMainCustomerUser.Id, MainBranchId, "John", "Customer", "ID-003", "0993333333", new DateOnly(1994, 6, 6), Gender.Male, "Sister", "0994444444", null, CustomerStatus.Active),
             new Customer(SecondaryCustomerId, secondaryCustomerUser.Id, SecondaryBranchId, "Other", "Customer", "ID-002", "0987777777", new DateOnly(1990, 1, 1), Gender.Male, "Dad", "0986666666", null, CustomerStatus.Active));
+
+        dbContext.Promotions.AddRange(
+            new Promotion(ActiveGlobalPromotionId, null, "Global Promo", "Visible global promotion", null, PromotionDiscountType.Informational, null, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(5), PromotionStatus.Active),
+            new Promotion(DraftBranchPromotionId, MainBranchId, "Branch Draft", "Draft branch promotion", null, PromotionDiscountType.Percentage, 10m, DateTimeOffset.UtcNow.AddDays(1), DateTimeOffset.UtcNow.AddDays(10), PromotionStatus.Draft),
+            new Promotion(ExpiredGlobalPromotionId, null, "Expired Promo", "Expired promotion", null, PromotionDiscountType.FixedAmount, 5m, DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-1), PromotionStatus.Expired));
 
         await dbContext.SaveChangesAsync();
     }
