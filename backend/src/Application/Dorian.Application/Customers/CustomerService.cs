@@ -67,7 +67,7 @@ public sealed class CustomerService : ICustomerService
 
         EnsureCanCreateForBranch(request.BranchId);
         await EnsureBranchExists(request.BranchId, cancellationToken);
-        await EnsureMembershipValid(request.BranchId, request.ActiveMembershipId, cancellationToken);
+        await EnsureMembershipValid(request.BranchId, request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
         await EnsureUniqueIdentity(request.IdentificationNumber, null, cancellationToken);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -83,7 +83,7 @@ public sealed class CustomerService : ICustomerService
         newUser.SetRoles([customerRoleId]);
         newUser.SetActive(request.Status == CustomerStatus.Active);
 
-        var customer = new Customer(Guid.NewGuid(), newUser.Id, request.BranchId, request.FirstName, request.LastName, request.IdentificationNumber, request.Phone, request.BirthDate, request.Gender, request.EmergencyContactName, request.EmergencyContactPhone, request.ActiveMembershipId, request.Status);
+        var customer = new Customer(Guid.NewGuid(), newUser.Id, request.BranchId, request.FirstName, request.LastName, request.IdentificationNumber, request.Phone, request.BirthDate, request.Gender, request.EmergencyContactName, request.EmergencyContactPhone, request.ActiveMembershipId, request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc, request.Status);
 
         _dbContext.Users.Add(newUser);
         _dbContext.Customers.Add(customer);
@@ -99,10 +99,10 @@ public sealed class CustomerService : ICustomerService
         EnsureCanManageCustomer(customer);
         EnsureCanCreateForBranch(request.BranchId);
         await EnsureBranchExists(request.BranchId, cancellationToken);
-        await EnsureMembershipValid(request.BranchId, request.ActiveMembershipId, cancellationToken);
+        await EnsureMembershipValid(request.BranchId, request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
         await EnsureUniqueIdentity(request.IdentificationNumber, customer.Id, cancellationToken);
 
-        customer.Update(request.BranchId, request.FirstName, request.LastName, request.IdentificationNumber, request.Phone, request.BirthDate, request.Gender, request.EmergencyContactName, request.EmergencyContactPhone, request.ActiveMembershipId, request.Status);
+        customer.Update(request.BranchId, request.FirstName, request.LastName, request.IdentificationNumber, request.Phone, request.BirthDate, request.Gender, request.EmergencyContactName, request.EmergencyContactPhone, request.ActiveMembershipId, request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc, request.Status);
         customer.User.UpdateProfile($"{request.FirstName} {request.LastName}", request.Phone);
         customer.User.AssignToBranch(request.BranchId);
         customer.User.SetActive(request.Status == CustomerStatus.Active);
@@ -173,10 +173,18 @@ public sealed class CustomerService : ICustomerService
             throw new NotFoundException("Branch not found.");
     }
 
-    private async Task EnsureMembershipValid(Guid branchId, Guid? membershipId, CancellationToken cancellationToken)
+    private async Task EnsureMembershipValid(Guid branchId, Guid? membershipId, CreateOrUpdateMembershipWindow request, CancellationToken cancellationToken)
     {
-        if (!membershipId.HasValue) return;
-        var exists = await _dbContext.Memberships.AnyAsync(x => x.Id == membershipId.Value && x.BranchId == branchId, cancellationToken);
+        if (!membershipId.HasValue)
+        {
+            if (request.ActiveMembershipStartsAtUtc.HasValue || request.ActiveMembershipEndsAtUtc.HasValue)
+                throw new CustomerValidationException("Membership dates require an active membership.");
+            return;
+        }
+        if (!request.ActiveMembershipStartsAtUtc.HasValue || !request.ActiveMembershipEndsAtUtc.HasValue)
+            throw new CustomerValidationException("Membership dates are required when an active membership is assigned.");
+
+        var exists = await _dbContext.Memberships.AnyAsync(x => x.Id == membershipId.Value && x.BranchId == branchId && x.IsActive, cancellationToken);
         if (!exists) throw new NotFoundException("Membership not found for the selected branch.");
     }
 
@@ -187,11 +195,14 @@ public sealed class CustomerService : ICustomerService
         if (exists) throw new CustomerValidationException("A customer with that identification number already exists.");
     }
 
-    private static readonly System.Linq.Expressions.Expression<Func<Customer, CustomerResponse>> MapExpression = customer => new CustomerResponse(customer.Id, customer.UserId, customer.User.Email, customer.BranchId, customer.ActiveMembershipId, customer.FirstName, customer.LastName, customer.IdentificationNumber, customer.Phone, customer.BirthDate, customer.Gender, customer.EmergencyContactName, customer.EmergencyContactPhone, customer.Status, customer.CreatedAtUtc, customer.UpdatedAtUtc);
-    private static CustomerResponse Map(Customer customer) => new(customer.Id, customer.UserId, customer.User.Email, customer.BranchId, customer.ActiveMembershipId, customer.FirstName, customer.LastName, customer.IdentificationNumber, customer.Phone, customer.BirthDate, customer.Gender, customer.EmergencyContactName, customer.EmergencyContactPhone, customer.Status, customer.CreatedAtUtc, customer.UpdatedAtUtc);
+    private static readonly System.Linq.Expressions.Expression<Func<Customer, CustomerResponse>> MapExpression = customer => new CustomerResponse(customer.Id, customer.UserId, customer.User.Email, customer.BranchId, customer.ActiveMembershipId, customer.ActiveMembershipStartsAtUtc, customer.ActiveMembershipEndsAtUtc, customer.FirstName, customer.LastName, customer.IdentificationNumber, customer.Phone, customer.BirthDate, customer.Gender, customer.EmergencyContactName, customer.EmergencyContactPhone, customer.Status, customer.CreatedAtUtc, customer.UpdatedAtUtc);
+    private static CustomerResponse Map(Customer customer) => new(customer.Id, customer.UserId, customer.User.Email, customer.BranchId, customer.ActiveMembershipId, customer.ActiveMembershipStartsAtUtc, customer.ActiveMembershipEndsAtUtc, customer.FirstName, customer.LastName, customer.IdentificationNumber, customer.Phone, customer.BirthDate, customer.Gender, customer.EmergencyContactName, customer.EmergencyContactPhone, customer.Status, customer.CreatedAtUtc, customer.UpdatedAtUtc);
+
+    private sealed record CreateOrUpdateMembershipWindow(DateTimeOffset? ActiveMembershipStartsAtUtc, DateTimeOffset? ActiveMembershipEndsAtUtc);
 
     private sealed class CustomerValidationException : AppException
     {
         public CustomerValidationException(string message) : base(message) { }
     }
 }
+

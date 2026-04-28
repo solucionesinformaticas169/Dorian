@@ -19,6 +19,7 @@ public sealed class CreateCustomerRequestValidator : AbstractValidator<CreateCus
         RuleFor(x => x.Gender).IsInEnum();
         RuleFor(x => x.Status).IsInEnum();
         RuleFor(x => x.BirthDate).Must(x => x is null || x <= DateOnly.FromDateTime(DateTime.UtcNow)).WithMessage("BirthDate must be in the past.");
+        CustomerMembershipValidationRules.ApplyMembershipWindowRules(this);
     }
 }
 
@@ -36,5 +37,40 @@ public sealed class UpdateCustomerRequestValidator : AbstractValidator<UpdateCus
         RuleFor(x => x.Gender).IsInEnum();
         RuleFor(x => x.Status).IsInEnum();
         RuleFor(x => x.BirthDate).Must(x => x is null || x <= DateOnly.FromDateTime(DateTime.UtcNow)).WithMessage("BirthDate must be in the past.");
+        CustomerMembershipValidationRules.ApplyMembershipWindowRules(this);
     }
 }
+
+file static class CustomerMembershipValidationRules
+{
+    public static void ApplyMembershipWindowRules(AbstractValidator<CreateCustomerRequest> validator)
+    {
+        validator.RuleFor(x => x)
+            .Must(HasValidMembershipWindow)
+            .WithMessage("Active membership dates are required when a membership is assigned, and end date must be greater than start date.");
+    }
+
+    public static void ApplyMembershipWindowRules(AbstractValidator<UpdateCustomerRequest> validator)
+    {
+        validator.RuleFor(x => x)
+            .Must(HasValidMembershipWindow)
+            .WithMessage("Active membership dates are required when a membership is assigned, and end date must be greater than start date.");
+    }
+
+    private static bool HasValidMembershipWindow(CreateCustomerRequest request)
+        => HasValidMembershipWindow(request.ActiveMembershipId, request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc);
+
+    private static bool HasValidMembershipWindow(UpdateCustomerRequest request)
+        => HasValidMembershipWindow(request.ActiveMembershipId, request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc);
+
+    private static bool HasValidMembershipWindow(Guid? membershipId, DateTimeOffset? startsAt, DateTimeOffset? endsAt)
+    {
+        if (!membershipId.HasValue)
+        {
+            return startsAt is null && endsAt is null;
+        }
+
+        return startsAt.HasValue && endsAt.HasValue && endsAt.Value > startsAt.Value;
+    }
+}
+

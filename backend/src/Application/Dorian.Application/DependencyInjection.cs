@@ -1,5 +1,6 @@
 namespace Dorian.Application;
 
+using Dorian.Application.Access;
 using Dorian.Application.Auth;
 using Dorian.Application.Bookings;
 using Dorian.Application.Branches;
@@ -15,6 +16,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+        services.AddScoped<IAccessService, AccessService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBranchService, BranchService>();
         services.AddScoped<IClassSessionService, ClassSessionService>();

@@ -23,15 +23,51 @@ public sealed class Customer : AuditableEntity<Guid>
         string? emergencyContactName,
         string? emergencyContactPhone,
         Guid? activeMembershipId,
+        CustomerStatus status) : this(
+            id,
+            userId,
+            branchId,
+            firstName,
+            lastName,
+            identificationNumber,
+            phone,
+            birthDate,
+            gender,
+            emergencyContactName,
+            emergencyContactPhone,
+            activeMembershipId,
+            null,
+            null,
+            status)
+    {
+    }
+
+    public Customer(
+        Guid id,
+        Guid userId,
+        Guid branchId,
+        string firstName,
+        string lastName,
+        string identificationNumber,
+        string? phone,
+        DateOnly? birthDate,
+        Gender gender,
+        string? emergencyContactName,
+        string? emergencyContactPhone,
+        Guid? activeMembershipId,
+        DateTimeOffset? activeMembershipStartsAtUtc,
+        DateTimeOffset? activeMembershipEndsAtUtc,
         CustomerStatus status) : base(id)
     {
         UserId = userId;
-        Update(branchId, firstName, lastName, identificationNumber, phone, birthDate, gender, emergencyContactName, emergencyContactPhone, activeMembershipId, status);
+        Update(branchId, firstName, lastName, identificationNumber, phone, birthDate, gender, emergencyContactName, emergencyContactPhone, activeMembershipId, activeMembershipStartsAtUtc, activeMembershipEndsAtUtc, status);
     }
 
     public Guid UserId { get; private set; }
     public Guid BranchId { get; private set; }
     public Guid? ActiveMembershipId { get; private set; }
+    public DateTimeOffset? ActiveMembershipStartsAtUtc { get; private set; }
+    public DateTimeOffset? ActiveMembershipEndsAtUtc { get; private set; }
     public string FirstName { get; private set; } = string.Empty;
     public string LastName { get; private set; } = string.Empty;
     public string IdentificationNumber { get; private set; } = string.Empty;
@@ -55,6 +91,8 @@ public sealed class Customer : AuditableEntity<Guid>
         string? emergencyContactName,
         string? emergencyContactPhone,
         Guid? activeMembershipId,
+        DateTimeOffset? activeMembershipStartsAtUtc,
+        DateTimeOffset? activeMembershipEndsAtUtc,
         CustomerStatus status)
     {
         BranchId = branchId;
@@ -67,6 +105,17 @@ public sealed class Customer : AuditableEntity<Guid>
         EmergencyContactName = string.IsNullOrWhiteSpace(emergencyContactName) ? null : emergencyContactName.Trim();
         EmergencyContactPhone = string.IsNullOrWhiteSpace(emergencyContactPhone) ? null : emergencyContactPhone.Trim();
         ActiveMembershipId = activeMembershipId;
+        ActiveMembershipStartsAtUtc = activeMembershipId.HasValue ? activeMembershipStartsAtUtc : null;
+        ActiveMembershipEndsAtUtc = activeMembershipId.HasValue ? activeMembershipEndsAtUtc : null;
         Status = status;
+    }
+
+    public bool HasActiveMembership(DateTimeOffset currentTimeUtc)
+    {
+        return ActiveMembershipId.HasValue
+            && ActiveMembershipStartsAtUtc.HasValue
+            && ActiveMembershipEndsAtUtc.HasValue
+            && ActiveMembershipStartsAtUtc.Value <= currentTimeUtc
+            && ActiveMembershipEndsAtUtc.Value >= currentTimeUtc;
     }
 }

@@ -38,6 +38,7 @@ app.UseAuthorization();
 app.MapGet("/", () => Results.Ok(new { name = "Dorian API", status = "ready", timestampUtc = DateTimeOffset.UtcNow })).AllowAnonymous();
 app.MapHealthChecks("/health").AllowAnonymous();
 app.MapAuthEndpoints();
+app.MapAccessEndpoints();
 app.MapBranchEndpoints();
 app.MapClassEndpoints();
 app.MapMembershipEndpoints();
