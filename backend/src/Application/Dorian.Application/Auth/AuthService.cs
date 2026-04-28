@@ -68,7 +68,10 @@ public sealed class AuthService : IAuthService
         refreshToken.Revoke(replacementHash);
 
         var user = refreshToken.User;
-        user.AddRefreshToken(new RefreshToken(Guid.NewGuid(), user.Id, replacementHash, replacement.ExpiresAtUtc, ipAddress));
+        var replacementEntity = new RefreshToken(Guid.NewGuid(), user.Id, replacementHash, replacement.ExpiresAtUtc, ipAddress);
+        user.AddRefreshToken(replacementEntity);
+        _dbContext.RefreshTokens.Add(replacementEntity);
+
         var roles = user.UserRoles.Select(x => x.Role.Name).ToArray();
         var accessToken = _jwtTokenService.GenerateAccessToken(user, roles);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -89,7 +92,9 @@ public sealed class AuthService : IAuthService
     {
         var accessToken = _jwtTokenService.GenerateAccessToken(user, roles);
         var refreshToken = _jwtTokenService.GenerateRefreshToken();
-        user.AddRefreshToken(new RefreshToken(Guid.NewGuid(), user.Id, _tokenHasher.Hash(refreshToken.Token), refreshToken.ExpiresAtUtc, ipAddress));
+        var refreshTokenEntity = new RefreshToken(Guid.NewGuid(), user.Id, _tokenHasher.Hash(refreshToken.Token), refreshToken.ExpiresAtUtc, ipAddress);
+        user.AddRefreshToken(refreshTokenEntity);
+        _dbContext.RefreshTokens.Add(refreshTokenEntity);
         return new AuthResponse(accessToken.Token, refreshToken.Token, accessToken.ExpiresAtUtc, refreshToken.ExpiresAtUtc, new AuthenticatedUserResponse(user.Id, user.Email, user.FullName, user.BranchId, roles));
     }
 
