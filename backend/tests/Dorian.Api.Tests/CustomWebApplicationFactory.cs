@@ -4,10 +4,12 @@ using System.Net.Http.Json;
 using Dorian.Application.Abstractions.Auth;
 using Dorian.Application.Abstractions.Persistence;
 using Dorian.Infrastructure.Persistence;
+using Dorian.Modules.Access.Domain.Entities;
 using Dorian.Modules.Branches.Domain.Entities;
 using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Constants;
 using Dorian.Modules.Identity.Domain.Entities;
+using Dorian.Modules.Memberships.Domain.Entities;
 using Dorian.Modules.Promotions.Domain.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -28,6 +30,15 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public Guid ActiveGlobalPromotionId { get; } = Guid.Parse("15151515-1515-1515-1515-151515151515");
     public Guid DraftBranchPromotionId { get; } = Guid.Parse("16161616-1616-1616-1616-161616161616");
     public Guid ExpiredGlobalPromotionId { get; } = Guid.Parse("17171717-1717-1717-1717-171717171717");
+    public Guid MainMembershipId { get; } = Guid.Parse("18181818-1818-1818-1818-181818181818");
+    public Guid SecondaryMembershipId { get; } = Guid.Parse("19191919-1919-1919-1919-191919191919");
+    public Guid InactiveCustomerId { get; } = Guid.Parse("20202020-2020-2020-2020-202020202020");
+    public Guid ExpiredMembershipCustomerId { get; } = Guid.Parse("21212121-2121-2121-2121-212121212121");
+    public Guid NoMembershipCustomerId { get; } = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    public Guid RevokedPassCustomerId { get; } = Guid.Parse("23232323-2323-2323-2323-232323232323");
+    public string ValidAccessPassQr => "ACC-VALID-MAIN";
+    public string ExpiredAccessPassQr => "ACC-EXPIRED-MAIN";
+    public string RevokedAccessPassQr => "ACC-REVOKED-MAIN";
     public string SuperAdminEmail => "superadmin@dorian.test";
     public string BranchAdminEmail => "branchadmin@dorian.test";
     public string ReceptionEmail => "reception@dorian.test";
@@ -88,6 +99,10 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             new Branch(MainBranchId, "CENTRAL", "Sucursal Central", "Quito", "Av. Principal", "0999999999"),
             new Branch(SecondaryBranchId, "SUR", "Sucursal Sur", "Guayaquil", "Av. Sur", "0980000000"));
 
+        dbContext.Memberships.AddRange(
+            new Membership(MainMembershipId, MainBranchId, "Mensual Central", 30, 35m, "USD", true),
+            new Membership(SecondaryMembershipId, SecondaryBranchId, "Mensual Sur", 30, 32m, "USD", true));
+
         var superAdmin = new User(Guid.NewGuid(), SuperAdminEmail, "Super Admin", passwordHasher.Hash(Password));
         superAdmin.SetRoles([SeedData.SuperAdminRoleId]);
 
@@ -115,11 +130,44 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         secondaryCustomerUser.AssignToBranch(SecondaryBranchId);
         secondaryCustomerUser.SetRoles([SeedData.CustomerRoleId]);
 
-        dbContext.Users.AddRange(superAdmin, branchAdmin, reception, trainer, customerUser, secondMainCustomerUser, secondaryCustomerUser);
+        var inactiveCustomerUser = new User(Guid.Parse("24242424-2424-2424-2424-242424242424"), "inactivecustomer@dorian.test", "Inactive Customer", passwordHasher.Hash(Password));
+        inactiveCustomerUser.AssignToBranch(MainBranchId);
+        inactiveCustomerUser.SetRoles([SeedData.CustomerRoleId]);
+        inactiveCustomerUser.SetActive(false);
+
+        var expiredMembershipCustomerUser = new User(Guid.Parse("25252525-2525-2525-2525-252525252525"), "expiredmembership@dorian.test", "Expired Membership Customer", passwordHasher.Hash(Password));
+        expiredMembershipCustomerUser.AssignToBranch(MainBranchId);
+        expiredMembershipCustomerUser.SetRoles([SeedData.CustomerRoleId]);
+
+        var noMembershipCustomerUser = new User(Guid.Parse("26262626-2626-2626-2626-262626262626"), "nomembership@dorian.test", "No Membership Customer", passwordHasher.Hash(Password));
+        noMembershipCustomerUser.AssignToBranch(MainBranchId);
+        noMembershipCustomerUser.SetRoles([SeedData.CustomerRoleId]);
+
+        var revokedPassCustomerUser = new User(Guid.Parse("27272727-2727-2727-2727-272727272727"), "revokedpass@dorian.test", "Revoked Pass Customer", passwordHasher.Hash(Password));
+        revokedPassCustomerUser.AssignToBranch(MainBranchId);
+        revokedPassCustomerUser.SetRoles([SeedData.CustomerRoleId]);
+
+        dbContext.Users.AddRange(superAdmin, branchAdmin, reception, trainer, customerUser, secondMainCustomerUser, secondaryCustomerUser, inactiveCustomerUser, expiredMembershipCustomerUser, noMembershipCustomerUser, revokedPassCustomerUser);
+
         dbContext.Customers.AddRange(
-            new Customer(SeededCustomerId, customerUser.Id, MainBranchId, "Jane", "Customer", "ID-001", "0991111111", new DateOnly(1995, 1, 1), Gender.Female, "Mom", "0992222222", null, CustomerStatus.Active),
-            new Customer(MainBranchSecondCustomerId, secondMainCustomerUser.Id, MainBranchId, "John", "Customer", "ID-003", "0993333333", new DateOnly(1994, 6, 6), Gender.Male, "Sister", "0994444444", null, CustomerStatus.Active),
-            new Customer(SecondaryCustomerId, secondaryCustomerUser.Id, SecondaryBranchId, "Other", "Customer", "ID-002", "0987777777", new DateOnly(1990, 1, 1), Gender.Male, "Dad", "0986666666", null, CustomerStatus.Active));
+            new Customer(SeededCustomerId, customerUser.Id, MainBranchId, "Jane", "Customer", "ID-001", "0991111111", new DateOnly(1995, 1, 1), Gender.Female, "Mom", "0992222222", MainMembershipId, DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(20), CustomerStatus.Active),
+            new Customer(MainBranchSecondCustomerId, secondMainCustomerUser.Id, MainBranchId, "John", "Customer", "ID-003", "0993333333", new DateOnly(1994, 6, 6), Gender.Male, "Sister", "0994444444", MainMembershipId, DateTimeOffset.UtcNow.AddDays(-7), DateTimeOffset.UtcNow.AddDays(14), CustomerStatus.Active),
+            new Customer(SecondaryCustomerId, secondaryCustomerUser.Id, SecondaryBranchId, "Other", "Customer", "ID-002", "0987777777", new DateOnly(1990, 1, 1), Gender.Male, "Dad", "0986666666", SecondaryMembershipId, DateTimeOffset.UtcNow.AddDays(-5), DateTimeOffset.UtcNow.AddDays(25), CustomerStatus.Active),
+            new Customer(InactiveCustomerId, inactiveCustomerUser.Id, MainBranchId, "Inactive", "Customer", "ID-004", "0995550000", new DateOnly(1991, 4, 1), Gender.Female, "Brother", "0995551000", MainMembershipId, DateTimeOffset.UtcNow.AddDays(-4), DateTimeOffset.UtcNow.AddDays(15), CustomerStatus.Inactive),
+            new Customer(ExpiredMembershipCustomerId, expiredMembershipCustomerUser.Id, MainBranchId, "Expired", "Membership", "ID-005", "0995552000", new DateOnly(1992, 8, 10), Gender.Male, "Spouse", "0995553000", MainMembershipId, DateTimeOffset.UtcNow.AddDays(-40), DateTimeOffset.UtcNow.AddDays(-1), CustomerStatus.Active),
+            new Customer(NoMembershipCustomerId, noMembershipCustomerUser.Id, MainBranchId, "No", "Membership", "ID-006", "0995554000", new DateOnly(1993, 9, 15), Gender.Male, "Friend", "0995555000", null, CustomerStatus.Active),
+            new Customer(RevokedPassCustomerId, revokedPassCustomerUser.Id, MainBranchId, "Revoked", "Pass", "ID-007", "0995556000", new DateOnly(1996, 11, 20), Gender.Female, "Parent", "0995557000", MainMembershipId, DateTimeOffset.UtcNow.AddDays(-2), DateTimeOffset.UtcNow.AddDays(10), CustomerStatus.Active));
+
+        var validPass = new AccessPass(Guid.Parse("28282828-2828-2828-2828-282828282828"), SeededCustomerId, ValidAccessPassQr, DateTimeOffset.UtcNow.AddHours(8));
+        var expiredPass = new AccessPass(Guid.Parse("29292929-2929-2929-2929-292929292929"), MainBranchSecondCustomerId, ExpiredAccessPassQr, DateTimeOffset.UtcNow.AddHours(-2));
+        var revokedPass = new AccessPass(Guid.Parse("30303030-3030-3030-3030-303030303030"), RevokedPassCustomerId, RevokedAccessPassQr, DateTimeOffset.UtcNow.AddHours(8));
+        revokedPass.Revoke();
+
+        dbContext.AccessPasses.AddRange(
+            validPass,
+            expiredPass,
+            revokedPass,
+            new AccessPass(Guid.Parse("31313131-3131-3131-3131-313131313131"), SecondaryCustomerId, "ACC-VALID-SECONDARY", DateTimeOffset.UtcNow.AddHours(8)));
 
         dbContext.Promotions.AddRange(
             new Promotion(ActiveGlobalPromotionId, null, "Global Promo", "Visible global promotion", null, PromotionDiscountType.Informational, null, DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(5), PromotionStatus.Active),
