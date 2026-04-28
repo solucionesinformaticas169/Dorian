@@ -39,8 +39,10 @@ app.MapGet("/", () => Results.Ok(new { name = "Dorian API", status = "ready", ti
 app.MapHealthChecks("/health").AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapBranchEndpoints();
+app.MapClassEndpoints();
 app.MapMembershipEndpoints();
 app.MapCustomerEndpoints();
+app.MapBookingEndpoints();
 app.Run();
 
 public partial class Program;

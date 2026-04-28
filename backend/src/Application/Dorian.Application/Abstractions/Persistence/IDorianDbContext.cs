@@ -2,6 +2,7 @@ namespace Dorian.Application.Abstractions.Persistence;
 
 using Dorian.Modules.Auditing.Domain.Entities;
 using Dorian.Modules.Branches.Domain.Entities;
+using Dorian.Modules.Classes.Domain.Entities;
 using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Entities;
 using Dorian.Modules.Memberships.Domain.Entities;
@@ -16,6 +17,8 @@ public interface IDorianDbContext
     DbSet<Branch> Branches { get; }
     DbSet<Membership> Memberships { get; }
     DbSet<Customer> Customers { get; }
+    DbSet<ClassSession> ClassSessions { get; }
+    DbSet<Booking> Bookings { get; }
     DbSet<AuditLog> AuditLogs { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

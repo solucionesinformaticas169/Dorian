@@ -1,7 +1,9 @@
 namespace Dorian.Application;
 
 using Dorian.Application.Auth;
+using Dorian.Application.Bookings;
 using Dorian.Application.Branches;
+using Dorian.Application.Classes;
 using Dorian.Application.Customers;
 using Dorian.Application.Memberships;
 using FluentValidation;
@@ -14,6 +16,8 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBranchService, BranchService>();
+        services.AddScoped<IClassSessionService, ClassSessionService>();
+        services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IMembershipService, MembershipService>();
         return services;

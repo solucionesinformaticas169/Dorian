@@ -2,6 +2,7 @@ namespace Dorian.Api.Endpoints;
 
 using Dorian.Api.Extensions;
 using Dorian.Application.Branches;
+using Dorian.Application.Classes;
 using Dorian.Application.Customers;
 using FluentValidation;
 
@@ -13,6 +14,7 @@ public static class BranchEndpoints
         group.MapGet("/", async (IBranchService service, CancellationToken cancellationToken) => Results.Ok(await service.GetAllAsync(cancellationToken)));
         group.MapGet("/{id:guid}", async (Guid id, IBranchService service, CancellationToken cancellationToken) => Results.Ok(await service.GetByIdAsync(id, cancellationToken)));
         group.MapGet("/{branchId:guid}/customers", async (Guid branchId, ICustomerService service, CancellationToken cancellationToken) => Results.Ok(await service.GetByBranchAsync(branchId, cancellationToken)));
+        group.MapGet("/{branchId:guid}/classes", async (Guid branchId, IClassSessionService service, CancellationToken cancellationToken) => Results.Ok(await service.GetByBranchAsync(branchId, cancellationToken)));
         group.MapPost("/", async (CreateBranchRequest request, IValidator<CreateBranchRequest> validator, IBranchService service, CancellationToken cancellationToken) =>
         {
             await validator.ValidateAndThrowAsync(request, cancellationToken);

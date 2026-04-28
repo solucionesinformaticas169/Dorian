@@ -9,6 +9,7 @@
     <ProjectReference Include="..\..\Modules\Branches\Dorian.Modules.Branches.Domain\Dorian.Modules.Branches.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Memberships\Dorian.Modules.Memberships.Domain\Dorian.Modules.Memberships.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Customers\Dorian.Modules.Customers.Domain\Dorian.Modules.Customers.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Classes\Dorian.Modules.Classes.Domain\Dorian.Modules.Classes.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Auditing\Dorian.Modules.Auditing.Domain\Dorian.Modules.Auditing.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
