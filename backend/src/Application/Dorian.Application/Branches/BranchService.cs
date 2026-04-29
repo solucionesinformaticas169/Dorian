@@ -29,13 +29,16 @@ public sealed class BranchService : IBranchService
         if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId.HasValue)
             return await query.Where(x => x.Id == user.BranchId.Value).Select(MapExpression).ToListAsync(cancellationToken);
 
+        if (user.IsInRole(RoleNames.Customer) || user.IsInRole(RoleNames.Trainer) || user.IsInRole(RoleNames.Reception))
+            return await query.Where(x => x.IsActive).OrderBy(x => x.Name).Select(MapExpression).ToListAsync(cancellationToken);
+
         throw new ForbiddenException("You do not have access to branches.");
     }
 
     public async Task<BranchResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var branch = await _dbContext.Branches.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken) ?? throw new NotFoundException("Branch not found.");
-        EnsureCanAccessBranch(branch.Id);
+        EnsureCanAccessBranch(branch);
         return Map(branch);
     }
 
@@ -87,15 +90,22 @@ public sealed class BranchService : IBranchService
         return user;
     }
 
-    private void EnsureCanAccessBranch(Guid branchId)
+    private void EnsureCanAccessBranch(Branch branch)
+    {
+        var user = EnsureAuthenticated();
+        if (user.IsInRole(RoleNames.SuperAdmin)) return;
+        if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId == branch.Id) return;
+        if ((user.IsInRole(RoleNames.Customer) || user.IsInRole(RoleNames.Trainer) || user.IsInRole(RoleNames.Reception)) && branch.IsActive) return;
+        throw new ForbiddenException("You cannot access this branch.");
+    }
+
+    private void EnsureCanUpdateBranch(Guid branchId)
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
         if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId == branchId) return;
-        throw new ForbiddenException("You cannot access this branch.");
+        throw new ForbiddenException("You cannot update this branch.");
     }
-
-    private void EnsureCanUpdateBranch(Guid branchId) => EnsureCanAccessBranch(branchId);
 
     private static readonly System.Linq.Expressions.Expression<Func<Branch, BranchResponse>> MapExpression = branch => new BranchResponse(branch.Id, branch.Code, branch.Name, branch.City, branch.Address, branch.PhoneNumber, branch.IsActive, branch.CreatedAtUtc, branch.UpdatedAtUtc);
     private static BranchResponse Map(Branch branch) => new(branch.Id, branch.Code, branch.Name, branch.City, branch.Address, branch.PhoneNumber, branch.IsActive, branch.CreatedAtUtc, branch.UpdatedAtUtc);

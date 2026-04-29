@@ -57,6 +57,20 @@ public sealed class CustomerService : ICustomerService
         return Map(customer);
     }
 
+    public async Task<CustomerResponse> GetMeAsync(CancellationToken cancellationToken)
+    {
+        var user = EnsureAuthenticated();
+        if (!user.IsInRole(RoleNames.Customer) || !user.UserId.HasValue)
+        {
+            throw new ForbiddenException("Only customers can access their own mobile profile.");
+        }
+
+        var customer = await QueryCustomers().SingleOrDefaultAsync(x => x.UserId == user.UserId.Value, cancellationToken)
+            ?? throw new NotFoundException("Customer profile not found.");
+
+        return Map(customer);
+    }
+
     public async Task<CustomerResponse> CreateAsync(CreateCustomerRequest request, CancellationToken cancellationToken)
     {
         var user = EnsureAuthenticated();
@@ -123,7 +137,7 @@ public sealed class CustomerService : ICustomerService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private IQueryable<Customer> QueryCustomers() => _dbContext.Customers.AsNoTracking().Include(x => x.User);
+    private IQueryable<Customer> QueryCustomers() => _dbContext.Customers.AsNoTracking().Include(x => x.User).Include(x => x.ActiveMembership);
 
     private CurrentUser EnsureAuthenticated()
     {
@@ -195,8 +209,53 @@ public sealed class CustomerService : ICustomerService
         if (exists) throw new CustomerValidationException("A customer with that identification number already exists.");
     }
 
-    private static readonly System.Linq.Expressions.Expression<Func<Customer, CustomerResponse>> MapExpression = customer => new CustomerResponse(customer.Id, customer.UserId, customer.User.Email, customer.BranchId, customer.ActiveMembershipId, customer.ActiveMembershipStartsAtUtc, customer.ActiveMembershipEndsAtUtc, customer.FirstName, customer.LastName, customer.IdentificationNumber, customer.Phone, customer.BirthDate, customer.Gender, customer.EmergencyContactName, customer.EmergencyContactPhone, customer.Status, customer.CreatedAtUtc, customer.UpdatedAtUtc);
-    private static CustomerResponse Map(Customer customer) => new(customer.Id, customer.UserId, customer.User.Email, customer.BranchId, customer.ActiveMembershipId, customer.ActiveMembershipStartsAtUtc, customer.ActiveMembershipEndsAtUtc, customer.FirstName, customer.LastName, customer.IdentificationNumber, customer.Phone, customer.BirthDate, customer.Gender, customer.EmergencyContactName, customer.EmergencyContactPhone, customer.Status, customer.CreatedAtUtc, customer.UpdatedAtUtc);
+    private static readonly System.Linq.Expressions.Expression<Func<Customer, CustomerResponse>> MapExpression = customer => new CustomerResponse(
+        customer.Id,
+        customer.UserId,
+        customer.User.Email,
+        customer.BranchId,
+        customer.ActiveMembershipId,
+        customer.ActiveMembership != null ? customer.ActiveMembership.Name : null,
+        customer.ActiveMembership != null ? customer.ActiveMembership.DurationInDays : null,
+        customer.ActiveMembership != null ? customer.ActiveMembership.Price : null,
+        customer.ActiveMembership != null ? customer.ActiveMembership.Currency : null,
+        customer.ActiveMembershipStartsAtUtc,
+        customer.ActiveMembershipEndsAtUtc,
+        customer.FirstName,
+        customer.LastName,
+        customer.IdentificationNumber,
+        customer.Phone,
+        customer.BirthDate,
+        customer.Gender,
+        customer.EmergencyContactName,
+        customer.EmergencyContactPhone,
+        customer.Status,
+        customer.CreatedAtUtc,
+        customer.UpdatedAtUtc);
+
+    private static CustomerResponse Map(Customer customer) => new(
+        customer.Id,
+        customer.UserId,
+        customer.User.Email,
+        customer.BranchId,
+        customer.ActiveMembershipId,
+        customer.ActiveMembership?.Name,
+        customer.ActiveMembership?.DurationInDays,
+        customer.ActiveMembership?.Price,
+        customer.ActiveMembership?.Currency,
+        customer.ActiveMembershipStartsAtUtc,
+        customer.ActiveMembershipEndsAtUtc,
+        customer.FirstName,
+        customer.LastName,
+        customer.IdentificationNumber,
+        customer.Phone,
+        customer.BirthDate,
+        customer.Gender,
+        customer.EmergencyContactName,
+        customer.EmergencyContactPhone,
+        customer.Status,
+        customer.CreatedAtUtc,
+        customer.UpdatedAtUtc);
 
     private sealed record CreateOrUpdateMembershipWindow(DateTimeOffset? ActiveMembershipStartsAtUtc, DateTimeOffset? ActiveMembershipEndsAtUtc);
 
@@ -205,4 +264,3 @@ public sealed class CustomerService : ICustomerService
         public CustomerValidationException(string message) : base(message) { }
     }
 }
-
