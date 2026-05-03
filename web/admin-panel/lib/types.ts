@@ -132,6 +132,36 @@ export type CheckIn = {
   updatedAtUtc?: string | null;
 };
 
+export type DashboardBranchActivity = {
+  branchId: string;
+  branchName: string;
+  activityCount: number;
+  activeCustomersCount: number;
+  todayClassesCount: number;
+  todayCheckInsCount: number;
+};
+
+export type DashboardClassOccupancy = {
+  classSessionId: string;
+  className: string;
+  branchName: string;
+  startTime: string;
+  reservedSpots: number;
+  capacity: number;
+  occupancyRate: number;
+};
+
+export type DashboardSummary = {
+  activeCustomersCount: number;
+  todayClassesCount: number;
+  todayCheckInsCount: number;
+  estimatedRevenue: number;
+  mostActiveBranchName: string;
+  branchActivity: DashboardBranchActivity[];
+  classOccupancy: DashboardClassOccupancy[];
+  estimatedRevenueFormula: string;
+};
+
 export type ApiErrorPayload = {
   message?: string;
   detail?: string;

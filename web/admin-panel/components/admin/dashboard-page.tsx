@@ -1,110 +1,147 @@
 "use client";
 
-import { useMemo } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { accessApi, bookingsApi, branchesApi, classesApi, customersApi, membershipsApi, promotionsApi } from "@/lib/api/admin";
+import { BarChart3, TrendingUp, UsersRound } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { dashboardApi } from "@/lib/api/admin";
 import { EmptyState, LoadingState } from "@/components/admin/page-state";
 import { SectionHeading } from "@/components/admin/section-heading";
 import { StatCard } from "@/components/admin/stat-card";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { getErrorMessage } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getErrorMessage } from "@/lib/utils";
 
 export function DashboardPage() {
-  const { data: branches, isLoading: branchesLoading, error: branchesError } = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
-  const statsQueries = useQueries({
-    queries: [
-      { queryKey: ["customers"], queryFn: customersApi.list },
-      { queryKey: ["memberships"], queryFn: membershipsApi.list },
-      { queryKey: ["classes"], queryFn: classesApi.list },
-      { queryKey: ["bookings"], queryFn: bookingsApi.list },
-      { queryKey: ["promotions"], queryFn: promotionsApi.list },
-    ],
-  });
+  const summaryQuery = useQuery({ queryKey: ["dashboard-summary"], queryFn: dashboardApi.summary });
 
-  const selectedBranchId = branches?.[0]?.id;
-  const { data: checkIns } = useQuery({
-    queryKey: ["checkins", selectedBranchId],
-    queryFn: () => accessApi.getCheckInsByBranch(selectedBranchId!),
-    enabled: Boolean(selectedBranchId),
-  });
+  if (summaryQuery.isLoading) {
+    return <LoadingState label="Cargando metricas operativas de Dorian..." />;
+  }
 
-  const isLoading = branchesLoading || statsQueries.some((query) => query.isLoading);
-  const error = branchesError ?? statsQueries.find((query) => query.error)?.error;
+  if (summaryQuery.error) {
+    return <Alert>{getErrorMessage(summaryQuery.error)}</Alert>;
+  }
 
-  const metrics = useMemo(() => {
-    const [customers, memberships, classes, bookings, promotions] = statsQueries.map((query) => query.data ?? []);
-    return {
-      branches: branches?.length ?? 0,
-      customers: customers.length,
-      memberships: memberships.length,
-      classes: classes.length,
-      bookings: bookings.length,
-      promotions: promotions.length,
-      acceptedCheckIns: (checkIns ?? []).filter((checkIn) => checkIn.status === 1).length,
-      rejectedCheckIns: (checkIns ?? []).filter((checkIn) => checkIn.status === 2).length,
-    };
-  }, [branches, checkIns, statsQueries]);
+  const summary = summaryQuery.data;
+  if (!summary) {
+    return <EmptyState title="No hay metricas disponibles" description="El dashboard se mostrara cuando existan sucursales, clientes y operacion minima para el MVP." />;
+  }
 
-  if (isLoading) return <LoadingState label="Construyendo el tablero ejecutivo..." />;
-  if (error) return <Alert>{getErrorMessage(error)}</Alert>;
-  if (!branches?.length) return <EmptyState title="No hay sucursales registradas" description="Crea la primera sucursal para comenzar a operar el gimnasio desde el panel." />;
+  const maxBranchActivity = Math.max(...summary.branchActivity.map((item) => item.activityCount), 1);
+  const maxOccupancy = Math.max(...summary.classOccupancy.map((item) => item.occupancyRate), 1);
 
   return (
     <div className="space-y-6">
       <SectionHeading
-        eyebrow="Executive overview"
-        title="Dashboard operacional"
-        description="Monitorea en una sola vista el pulso comercial y operativo del gimnasio multi-sucursal."
+        eyebrow="Control room"
+        title="Dashboard operativo Dorian"
+        description="Vista consolidada del rendimiento actual del gimnasio, con metricas reales de clientes, check-ins y ocupacion."
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Sucursales" value={metrics.branches} helper="Red activa en la plataforma" />
-        <StatCard label="Clientes" value={metrics.customers} helper="Perfiles disponibles para operacion" />
-        <StatCard label="Membresias" value={metrics.memberships} helper="Catalogo activo para venta y renovacion" />
-        <StatCard label="Clases" value={metrics.classes} helper="Sesiones configuradas para agenda" />
-        <StatCard label="Reservas" value={metrics.bookings} helper="Movimientos recientes del calendario" />
-        <StatCard label="Promociones" value={metrics.promotions} helper="Campanas visibles en web y app" />
-        <StatCard label="Check-ins OK" value={metrics.acceptedCheckIns} helper={`Primer filtro sobre ${branches[0].name}`} />
-        <StatCard label="Check-ins rechazados" value={metrics.rejectedCheckIns} helper="Casos para seguimiento en recepcion" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <StatCard label="Clientes activos" value={summary.activeCustomersCount} helper="Perfiles activos dentro del alcance del rol actual" />
+        <StatCard label="Clases del dia" value={summary.todayClassesCount} helper="Sesiones programadas para hoy" />
+        <StatCard label="Check-ins del dia" value={summary.todayCheckInsCount} helper="Ingresos aceptados durante la jornada" />
+        <StatCard label="Ingresos estimados" value={formatCurrency(summary.estimatedRevenue)} helper="Basado en membresias activas asignadas" />
+        <StatCard label="Sucursal lider" value={summary.mostActiveBranchName} helper="Mayor actividad operativa en el tablero" />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
-          <SectionHeading
-            eyebrow="Insights"
-            title="Ritmo del negocio"
-            description="El tablero usa endpoints reales del backend, sin mocks, para que la demo refleje el estado actual del MVP."
-          />
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-sm text-slate-400">Sucursal destacada</p>
-              <p className="mt-2 font-heading text-2xl text-white">{branches[0].name}</p>
-              <p className="mt-1 text-sm text-slate-400">{branches[0].city} · {branches[0].phoneNumber || "Sin telefono"}</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Actividad por sucursal</p>
+              <h3 className="mt-3 font-heading text-2xl text-white">Pulso comercial y operativo</h3>
+              <p className="mt-2 max-w-2xl text-sm text-slate-400">El score suma clientes activos, clases de hoy y check-ins aceptados para comparar el movimiento de cada sede.</p>
             </div>
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="text-sm text-slate-400">Promociones activas</p>
-              <p className="mt-2 font-heading text-2xl text-white">{(statsQueries[4].data ?? []).filter((promotion) => promotion.status === 2).length}</p>
-              <p className="mt-1 text-sm text-slate-400">Listas para impulsar captacion y retencion</p>
-            </div>
+            <span className="inline-flex rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-[var(--accent)]">
+              <TrendingUp className="h-5 w-5" />
+            </span>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            {summary.branchActivity.map((item) => (
+              <div key={item.branchId} className="rounded-[26px] border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-white">{item.branchName}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.24em] text-slate-500">
+                      {item.activeCustomersCount} clientes · {item.todayClassesCount} clases · {item.todayCheckInsCount} check-ins
+                    </p>
+                  </div>
+                  <p className="font-heading text-2xl text-white">{item.activityCount}</p>
+                </div>
+                <div className="mt-4 h-2 rounded-full bg-white/5">
+                  <div
+                    className="h-2 rounded-full bg-[linear-gradient(90deg,var(--accent),#ffd2b5)]"
+                    style={{ width: `${Math.max((item.activityCount / maxBranchActivity) * 100, 8)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
 
         <Card>
-          <SectionHeading
-            eyebrow="Access live"
-            title="Control de ingreso"
-            description="Resumen inicial del flujo QR para la primera sucursal disponible."
-          />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Ocupacion de clases</p>
+              <h3 className="mt-3 font-heading text-2xl text-white">Aforo de hoy</h3>
+              <p className="mt-2 text-sm text-slate-400">Ideal para recepcion y coordinacion de entrenadores durante la demo operativa.</p>
+            </div>
+            <span className="inline-flex rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-[var(--accent)]">
+              <BarChart3 className="h-5 w-5" />
+            </span>
+          </div>
+
           <div className="mt-6 space-y-4">
-            {(checkIns ?? []).slice(0, 5).map((checkIn) => (
-              <div key={checkIn.id} className="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-sm text-white">Cliente {checkIn.customerId.slice(0, 8)}</p>
-                <p className="mt-1 text-xs uppercase tracking-[0.24em] text-slate-500">{checkIn.status === 1 ? "Aceptado" : "Rechazado"}</p>
-                <p className="mt-2 text-sm text-slate-400">{checkIn.rejectionReason || "Ingreso validado correctamente."}</p>
+            {summary.classOccupancy.length ? (
+              summary.classOccupancy.map((item) => (
+                <div key={item.classSessionId} className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-white">{item.className}</p>
+                      <p className="mt-1 text-sm text-slate-400">{item.branchName} · {formatDateTime(item.startTime)}</p>
+                    </div>
+                    <p className="font-heading text-xl text-white">{item.occupancyRate.toFixed(0)}%</p>
+                  </div>
+                  <div className="mt-4 h-2 rounded-full bg-white/5">
+                    <div
+                      className="h-2 rounded-full bg-[linear-gradient(90deg,#ff8a3d,var(--accent))]"
+                      style={{ width: `${Math.max((item.occupancyRate / maxOccupancy) * 100, item.occupancyRate > 0 ? 10 : 0)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs uppercase tracking-[0.24em] text-slate-500">{item.reservedSpots}/{item.capacity} cupos reservados</p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.03] p-5 text-sm text-slate-400">
+                Aun no hay clases programadas para hoy dentro del alcance de este usuario.
               </div>
-            ))}
-            {!checkIns?.length ? <p className="text-sm text-slate-400">Aun no hay registros de ingreso para esta sucursal.</p> : null}
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+        <Card>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Ingresos estimados</p>
+              <h3 className="mt-3 font-heading text-2xl text-white">{formatCurrency(summary.estimatedRevenue)}</h3>
+              <p className="mt-2 text-sm text-slate-400">{summary.estimatedRevenueFormula}</p>
+            </div>
+            <span className="inline-flex rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-[var(--accent)]">
+              <UsersRound className="h-5 w-5" />
+            </span>
+          </div>
+        </Card>
+
+        <Card>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Lectura rapida</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <MiniMetric label="Clientes activos" value={summary.activeCustomersCount.toString()} />
+            <MiniMetric label="Clases hoy" value={summary.todayClassesCount.toString()} />
+            <MiniMetric label="Check-ins hoy" value={summary.todayCheckInsCount.toString()} />
           </div>
         </Card>
       </div>
@@ -112,3 +149,11 @@ export function DashboardPage() {
   );
 }
 
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] border border-white/10 bg-white/[0.03] p-4">
+      <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{label}</p>
+      <p className="mt-2 font-heading text-2xl text-white">{value}</p>
+    </div>
+  );
+}

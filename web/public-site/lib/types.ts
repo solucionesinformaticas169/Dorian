@@ -61,3 +61,15 @@ export type AuthResponse = {
     roles: string[];
   };
 };
+
+export type GroupClass = {
+  slug: string;
+  name: string;
+  emoji: string;
+  summary: string;
+  type: string;
+  subtitle: string;
+  description: string;
+  tagline: string;
+  benefits: string[];
+};

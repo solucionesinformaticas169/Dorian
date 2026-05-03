@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { ArrowRight, ShieldCheck, Sparkles, Trophy, Waves } from "lucide-react";
 import { BranchCard } from "@/components/marketing/branch-card";
-import { ClassCard } from "@/components/marketing/class-card";
+import { GroupClassCard } from "@/components/marketing/group-class-card";
 import { PlanCard } from "@/components/marketing/plan-card";
 import { PromotionCard } from "@/components/marketing/promotion-card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ const benefits = [
 ];
 
 export default async function HomePage() {
-  const { branches, classes, promotions, memberships } = await getPublicData();
+  const { branches, classes, promotions, memberships, groupClasses } = await getPublicData();
   const branchMap = Object.fromEntries(branches.map((branch) => [branch.id, branch.name]));
 
   return (
@@ -73,8 +73,20 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <SectionTitle eyebrow="Clases" title="Agenda sesiones que elevan tu energia" description="Descubre clases dirigidas con aforo controlado, horarios claros y una experiencia lista para reservar desde la app." />
-        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{classes.slice(0, 3).map((item) => <ClassCard key={item.id} item={item} branchName={branchMap[item.branchId]} />)}</div>
+        <SectionTitle eyebrow="Clases grupales" title="Disciplinas con identidad propia" description="Dorian combina energia comercial y agenda real para ayudarte a descubrir la clase ideal antes de reservar." />
+        <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">{groupClasses.map((item) => <GroupClassCard key={item.slug} item={item} />)}</div>
+        <div className="mt-8 rounded-[30px] border border-white/10 bg-white/[0.03] p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Agenda activa</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            {classes.slice(0, 3).map((item) => (
+              <div key={item.id} className="rounded-[24px] border border-white/10 bg-black/20 p-4">
+                <p className="font-semibold text-white">{item.name}</p>
+                <p className="mt-2 text-sm text-slate-400">{branchMap[item.branchId]}</p>
+                <p className="mt-3 text-xs uppercase tracking-[0.22em] text-slate-500">{new Date(item.startTime).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" })}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">

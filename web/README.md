@@ -16,6 +16,7 @@ Contiene dos aplicaciones Next.js App Router:
 - Conectado a los endpoints reales del backend .NET del MVP.
 - Branding real de Gimnasio Dorian con logo oficial y paleta naranja, blanco y negro.
 - Edicion de sucursales con `mapUrl`, `latitude`, `longitude` y acceso rapido a Google Maps.
+- Dashboard visual conectado a `GET /dashboard/summary` con metricas por rol, barras de actividad y ocupacion de clases.
 
 ### `public-site`
 
@@ -23,3 +24,4 @@ Contiene dos aplicaciones Next.js App Router:
 - Paginas de Home, Sucursales, Clases, Promociones, Planes y Contacto.
 - Branding real de Gimnasio Dorian con logo oficial y paleta naranja, blanco y negro.
 - Sucursales reales con boton `Ver en mapa` hacia Google Maps.
+- Catalogo comercial de clases grupales consumido desde `GET /group-classes` y separado de la agenda real de `ClassSession`.

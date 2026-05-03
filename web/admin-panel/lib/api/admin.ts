@@ -1,5 +1,5 @@
 import { apiFetch, authFetch } from "@/lib/api/client";
-import type { AccessPass, Booking, Branch, CheckIn, ClassSession, Customer, Membership, Promotion, Session } from "@/lib/types";
+import type { AccessPass, Booking, Branch, CheckIn, ClassSession, Customer, DashboardSummary, Membership, Promotion, Session } from "@/lib/types";
 
 export const authApi = {
   login: (payload: { email: string; password: string }) => authFetch<Session>("/login", { method: "POST", body: JSON.stringify(payload) }),
@@ -61,5 +61,9 @@ export const accessApi = {
   getCheckInsByCustomer: (customerId: string) => apiFetch<CheckIn[]>(`/customers/${customerId}/check-ins`),
   scan: (branchId: string, payload: { qrCodeValue: string }) => apiFetch<CheckIn>(`/branches/${branchId}/check-ins/scan`, { method: "POST", body: JSON.stringify(payload) }),
   manual: (branchId: string, payload: { customerId: string }) => apiFetch<CheckIn>(`/branches/${branchId}/check-ins/manual`, { method: "POST", body: JSON.stringify(payload) }),
+};
+
+export const dashboardApi = {
+  summary: () => apiFetch<DashboardSummary>("/dashboard/summary"),
 };
 

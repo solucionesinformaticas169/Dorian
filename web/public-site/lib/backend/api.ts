@@ -1,5 +1,5 @@
 import "server-only";
-import type { AuthResponse, Branch, ClassSession, Membership, Promotion } from "@/lib/types";
+import type { AuthResponse, Branch, ClassSession, GroupClass, Membership, Promotion } from "@/lib/types";
 
 const apiUrl = process.env.BACKEND_API_URL ?? "http://localhost:5000";
 const serviceEmail = process.env.BACKEND_SERVICE_EMAIL ?? "superadmin@dorian.test";
@@ -73,13 +73,18 @@ export async function getMemberships() {
   return memberships.filter((membership) => membership.isActive);
 }
 
+export async function getGroupClasses() {
+  return backendFetch<GroupClass[]>("/group-classes");
+}
+
 export async function getPublicData() {
-  const [branches, classes, promotions, memberships] = await Promise.all([
+  const [branches, classes, promotions, memberships, groupClasses] = await Promise.all([
     getBranches(),
     getClasses(),
     getPromotions(),
     getMemberships(),
+    getGroupClasses(),
   ]);
 
-  return { branches, classes, promotions, memberships };
+  return { branches, classes, promotions, memberships, groupClasses };
 }
