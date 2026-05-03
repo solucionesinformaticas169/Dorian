@@ -29,6 +29,7 @@ void main() {
     storage: storage,
     authApi: AuthApi(client),
     customerApi: CustomerApi(client),
+    fitnessProfileApi: FitnessProfileApi(client),
   );
 
   runApp(
@@ -41,6 +42,7 @@ void main() {
         Provider.value(value: BookingApi(client)),
         Provider.value(value: PromotionApi(client)),
         Provider.value(value: AccessApi(client)),
+        Provider.value(value: FitnessProfileApi(client)),
       ],
       child: const DorianApp(),
     ),
@@ -110,33 +112,43 @@ class AppGate extends StatelessWidget {
         if (session.isBootstrapping) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
-        return session.isAuthenticated ? const ClientShell() : const LoginPage();
+        if (!session.isAuthenticated) {
+          return const LoginPage();
+        }
+        if (session.requiresOnboarding) {
+          return const FitnessOnboardingPage();
+        }
+        return const ClientShell();
       },
     );
   }
 }
 
 class SessionController extends ChangeNotifier {
-  SessionController({required this.storage, required this.authApi, required this.customerApi});
+  SessionController({required this.storage, required this.authApi, required this.customerApi, required this.fitnessProfileApi});
 
   final SessionStorage storage;
   final AuthApi authApi;
   final CustomerApi customerApi;
+  final FitnessProfileApi fitnessProfileApi;
 
   bool isBootstrapping = true;
   bool isBusy = false;
+  bool skipOnboardingForSession = false;
   String? errorMessage;
   AuthSession? authSession;
   CustomerProfile? profile;
+  CustomerFitnessProfile? fitnessProfile;
 
   bool get isAuthenticated => authSession != null;
+  bool get requiresOnboarding => isAuthenticated && !(fitnessProfile?.onboardingCompleted ?? false) && !skipOnboardingForSession;
   SessionTokens? get tokens => authSession?.tokens;
 
   Future<void> initialize() async {
     authSession = await storage.read();
     if (authSession != null) {
       try {
-        await refreshProfile();
+        await loadSessionContext();
       } catch (_) {
         await clearLocal();
       }
@@ -152,7 +164,8 @@ class SessionController extends ChangeNotifier {
     try {
       authSession = await authApi.login(email, password);
       await storage.save(authSession!);
-      await refreshProfile();
+      skipOnboardingForSession = false;
+      await loadSessionContext();
     } catch (error) {
       errorMessage = error.toString();
       rethrow;
@@ -162,8 +175,29 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  Future<void> loadSessionContext() async {
+    await refreshProfile();
+    await refreshFitnessProfile();
+  }
+
   Future<void> refreshProfile() async {
     profile = await customerApi.getMe();
+    notifyListeners();
+  }
+
+  Future<void> refreshFitnessProfile() async {
+    fitnessProfile = await fitnessProfileApi.getMyProfile();
+    notifyListeners();
+  }
+
+  void skipOnboardingOnce() {
+    skipOnboardingForSession = true;
+    notifyListeners();
+  }
+
+  void updateFitnessProfile(CustomerFitnessProfile value) {
+    fitnessProfile = value;
+    skipOnboardingForSession = false;
     notifyListeners();
   }
 
@@ -195,7 +229,9 @@ class SessionController extends ChangeNotifier {
   Future<void> clearLocal() async {
     authSession = null;
     profile = null;
+    fitnessProfile = null;
     errorMessage = null;
+    skipOnboardingForSession = false;
     await storage.clear();
     notifyListeners();
   }
@@ -328,6 +364,15 @@ class AccessApi {
   final ApiClient client;
   Future<AccessPass> getPass(String customerId) async => AccessPass.fromJson(await client.get('/customers/$customerId/access-pass') as Map<String, dynamic>);
   Future<AccessPass> regenerate(String customerId) async => AccessPass.fromJson(await client.post('/customers/$customerId/access-pass/regenerate') as Map<String, dynamic>);
+}
+
+class FitnessProfileApi {
+  FitnessProfileApi(this.client);
+  final ApiClient client;
+
+  Future<CustomerFitnessProfile> getMyProfile() async => CustomerFitnessProfile.fromJson(await client.get('/customers/me/fitness-profile') as Map<String, dynamic>);
+  Future<CustomerFitnessProfile> create(CustomerFitnessProfileInput payload) async => CustomerFitnessProfile.fromJson(await client.post('/customers/me/fitness-profile', body: payload.toJson()) as Map<String, dynamic>);
+  Future<CustomerFitnessProfile> update(CustomerFitnessProfileInput payload) async => CustomerFitnessProfile.fromJson(await client.put('/customers/me/fitness-profile', body: payload.toJson()) as Map<String, dynamic>);
 }
 
 class AuthSession {
@@ -464,6 +509,176 @@ class GymBranch {
         latitude: (json['latitude'] as num?)?.toDouble(),
         longitude: (json['longitude'] as num?)?.toDouble(),
       );
+}
+
+const fitnessGoalLabels = <int, String>{
+  1: 'Perder peso',
+  2: 'Definicion muscular',
+  3: 'Hipertrofia',
+  4: 'Mantener condicion',
+};
+
+const focusMuscleGroupLabels = <int, String>{
+  1: 'Balanceado',
+  2: 'Pecho',
+  3: 'Espalda',
+  4: 'Brazos',
+  5: 'Piernas',
+  6: 'Abdomen',
+  7: 'Gluteos',
+};
+
+const experienceLevelLabels = <int, String>{
+  1: 'Principiante',
+  2: 'Intermedio',
+  3: 'Avanzado',
+};
+
+const gymTypeLabels = <int, String>{
+  1: 'Gimnasio basico',
+  2: 'Gimnasio avanzado',
+};
+
+const trainingDayLabels = <int, String>{
+  1: 'Lunes',
+  2: 'Martes',
+  3: 'Miercoles',
+  4: 'Jueves',
+  5: 'Viernes',
+  6: 'Sabado',
+  7: 'Domingo',
+};
+
+const fitnessGenderLabels = <int, String>{
+  1: 'Masculino',
+  2: 'Femenino',
+  3: 'Otro',
+  4: 'Prefiero no decirlo',
+};
+
+const notificationIntensityLabels = <int, String>{
+  1: 'Bajo',
+  2: 'Moderada',
+  3: 'Intenso',
+};
+
+class CustomerFitnessProfile {
+  CustomerFitnessProfile({
+    required this.id,
+    required this.customerId,
+    required this.goal,
+    required this.focusMuscleGroup,
+    required this.experienceLevel,
+    required this.gymType,
+    required this.includeCardio,
+    required this.trainingDays,
+    required this.preferredTrainingTime,
+    required this.gender,
+    required this.birthDate,
+    required this.weightKg,
+    required this.heightCm,
+    required this.targetWeightKg,
+    required this.notificationsEnabled,
+    required this.notificationIntensity,
+    required this.onboardingCompleted,
+  });
+
+  final String? id;
+  final String? customerId;
+  final int? goal;
+  final int? focusMuscleGroup;
+  final int? experienceLevel;
+  final int? gymType;
+  final bool includeCardio;
+  final List<int> trainingDays;
+  final String? preferredTrainingTime;
+  final String? gender;
+  final String? birthDate;
+  final double? weightKg;
+  final double? heightCm;
+  final double? targetWeightKg;
+  final bool notificationsEnabled;
+  final int? notificationIntensity;
+  final bool onboardingCompleted;
+
+  bool get hasFlexibleSchedule => preferredTrainingTime == null || preferredTrainingTime!.isEmpty;
+  String get goalLabel => goal == null ? 'No definido' : fitnessGoalLabels[goal] ?? 'No definido';
+  String get focusLabel => focusMuscleGroup == null ? 'No definido' : focusMuscleGroupLabels[focusMuscleGroup] ?? 'No definido';
+  String get experienceLabel => experienceLevel == null ? 'No definido' : experienceLevelLabels[experienceLevel] ?? 'No definido';
+
+  factory CustomerFitnessProfile.fromJson(Map<String, dynamic> json) => CustomerFitnessProfile(
+        id: json['id'] as String?,
+        customerId: json['customerId'] as String?,
+        goal: json['goal'] as int?,
+        focusMuscleGroup: json['focusMuscleGroup'] as int?,
+        experienceLevel: json['experienceLevel'] as int?,
+        gymType: json['gymType'] as int?,
+        includeCardio: json['includeCardio'] as bool? ?? false,
+        trainingDays: (json['trainingDays'] as List<dynamic>? ?? const []).map((item) => item as int).toList(),
+        preferredTrainingTime: json['preferredTrainingTime'] as String?,
+        gender: json['gender']?.toString(),
+        birthDate: json['birthDate'] as String?,
+        weightKg: (json['weightKg'] as num?)?.toDouble(),
+        heightCm: (json['heightCm'] as num?)?.toDouble(),
+        targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
+        notificationsEnabled: json['notificationsEnabled'] as bool? ?? false,
+        notificationIntensity: json['notificationIntensity'] as int?,
+        onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
+      );
+}
+
+class CustomerFitnessProfileInput {
+  CustomerFitnessProfileInput({
+    required this.goal,
+    required this.focusMuscleGroup,
+    required this.experienceLevel,
+    required this.gymType,
+    required this.includeCardio,
+    required this.trainingDays,
+    required this.preferredTrainingTime,
+    required this.gender,
+    required this.birthDate,
+    required this.weightKg,
+    required this.heightCm,
+    required this.targetWeightKg,
+    required this.notificationsEnabled,
+    required this.notificationIntensity,
+    required this.onboardingCompleted,
+  });
+
+  final int goal;
+  final int focusMuscleGroup;
+  final int experienceLevel;
+  final int gymType;
+  final bool includeCardio;
+  final List<int> trainingDays;
+  final String? preferredTrainingTime;
+  final int gender;
+  final String birthDate;
+  final double weightKg;
+  final double heightCm;
+  final double targetWeightKg;
+  final bool notificationsEnabled;
+  final int notificationIntensity;
+  final bool onboardingCompleted;
+
+  Map<String, dynamic> toJson() => {
+        'goal': goal,
+        'focusMuscleGroup': focusMuscleGroup,
+        'experienceLevel': experienceLevel,
+        'gymType': gymType,
+        'includeCardio': includeCardio,
+        'trainingDays': trainingDays,
+        'preferredTrainingTime': preferredTrainingTime,
+        'gender': gender,
+        'birthDate': birthDate,
+        'weightKg': weightKg,
+        'heightCm': heightCm,
+        'targetWeightKg': targetWeightKg,
+        'notificationsEnabled': notificationsEnabled,
+        'notificationIntensity': notificationIntensity,
+        'onboardingCompleted': onboardingCompleted,
+      };
 }
 
 class GymClass {
@@ -648,6 +863,518 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+}
+
+class FitnessOnboardingPage extends StatefulWidget {
+  const FitnessOnboardingPage({super.key, this.editMode = false});
+
+  final bool editMode;
+
+  @override
+  State<FitnessOnboardingPage> createState() => _FitnessOnboardingPageState();
+}
+
+class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
+  int currentStep = 0;
+  bool isSaving = false;
+  String? errorMessage;
+  late int goal;
+  late int focusMuscleGroup;
+  late int experienceLevel;
+  late int gymType;
+  late bool includeCardio;
+  late Set<int> trainingDays;
+  late bool flexibleSchedule;
+  TimeOfDay? preferredTime;
+  late int gender;
+  DateTime? birthDate;
+  late bool notificationsEnabled;
+  late int notificationIntensity;
+  late final TextEditingController weightController;
+  late final TextEditingController heightController;
+  late final TextEditingController targetWeightController;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = context.read<SessionController>().fitnessProfile;
+    goal = existing?.goal ?? 3;
+    focusMuscleGroup = existing?.focusMuscleGroup ?? 1;
+    experienceLevel = existing?.experienceLevel ?? 1;
+    gymType = existing?.gymType ?? 2;
+    includeCardio = existing?.includeCardio ?? true;
+    trainingDays = {...(existing?.trainingDays ?? [1, 3, 5])};
+    flexibleSchedule = existing?.hasFlexibleSchedule ?? false;
+    preferredTime = _parseTime(existing?.preferredTrainingTime);
+    gender = int.tryParse(existing?.gender ?? '') ?? 4;
+    birthDate = existing?.birthDate == null ? null : DateTime.tryParse(existing!.birthDate!);
+    notificationsEnabled = existing?.notificationsEnabled ?? true;
+    notificationIntensity = existing?.notificationIntensity ?? 2;
+    weightController = TextEditingController(text: existing?.weightKg?.toStringAsFixed(1) ?? '');
+    heightController = TextEditingController(text: existing?.heightCm?.toStringAsFixed(1) ?? '');
+    targetWeightController = TextEditingController(text: existing?.targetWeightKg?.toStringAsFixed(1) ?? '');
+  }
+
+  @override
+  void dispose() {
+    weightController.dispose();
+    heightController.dispose();
+    targetWeightController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalSteps = widget.editMode ? 9 : 10;
+    final progress = (currentStep + 1) / totalSteps;
+
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF180F0B), Color(0xFF070707), Color(0xFF26170E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Row(
+                children: [
+                  if (widget.editMode)
+                    IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    ),
+                  Expanded(
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      color: dorianAccent,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('${currentStep + 1}/$totalSteps', style: const TextStyle(color: Colors.white70)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (widget.editMode) ...[
+                Text('Perfil fitness', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                const Text('Actualiza tu objetivo, tus habitos y tus datos para personalizar mejor tu experiencia Dorian.', style: TextStyle(color: dorianTextSoft)),
+              ] else ...[
+                const BrandLogo(size: 84),
+                const SizedBox(height: 18),
+                Text('Dorian Fitness', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                const Text('Crea tu perfil fitness y recibe una experiencia personalizada.', style: TextStyle(color: dorianTextSoft)),
+              ],
+              const SizedBox(height: 22),
+              GlowCard(child: _buildStepContent()),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(errorMessage!, style: const TextStyle(color: Color(0xFFFF8C8C))),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  if (currentStep > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isSaving ? null : () => setState(() => currentStep -= 1),
+                        child: const Text('Atras'),
+                      ),
+                    ),
+                  if (currentStep > 0) const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: isSaving ? null : _handlePrimaryAction,
+                      child: Text(isSaving ? 'Guardando...' : currentStep == totalSteps - 1 ? 'Finalizar' : currentStep == 0 && !widget.editMode ? 'Comenzar' : 'Continuar'),
+                    ),
+                  ),
+                ],
+              ),
+              if (!widget.editMode && currentStep == 0) ...[
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: isSaving ? null : () => context.read<SessionController>().skipOnboardingOnce(),
+                  child: const Text('Ya tengo una cuenta'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepContent() {
+    final stepIndex = widget.editMode ? currentStep + 1 : currentStep;
+    switch (stepIndex) {
+      case 0:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Bienvenido a tu configuracion inicial', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            const Text('En pocos pasos definiremos tu objetivo, tus preferencias y tu base fisica para personalizar mejor tu experiencia.', style: TextStyle(color: Colors.white70, height: 1.5)),
+          ],
+        );
+      case 1:
+        return _optionStep('Cual es tu objetivo principal?', fitnessGoalLabels, goal, (value) => setState(() => goal = value));
+      case 2:
+        return _optionStep('Que grupo muscular quieres priorizar?', focusMuscleGroupLabels, focusMuscleGroup, (value) => setState(() => focusMuscleGroup = value), recommendedValue: 1);
+      case 3:
+        return _experienceStep();
+      case 4:
+        return _optionStep('Que tipo de gimnasio sueles usar?', gymTypeLabels, gymType, (value) => setState(() => gymType = value));
+      case 5:
+        return _cardioStep();
+      case 6:
+        return _trainingDaysStep();
+      case 7:
+        return _physicalDataStep();
+      case 8:
+        return _preferredTimeStep();
+      case 9:
+        return _notificationsStep();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _optionStep(String title, Map<int, String> labels, int selected, ValueChanged<int> onSelected, {int? recommendedValue}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        for (final entry in labels.entries) ...[
+          _selectionTile(
+            title: entry.value,
+            subtitle: recommendedValue == entry.key ? 'Recomendado para empezar con un plan equilibrado.' : null,
+            selected: selected == entry.key,
+            onTap: () => onSelected(entry.key),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+
+  Widget _experienceStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cual es tu experiencia entrenando?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        _selectionTile(title: 'Principiante', subtitle: 'Menos de 6 meses', selected: experienceLevel == 1, onTap: () => setState(() => experienceLevel = 1)),
+        const SizedBox(height: 12),
+        _selectionTile(title: 'Intermedio', subtitle: 'Mas de 6 meses y menos de 2 anos', selected: experienceLevel == 2, onTap: () => setState(() => experienceLevel = 2)),
+        const SizedBox(height: 12),
+        _selectionTile(title: 'Avanzado', subtitle: 'Mas de 2 anos', selected: experienceLevel == 3, onTap: () => setState(() => experienceLevel = 3)),
+      ],
+    );
+  }
+
+  Widget _cardioStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Quieres incluir cardio?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        _selectionTile(title: 'Incluir cardio en entrenamientos', selected: includeCardio, onTap: () => setState(() => includeCardio = true)),
+        const SizedBox(height: 12),
+        _selectionTile(title: 'No quiero ejercicios de cardio', selected: !includeCardio, onTap: () => setState(() => includeCardio = false)),
+      ],
+    );
+  }
+
+  Widget _trainingDaysStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Que dias tienes disponibles?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 10),
+        const Text('Selecciona al menos un dia para construir una rutina realista.', style: TextStyle(color: Colors.white70)),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: trainingDayLabels.entries.map((entry) {
+            final selected = trainingDays.contains(entry.key);
+            return FilterChip(
+              label: Text(entry.value),
+              selected: selected,
+              onSelected: (_) {
+                setState(() {
+                  if (selected) {
+                    trainingDays.remove(entry.key);
+                  } else {
+                    trainingDays.add(entry.key);
+                  }
+                });
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _physicalDataStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cuéntanos tus datos fisicos', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<int>(
+          key: ValueKey(gender),
+          initialValue: gender,
+          decoration: const InputDecoration(labelText: 'Genero'),
+          items: fitnessGenderLabels.entries.map((entry) => DropdownMenuItem<int>(value: entry.key, child: Text(entry.value))).toList(),
+          onChanged: (value) => setState(() => gender = value ?? gender),
+        ),
+        const SizedBox(height: 14),
+        InkWell(
+          onTap: _pickBirthDate,
+          borderRadius: BorderRadius.circular(18),
+          child: InputDecorator(
+            decoration: const InputDecoration(labelText: 'Fecha de nacimiento'),
+            child: Text(birthDate == null ? 'Selecciona una fecha' : formatDate(birthDate!)),
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(controller: weightController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Peso actual (kg)')),
+        const SizedBox(height: 14),
+        TextField(controller: heightController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Altura (cm)')),
+        const SizedBox(height: 14),
+        TextField(controller: targetWeightController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Peso objetivo (kg)')),
+      ],
+    );
+  }
+
+  Widget _preferredTimeStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Cual es tu horario preferido?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: flexibleSchedule,
+          activeThumbColor: dorianAccent,
+          title: const Text('Horarios diferentes cada dia'),
+          subtitle: const Text('Usaremos tus dias disponibles sin fijar una sola hora.'),
+          onChanged: (value) => setState(() => flexibleSchedule = value),
+        ),
+        const SizedBox(height: 8),
+        if (!flexibleSchedule)
+          InkWell(
+            onTap: _pickPreferredTime,
+            borderRadius: BorderRadius.circular(18),
+            child: InputDecorator(
+              decoration: const InputDecoration(labelText: 'Hora preferida'),
+              child: Text(preferredTime == null ? 'Selecciona una hora' : preferredTime!.format(context)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _notificationsStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Notificaciones', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: notificationsEnabled,
+          activeThumbColor: dorianAccent,
+          title: const Text('Activar notificaciones'),
+          subtitle: const Text('Recibe recordatorios y empujes de motivacion.'),
+          onChanged: (value) => setState(() => notificationsEnabled = value),
+        ),
+        const SizedBox(height: 14),
+        DropdownButtonFormField<int>(
+          key: ValueKey(notificationIntensity),
+          initialValue: notificationIntensity,
+          decoration: const InputDecoration(labelText: 'Frecuencia'),
+          items: notificationIntensityLabels.entries.map((entry) => DropdownMenuItem<int>(value: entry.key, child: Text(entry.value))).toList(),
+          onChanged: notificationsEnabled ? (value) => setState(() => notificationIntensity = value ?? notificationIntensity) : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _selectionTile({required String title, String? subtitle, required bool selected, required VoidCallback onTap}) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: selected ? dorianAccent : Colors.white.withValues(alpha: 0.08), width: selected ? 1.4 : 1),
+          color: selected ? dorianAccent.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.02),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 6),
+                    Text(subtitle, style: const TextStyle(color: Colors.white70)),
+                  ],
+                ],
+              ),
+            ),
+            Icon(selected ? Icons.check_circle : Icons.radio_button_unchecked, color: selected ? dorianAccent : Colors.white38),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickBirthDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: birthDate ?? DateTime(1998, 1, 1),
+      firstDate: DateTime(1950, 1, 1),
+      lastDate: DateTime.now(),
+    );
+    if (selected != null) {
+      setState(() => birthDate = selected);
+    }
+  }
+
+  Future<void> _pickPreferredTime() async {
+    final selected = await showTimePicker(context: context, initialTime: preferredTime ?? const TimeOfDay(hour: 18, minute: 30));
+    if (selected != null) {
+      setState(() => preferredTime = selected);
+    }
+  }
+
+  Future<void> _handlePrimaryAction() async {
+    setState(() => errorMessage = null);
+    if (!_validateCurrentStep()) {
+      return;
+    }
+
+    final totalSteps = widget.editMode ? 9 : 10;
+    if (currentStep < totalSteps - 1) {
+      setState(() => currentStep += 1);
+      return;
+    }
+
+    final weight = double.tryParse(weightController.text.replaceAll(',', '.'));
+    final height = double.tryParse(heightController.text.replaceAll(',', '.'));
+    final targetWeight = double.tryParse(targetWeightController.text.replaceAll(',', '.'));
+    if (birthDate == null || weight == null || height == null || targetWeight == null) {
+      setState(() => errorMessage = 'Completa tus datos fisicos antes de finalizar.');
+      return;
+    }
+
+    final payload = CustomerFitnessProfileInput(
+      goal: goal,
+      focusMuscleGroup: focusMuscleGroup,
+      experienceLevel: experienceLevel,
+      gymType: gymType,
+      includeCardio: includeCardio,
+      trainingDays: trainingDays.toList()..sort(),
+      preferredTrainingTime: flexibleSchedule ? null : _timeToBackend(preferredTime),
+      gender: gender,
+      birthDate: '${birthDate!.year.toString().padLeft(4, '0')}-${birthDate!.month.toString().padLeft(2, '0')}-${birthDate!.day.toString().padLeft(2, '0')}',
+      weightKg: weight,
+      heightCm: height,
+      targetWeightKg: targetWeight,
+      notificationsEnabled: notificationsEnabled,
+      notificationIntensity: notificationIntensity,
+      onboardingCompleted: true,
+    );
+
+    setState(() => isSaving = true);
+    try {
+      final api = context.read<FitnessProfileApi>();
+      final session = context.read<SessionController>();
+      final response = session.fitnessProfile?.id == null ? await api.create(payload) : await api.update(payload);
+      session.updateFitnessProfile(response);
+      if (!mounted) return;
+      if (widget.editMode) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil fitness actualizado.')));
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      setState(() => errorMessage = error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => isSaving = false);
+      }
+    }
+  }
+
+  bool _validateCurrentStep() {
+    final stepIndex = widget.editMode ? currentStep + 1 : currentStep;
+    switch (stepIndex) {
+      case 6:
+        if (trainingDays.isEmpty) {
+          setState(() => errorMessage = 'Selecciona al menos un dia disponible.');
+          return false;
+        }
+        break;
+      case 7:
+        if (birthDate == null) {
+          setState(() => errorMessage = 'Selecciona tu fecha de nacimiento.');
+          return false;
+        }
+        if (double.tryParse(weightController.text.replaceAll(',', '.')) == null || double.tryParse(weightController.text.replaceAll(',', '.'))! <= 0) {
+          setState(() => errorMessage = 'Ingresa un peso valido.');
+          return false;
+        }
+        if (double.tryParse(heightController.text.replaceAll(',', '.')) == null || double.tryParse(heightController.text.replaceAll(',', '.'))! <= 0) {
+          setState(() => errorMessage = 'Ingresa una altura valida.');
+          return false;
+        }
+        if (double.tryParse(targetWeightController.text.replaceAll(',', '.')) == null || double.tryParse(targetWeightController.text.replaceAll(',', '.'))! <= 0) {
+          setState(() => errorMessage = 'Ingresa un peso objetivo valido.');
+          return false;
+        }
+        break;
+      case 8:
+        if (!flexibleSchedule && preferredTime == null) {
+          setState(() => errorMessage = 'Selecciona una hora preferida o activa horarios variables.');
+          return false;
+        }
+        break;
+    }
+    return true;
+  }
+
+  TimeOfDay? _parseTime(String? value) {
+    if (value == null || value.isEmpty) return null;
+    final segments = value.split(':');
+    if (segments.length < 2) return null;
+    final hour = int.tryParse(segments[0]);
+    final minute = int.tryParse(segments[1]);
+    if (hour == null || minute == null) return null;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  String? _timeToBackend(TimeOfDay? value) {
+    if (value == null) return null;
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 }
 
@@ -1104,6 +1831,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
     final profile = session.profile!;
+    final fitnessProfile = session.fitnessProfile;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
@@ -1125,11 +1853,34 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Perfil fitness', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(
+                fitnessProfile?.onboardingCompleted == true
+                    ? '${fitnessProfile!.goalLabel} · ${fitnessProfile.focusLabel} · ${fitnessProfile.experienceLabel}'
+                    : 'Aun no completas tu onboarding fitness.',
+                style: const TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         QuickActionCard(
           icon: Icons.qr_code_2,
           title: 'Mi QR de acceso',
           subtitle: 'Ver o regenerar',
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())),
+        ),
+        const SizedBox(height: 12),
+        QuickActionCard(
+          icon: Icons.flag_circle_outlined,
+          title: 'Mi perfil fitness',
+          subtitle: fitnessProfile?.onboardingCompleted == true ? 'Editar onboarding' : 'Completar onboarding',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitnessOnboardingPage(editMode: true))),
         ),
         const SizedBox(height: 12),
         QuickActionCard(

@@ -53,7 +53,30 @@ export type Customer = {
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
   status: number;
+  onboardingCompleted: boolean;
   createdAtUtc: string;
+  updatedAtUtc?: string | null;
+};
+
+export type CustomerFitnessProfile = {
+  id?: string | null;
+  customerId?: string | null;
+  goal?: number | null;
+  focusMuscleGroup?: number | null;
+  experienceLevel?: number | null;
+  gymType?: number | null;
+  includeCardio: boolean;
+  trainingDays: number[];
+  preferredTrainingTime?: string | null;
+  gender?: number | null;
+  birthDate?: string | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  targetWeightKg?: number | null;
+  notificationsEnabled: boolean;
+  notificationIntensity?: number | null;
+  onboardingCompleted: boolean;
+  createdAtUtc?: string | null;
   updatedAtUtc?: string | null;
 };
 
@@ -179,6 +202,39 @@ export const genderMap: Record<number, string> = {
   1: "Masculino",
   2: "Femenino",
   3: "Otro",
+};
+
+export const fitnessGoalMap: Record<number, string> = {
+  1: "Perder peso",
+  2: "Definicion muscular",
+  3: "Hipertrofia",
+  4: "Mantener condicion",
+};
+
+export const focusMuscleGroupMap: Record<number, string> = {
+  1: "Balanceado",
+  2: "Pecho",
+  3: "Espalda",
+  4: "Brazos",
+  5: "Piernas",
+  6: "Abdomen",
+  7: "Gluteos",
+};
+
+export const fitnessExperienceLevelMap: Record<number, string> = {
+  1: "Principiante",
+  2: "Intermedio",
+  3: "Avanzado",
+};
+
+export const trainingDayMap: Record<number, string> = {
+  1: "Lunes",
+  2: "Martes",
+  3: "Miercoles",
+  4: "Jueves",
+  5: "Viernes",
+  6: "Sabado",
+  7: "Domingo",
 };
 
 export const classStatusMap: Record<number, string> = {
