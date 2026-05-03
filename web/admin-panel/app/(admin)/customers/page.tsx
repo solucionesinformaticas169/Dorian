@@ -78,6 +78,11 @@ export default function CustomersPage() {
     queryFn: () => customersApi.trainingPlan(selectedFitnessCustomer!.id),
     enabled: Boolean(selectedFitnessCustomer),
   });
+  const activitySummaryQuery = useQuery({
+    queryKey: ["customer-activity-summary", selectedFitnessCustomer?.id],
+    queryFn: () => customersApi.activitySummary(selectedFitnessCustomer!.id, 7),
+    enabled: Boolean(selectedFitnessCustomer),
+  });
   const generateTrainingPlanMutation = useMutation({
     mutationFn: async (customerId: string) => customersApi.generateTrainingPlan(customerId),
     onSuccess: async () => {
@@ -165,6 +170,7 @@ export default function CustomersPage() {
   const selectedFitness = fitnessProfileQuery.data;
   const selectedBodySummary = bodySummaryQuery.data;
   const selectedTrainingPlan = trainingPlanQuery.data;
+  const selectedActivitySummary = activitySummaryQuery.data;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -349,8 +355,8 @@ export default function CustomersPage() {
               title={`Resumen de ${selectedFitnessCustomer.firstName} ${selectedFitnessCustomer.lastName}`}
               description="Vista solo lectura del onboarding fitness para soporte del panel."
             />
-            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading || trainingPlanQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
-            {fitnessProfileQuery.error || bodySummaryQuery.error || trainingPlanQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error ?? trainingPlanQuery.error)}</Alert> : null}
+            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading || trainingPlanQuery.isLoading || activitySummaryQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
+            {fitnessProfileQuery.error || bodySummaryQuery.error || trainingPlanQuery.error || activitySummaryQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error ?? trainingPlanQuery.error ?? activitySummaryQuery.error)}</Alert> : null}
             {selectedFitness ? (
               <div className="mt-5 grid gap-4 md:grid-cols-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -395,6 +401,30 @@ export default function CustomersPage() {
                       {generateTrainingPlanMutation.isPending ? "Generando..." : "Generar plan"}
                     </Button>
                   </div>
+                </div>
+              </div>
+            ) : null}
+            {selectedActivitySummary ? (
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Actividad semanal</p>
+                  <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.daysTrained} dias entrenados</p>
+                  <p className="mt-2 text-sm text-slate-300">Duracion acumulada: {Math.round(selectedActivitySummary.totalDurationSeconds / 60)} min</p>
+                  <p className="mt-2 text-sm text-slate-300">Calorias estimadas: {selectedActivitySummary.caloriesEstimated}</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Ultima actividad</p>
+                  <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.recentActivities[0]?.title ?? "Sin actividades"}</p>
+                  <p className="mt-2 text-sm text-slate-300">
+                    {selectedActivitySummary.recentActivities[0]?.completedAt ? formatDateTime(selectedActivitySummary.recentActivities[0].completedAt) : "Sin registros"}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-300">Ejercicios completados: {selectedActivitySummary.recentActivities[0]?.exercisesCompleted ?? 0}</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Progreso semanal</p>
+                  <p className="mt-2 text-sm text-slate-300">Series: {selectedActivitySummary.seriesCompleted}</p>
+                  <p className="mt-2 text-sm text-slate-300">Reps: {selectedActivitySummary.repsCompleted}</p>
+                  <p className="mt-2 text-sm text-slate-300">Carga: {selectedActivitySummary.totalLoadKg ? `${selectedActivitySummary.totalLoadKg} kg` : "Sin carga registrada"}</p>
                 </div>
               </div>
             ) : null}

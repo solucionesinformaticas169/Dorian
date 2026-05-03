@@ -45,6 +45,7 @@ void main() {
         Provider.value(value: FitnessProfileApi(client)),
         Provider.value(value: BodyTrackingApi(client)),
         Provider.value(value: TrainingPlanApi(client)),
+        Provider.value(value: ActivityApi(client)),
       ],
       child: const DorianApp(),
     ),
@@ -434,6 +435,23 @@ class TrainingPlanApi {
       TrainingPlanDayData.fromJson(await client.put('/training-days/$id/uncomplete') as Map<String, dynamic>);
 }
 
+class ActivityApi {
+  ActivityApi(this.client);
+  final ApiClient client;
+
+  Future<ActivitySummaryData> getSummary(int range) async =>
+      ActivitySummaryData.fromJson(await client.get('/customers/me/activity-summary?range=$range') as Map<String, dynamic>);
+
+  Future<List<ActivityHistoryItemData>> getHistory() async =>
+      ((await client.get('/customers/me/activity-history')) as List<dynamic>).map((item) => ActivityHistoryItemData.fromJson(item as Map<String, dynamic>)).toList();
+
+  Future<List<MuscleActivityData>> getMuscleActivity() async =>
+      ((await client.get('/customers/me/muscle-activity')) as List<dynamic>).map((item) => MuscleActivityData.fromJson(item as Map<String, dynamic>)).toList();
+
+  Future<ActivityHistoryItemData> createManualActivity(ManualWorkoutActivityInput payload) async =>
+      ActivityHistoryItemData.fromJson(await client.post('/customers/me/workout-activities', body: payload.toJson()) as Map<String, dynamic>);
+}
+
 class AuthSession {
   AuthSession({required this.accessToken, required this.refreshToken, required this.accessTokenExpiresAtUtc, required this.refreshTokenExpiresAtUtc, required this.user});
   final String accessToken;
@@ -645,6 +663,19 @@ const exerciseMuscleGroupLabels = <int, String>{
   8: 'Gluteos',
   9: 'Cardio',
   10: 'Full body',
+};
+
+const exerciseMuscleGroupNameLabels = <String, String>{
+  'Chest': 'Pecho',
+  'Back': 'Espalda',
+  'Legs': 'Piernas',
+  'Shoulders': 'Hombros',
+  'Biceps': 'Biceps',
+  'Triceps': 'Triceps',
+  'Abdomen': 'Abdomen',
+  'Glutes': 'Gluteos',
+  'Cardio': 'Cardio',
+  'FullBody': 'Full body',
 };
 
 class CustomerFitnessProfile {
@@ -1207,6 +1238,182 @@ class TrainingPlanExerciseData {
         notes: json['notes'] as String?,
         order: json['order'] as int,
       );
+}
+
+class ActivitySummaryData {
+  ActivitySummaryData({
+    required this.rangeInDays,
+    required this.daysTrained,
+    required this.totalDurationSeconds,
+    required this.caloriesEstimated,
+    required this.exercisesCompleted,
+    required this.seriesCompleted,
+    required this.repsCompleted,
+    required this.totalLoadKg,
+    required this.muscleGroups,
+    required this.activityByDay,
+    required this.recentActivities,
+  });
+
+  final int rangeInDays;
+  final int daysTrained;
+  final int totalDurationSeconds;
+  final int caloriesEstimated;
+  final int exercisesCompleted;
+  final int seriesCompleted;
+  final int repsCompleted;
+  final double? totalLoadKg;
+  final List<MuscleActivityData> muscleGroups;
+  final List<ActivityByDayPointData> activityByDay;
+  final List<ActivityHistoryItemData> recentActivities;
+
+  factory ActivitySummaryData.fromJson(Map<String, dynamic> json) => ActivitySummaryData(
+        rangeInDays: json['rangeInDays'] as int,
+        daysTrained: json['daysTrained'] as int,
+        totalDurationSeconds: json['totalDurationSeconds'] as int,
+        caloriesEstimated: json['caloriesEstimated'] as int,
+        exercisesCompleted: json['exercisesCompleted'] as int,
+        seriesCompleted: json['seriesCompleted'] as int,
+        repsCompleted: json['repsCompleted'] as int,
+        totalLoadKg: (json['totalLoadKg'] as num?)?.toDouble(),
+        muscleGroups: (json['muscleGroups'] as List<dynamic>).map((item) => MuscleActivityData.fromJson(item as Map<String, dynamic>)).toList(),
+        activityByDay: (json['activityByDay'] as List<dynamic>).map((item) => ActivityByDayPointData.fromJson(item as Map<String, dynamic>)).toList(),
+        recentActivities: (json['recentActivities'] as List<dynamic>).map((item) => ActivityHistoryItemData.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+}
+
+class MuscleActivityData {
+  MuscleActivityData({
+    required this.muscleGroup,
+    required this.sessions,
+    required this.exercisesCompleted,
+    required this.percentage,
+    required this.fatigueStatus,
+  });
+
+  final String muscleGroup;
+  final int sessions;
+  final int exercisesCompleted;
+  final int percentage;
+  final String fatigueStatus;
+
+  String get label => exerciseMuscleGroupNameLabels[muscleGroup] ?? muscleGroup;
+
+  factory MuscleActivityData.fromJson(Map<String, dynamic> json) => MuscleActivityData(
+        muscleGroup: json['muscleGroup'].toString(),
+        sessions: json['sessions'] as int,
+        exercisesCompleted: json['exercisesCompleted'] as int,
+        percentage: json['percentage'] as int,
+        fatigueStatus: json['fatigueStatus'] as String,
+      );
+}
+
+class ActivityByDayPointData {
+  ActivityByDayPointData({
+    required this.day,
+    required this.activityCount,
+    required this.durationSeconds,
+    required this.caloriesEstimated,
+    required this.exercisesCompleted,
+  });
+
+  final DateTime day;
+  final int activityCount;
+  final int durationSeconds;
+  final int caloriesEstimated;
+  final int exercisesCompleted;
+
+  factory ActivityByDayPointData.fromJson(Map<String, dynamic> json) => ActivityByDayPointData(
+        day: DateTime.parse(json['day'] as String),
+        activityCount: json['activityCount'] as int,
+        durationSeconds: json['durationSeconds'] as int,
+        caloriesEstimated: json['caloriesEstimated'] as int,
+        exercisesCompleted: json['exercisesCompleted'] as int,
+      );
+}
+
+class ActivityHistoryItemData {
+  ActivityHistoryItemData({
+    required this.id,
+    required this.title,
+    required this.completedAt,
+    required this.durationSeconds,
+    required this.caloriesEstimated,
+    required this.exercisesCompleted,
+    required this.muscleGroups,
+    required this.notes,
+  });
+
+  final String id;
+  final String title;
+  final DateTime completedAt;
+  final int durationSeconds;
+  final int caloriesEstimated;
+  final int exercisesCompleted;
+  final List<String> muscleGroups;
+  final String? notes;
+
+  factory ActivityHistoryItemData.fromJson(Map<String, dynamic> json) => ActivityHistoryItemData(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        completedAt: DateTime.parse(json['completedAt'] as String),
+        durationSeconds: json['durationSeconds'] as int,
+        caloriesEstimated: json['caloriesEstimated'] as int,
+        exercisesCompleted: json['exercisesCompleted'] as int,
+        muscleGroups: (json['muscleGroups'] as List<dynamic>).map((item) => item.toString()).toList(),
+        notes: json['notes'] as String?,
+      );
+}
+
+class ManualWorkoutActivityInput {
+  ManualWorkoutActivityInput({
+    required this.completedAt,
+    required this.durationSeconds,
+    required this.caloriesEstimated,
+    required this.notes,
+    required this.exercises,
+  });
+
+  final DateTime completedAt;
+  final int durationSeconds;
+  final int caloriesEstimated;
+  final String? notes;
+  final List<ManualWorkoutExerciseInput> exercises;
+
+  Map<String, dynamic> toJson() => {
+        'completedAt': completedAt.toUtc().toIso8601String(),
+        'durationSeconds': durationSeconds,
+        'caloriesEstimated': caloriesEstimated,
+        'notes': notes,
+        'exercises': exercises.map((item) => item.toJson()).toList(),
+      };
+}
+
+class ManualWorkoutExerciseInput {
+  ManualWorkoutExerciseInput({
+    required this.exerciseName,
+    required this.muscleGroup,
+    required this.sets,
+    required this.reps,
+    required this.weightKg,
+    required this.completed,
+  });
+
+  final String exerciseName;
+  final int muscleGroup;
+  final int sets;
+  final String reps;
+  final double? weightKg;
+  final bool completed;
+
+  Map<String, dynamic> toJson() => {
+        'exerciseName': exerciseName,
+        'muscleGroup': muscleGroup,
+        'sets': sets,
+        'reps': reps,
+        'weightKg': weightKg,
+        'completed': completed,
+      };
 }
 
 class GymClass {
@@ -1996,6 +2203,8 @@ class _HomePageState extends State<HomePage> {
             QuickActionCard(icon: Icons.monitor_weight_outlined, title: 'Cuerpo', subtitle: 'Peso, medidas y progreso', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BodyTrackingPage()))),
             const SizedBox(height: 12),
             QuickActionCard(icon: Icons.assignment_outlined, title: 'Mi plan de entrenamiento', subtitle: 'Rutina personalizada', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrainingPlanPage()))),
+            const SizedBox(height: 12),
+            QuickActionCard(icon: Icons.insights_outlined, title: 'Actividades', subtitle: 'Progreso y constancia', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage()))),
             const SizedBox(height: 24),
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -2427,6 +2636,13 @@ class ProfilePage extends StatelessWidget {
           title: 'Mi perfil fitness',
           subtitle: fitnessProfile?.onboardingCompleted == true ? 'Editar onboarding' : 'Completar onboarding',
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitnessOnboardingPage(editMode: true))),
+        ),
+        const SizedBox(height: 12),
+        QuickActionCard(
+          icon: Icons.insights_outlined,
+          title: 'Actividades',
+          subtitle: 'Resumen e historial',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage())),
         ),
         const SizedBox(height: 12),
         QuickActionCard(
@@ -2938,6 +3154,586 @@ class _TrainingQuickTab extends StatelessWidget {
       ],
     );
   }
+}
+
+class ActivityPage extends StatefulWidget {
+  const ActivityPage({super.key});
+
+  @override
+  State<ActivityPage> createState() => _ActivityPageState();
+}
+
+class _ActivityPageState extends State<ActivityPage> {
+  int range = 7;
+  late Future<_ActivityBundle> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = _load();
+  }
+
+  Future<_ActivityBundle> _load() async {
+    final api = context.read<ActivityApi>();
+    final result = await Future.wait<dynamic>([
+      api.getSummary(range),
+      api.getHistory(),
+      api.getMuscleActivity(),
+    ]);
+
+    return _ActivityBundle(
+      summary: result[0] as ActivitySummaryData,
+      history: result[1] as List<ActivityHistoryItemData>,
+      muscles: result[2] as List<MuscleActivityData>,
+    );
+  }
+
+  Future<void> _refresh() async {
+    setState(() => future = _load());
+    await future;
+  }
+
+  void _changeRange(int value) {
+    if (value == range) return;
+    setState(() {
+      range = value;
+      future = _load();
+    });
+  }
+
+  Future<void> _openManualForm() async {
+    final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const ManualWorkoutActivityPage()));
+    if (changed == true) {
+      await _refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_ActivityBundle>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const PremiumScaffold(title: 'Actividades', child: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+          return PremiumScaffold(title: 'Actividades', child: Center(child: Text(snapshot.error.toString())));
+        }
+
+        final bundle = snapshot.data!;
+        return DefaultTabController(
+          length: 2,
+          child: PremiumScaffold(
+            title: 'Actividades',
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: GlowCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tu consistencia Dorian', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        const Text('Entrena y registra tus actividades para ver estadísticas.', style: TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [7, 14, 28, 90]
+                              .map(
+                                (value) => ChoiceChip(
+                                  label: Text('$value dias'),
+                                  selected: range == value,
+                                  selectedColor: dorianAccent.withValues(alpha: 0.24),
+                                  onSelected: (_) => _changeRange(value),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: TabBar(
+                    labelColor: dorianAccent,
+                    unselectedLabelColor: Colors.white70,
+                    indicatorColor: dorianAccent,
+                    tabs: [
+                      Tab(text: 'Actividades'),
+                      Tab(text: 'Historico'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _ActivitySummaryTab(bundle: bundle, onAdd: _openManualForm),
+                      _ActivityHistoryTab(bundle: bundle, onAdd: _openManualForm),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ActivitySummaryTab extends StatelessWidget {
+  const _ActivitySummaryTab({required this.bundle, required this.onAdd});
+
+  final _ActivityBundle bundle;
+  final Future<void> Function() onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = bundle.summary;
+    final muscles = bundle.muscles.isNotEmpty ? bundle.muscles : summary.muscleGroups;
+
+    if (summary.recentActivities.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Aun no hay actividad registrada', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                const Text('Entrena y registra tus actividades para ver estadísticas.', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add_circle_outline),
+                  label: const Text('Añadir actividad manual'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _BodyMetricCard(title: 'Duracion', value: formatDuration(summary.totalDurationSeconds), subtitle: '${summary.daysTrained} dias entrenados'),
+            _BodyMetricCard(title: 'Calorias', value: '${summary.caloriesEstimated}', subtitle: 'Estimacion total'),
+            _BodyMetricCard(title: 'Ejercicios', value: '${summary.exercisesCompleted}', subtitle: '${summary.seriesCompleted} series'),
+            _BodyMetricCard(title: 'Reps', value: '${summary.repsCompleted}', subtitle: summary.totalLoadKg == null ? 'Sin carga' : '${summary.totalLoadKg!.toStringAsFixed(1)} kg'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Actividad por dia', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              ActivityBarChart(points: summary.activityByDay),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Regiones mas entrenadas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              for (final muscle in muscles) ...[
+                Row(
+                  children: [
+                    Expanded(child: Text(muscle.label)),
+                    Text('${muscle.percentage}%'),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                LinearProgressIndicator(
+                  value: (muscle.percentage / 100).clamp(0.0, 1.0),
+                  backgroundColor: Colors.white.withValues(alpha: 0.08),
+                  color: dorianAccent,
+                ),
+                const SizedBox(height: 4),
+                Text('${muscle.exercisesCompleted} ejercicios · ${muscle.fatigueStatus}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                const SizedBox(height: 12),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Fatiga muscular', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: muscles
+                    .map(
+                      (muscle) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          color: Colors.white.withValues(alpha: 0.04),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(muscle.label, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            Text(muscle.fatigueStatus, style: const TextStyle(color: dorianAccentSoft)),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActivityHistoryTab extends StatelessWidget {
+  const _ActivityHistoryTab({required this.bundle, required this.onAdd});
+
+  final _ActivityBundle bundle;
+  final Future<void> Function() onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final history = bundle.history;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text('Calendario mensual', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700))),
+                  TextButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Añadir')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              MonthlyActivityCalendar(history: history),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (history.isEmpty)
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Sin actividades todavia', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                const Text('Entrena y registra tus actividades para ver estadísticas.', style: TextStyle(color: Colors.white70)),
+              ],
+            ),
+          )
+        else
+          ...history.map(
+            (activity) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: GlowCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(activity.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Text(formatDateTime(activity.completedAt), style: const TextStyle(color: dorianAccentSoft)),
+                    const SizedBox(height: 8),
+                    Text('${formatDuration(activity.durationSeconds)} · ${activity.caloriesEstimated} kcal · ${activity.exercisesCompleted} ejercicios', style: const TextStyle(color: Colors.white70)),
+                    if (activity.notes != null && activity.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(activity.notes!, style: const TextStyle(color: dorianTextSoft)),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class ManualWorkoutActivityPage extends StatefulWidget {
+  const ManualWorkoutActivityPage({super.key});
+
+  @override
+  State<ManualWorkoutActivityPage> createState() => _ManualWorkoutActivityPageState();
+}
+
+class _ManualWorkoutActivityPageState extends State<ManualWorkoutActivityPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _title = TextEditingController();
+  final _durationMinutes = TextEditingController();
+  final _calories = TextEditingController();
+  final _sets = TextEditingController(text: '3');
+  final _reps = TextEditingController(text: '12');
+  final _weight = TextEditingController();
+  final _notes = TextEditingController();
+  DateTime completedAt = DateTime.now();
+  int muscleGroup = 10;
+  bool isSaving = false;
+
+  @override
+  void dispose() {
+    for (final controller in [_title, _durationMinutes, _calories, _sets, _reps, _weight, _notes]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: completedAt,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (selected == null) return;
+    setState(() => completedAt = DateTime(selected.year, selected.month, selected.day, completedAt.hour, completedAt.minute));
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => isSaving = true);
+    try {
+      await context.read<ActivityApi>().createManualActivity(
+            ManualWorkoutActivityInput(
+              completedAt: completedAt,
+              durationSeconds: int.parse(_durationMinutes.text.trim()) * 60,
+              caloriesEstimated: int.parse(_calories.text.trim()),
+              notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+              exercises: [
+                ManualWorkoutExerciseInput(
+                  exerciseName: _title.text.trim(),
+                  muscleGroup: muscleGroup,
+                  sets: int.parse(_sets.text.trim()),
+                  reps: _reps.text.trim(),
+                  weightKg: _parseDouble(_weight.text),
+                  completed: true,
+                ),
+              ],
+            ),
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumScaffold(
+      title: 'Añadir actividad',
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Fecha', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      TextButton(onPressed: _pickDate, child: Text(formatDate(completedAt))),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _title,
+                    decoration: const InputDecoration(labelText: 'Ejercicio principal'),
+                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Ingresa un ejercicio' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: muscleGroup,
+                    decoration: const InputDecoration(labelText: 'Grupo muscular'),
+                    items: exerciseMuscleGroupLabels.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+                    onChanged: (value) => setState(() => muscleGroup = value ?? 10),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildIntField(_durationMinutes, 'Duracion (min)', min: 1),
+                  const SizedBox(height: 12),
+                  _buildIntField(_calories, 'Calorias estimadas', min: 0),
+                  const SizedBox(height: 12),
+                  _buildIntField(_sets, 'Series', min: 0),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _reps,
+                    decoration: const InputDecoration(labelText: 'Repeticiones'),
+                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Ingresa las repeticiones' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _weight,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Carga (kg) opcional'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notes,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(labelText: 'Notas'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: isSaving ? null : _submit,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(isSaving ? 'Guardando...' : 'Guardar actividad'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIntField(TextEditingController controller, String label, {required int min}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(labelText: label),
+      validator: (value) {
+        final parsed = int.tryParse(value?.trim() ?? '');
+        if (parsed == null) return 'Ingresa un numero valido';
+        if (parsed < min) return 'Debe ser mayor o igual a $min';
+        return null;
+      },
+    );
+  }
+}
+
+class ActivityBarChart extends StatelessWidget {
+  const ActivityBarChart({super.key, required this.points});
+
+  final List<ActivityByDayPointData> points;
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.isEmpty) {
+      return const Text('Sin actividad reciente.', style: TextStyle(color: Colors.white70));
+    }
+
+    final maxValue = points.map((item) => item.activityCount).fold<int>(0, (current, item) => item > current ? item : current);
+    final safeMax = maxValue == 0 ? 1 : maxValue;
+
+    return SizedBox(
+      height: 160,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: points.map((point) {
+          final ratio = point.activityCount / safeMax;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text('${point.activityCount}', style: const TextStyle(fontSize: 10, color: dorianAccentSoft)),
+                  const SizedBox(height: 6),
+                  Container(
+                    height: 34 + (ratio * 80),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: const LinearGradient(colors: [dorianAccent, dorianAccentSoft], begin: Alignment.bottomCenter, end: Alignment.topCenter),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${point.day.day}/${point.day.month}', style: const TextStyle(fontSize: 10, color: Colors.white54)),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class MonthlyActivityCalendar extends StatelessWidget {
+  const MonthlyActivityCalendar({super.key, required this.history});
+
+  final List<ActivityHistoryItemData> history;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final firstDay = DateTime(now.year, now.month, 1);
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final activeDays = history
+        .where((item) => item.completedAt.year == now.year && item.completedAt.month == now.month)
+        .map((item) => item.completedAt.day)
+        .toSet();
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(daysInMonth + firstDay.weekday - 1, (index) {
+        if (index < firstDay.weekday - 1) {
+          return const SizedBox(width: 36, height: 36);
+        }
+
+        final day = index - firstDay.weekday + 2;
+        final isActive = activeDays.contains(day);
+        return Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: isActive ? dorianAccent.withValues(alpha: 0.22) : Colors.white.withValues(alpha: 0.04),
+            border: Border.all(color: isActive ? dorianAccent : Colors.white.withValues(alpha: 0.06)),
+          ),
+          alignment: Alignment.center,
+          child: Text('$day', style: TextStyle(color: isActive ? Colors.white : Colors.white70, fontWeight: isActive ? FontWeight.w700 : FontWeight.w500)),
+        );
+      }),
+    );
+  }
+}
+
+class _ActivityBundle {
+  const _ActivityBundle({
+    required this.summary,
+    required this.history,
+    required this.muscles,
+  });
+
+  final ActivitySummaryData summary;
+  final List<ActivityHistoryItemData> history;
+  final List<MuscleActivityData> muscles;
 }
 
 class BodyTrackingPage extends StatefulWidget {
@@ -3894,6 +4690,21 @@ double? _parseDouble(String text) {
   final normalized = text.trim().replaceAll(',', '.');
   if (normalized.isEmpty) return null;
   return double.tryParse(normalized);
+}
+
+String formatDuration(int durationSeconds) {
+  final totalMinutes = (durationSeconds / 60).round();
+  final hours = totalMinutes ~/ 60;
+  final minutes = totalMinutes % 60;
+  if (hours <= 0) {
+    return '$minutes min';
+  }
+
+  if (minutes == 0) {
+    return '$hours h';
+  }
+
+  return '${hours}h ${minutes}m';
 }
 
 extension IterableX<T> on Iterable<T> {

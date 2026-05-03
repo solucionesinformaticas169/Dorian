@@ -1,5 +1,5 @@
 import { apiFetch, authFetch } from "@/lib/api/client";
-import type { AccessPass, BodySummary, Booking, Branch, CheckIn, ClassSession, Customer, CustomerFitnessProfile, DashboardSummary, Membership, Promotion, Session, TrainingPlan } from "@/lib/types";
+import type { AccessPass, ActivitySummary, BodySummary, Booking, Branch, CheckIn, ClassSession, Customer, CustomerFitnessProfile, DashboardSummary, Membership, Promotion, Session, TrainingPlan } from "@/lib/types";
 
 export const authApi = {
   login: (payload: { email: string; password: string }) => authFetch<Session>("/login", { method: "POST", body: JSON.stringify(payload) }),
@@ -20,6 +20,7 @@ export const customersApi = {
   fitnessProfile: (customerId: string) => apiFetch<CustomerFitnessProfile>(`/customers/${customerId}/fitness-profile`),
   bodySummary: (customerId: string) => apiFetch<BodySummary>(`/customers/${customerId}/body-summary`),
   trainingPlan: (customerId: string) => apiFetch<TrainingPlan | undefined>(`/customers/${customerId}/training-plan`),
+  activitySummary: (customerId: string, range = 7) => apiFetch<ActivitySummary>(`/customers/${customerId}/activity-summary?range=${range}`),
   generateTrainingPlan: (customerId: string) => apiFetch<TrainingPlan>(`/customers/${customerId}/training-plan/generate`, { method: "POST" }),
   create: (payload: unknown) => apiFetch<Customer>("/customers", { method: "POST", body: JSON.stringify(payload) }),
   update: (id: string, payload: unknown) => apiFetch<Customer>(`/customers/${id}`, { method: "PUT", body: JSON.stringify(payload) }),

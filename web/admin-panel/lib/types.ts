@@ -166,6 +166,47 @@ export type TrainingPlan = {
   phases: TrainingPlanPhase[];
 };
 
+export type ActivitySummaryMuscleGroup = {
+  muscleGroup: string;
+  sessions: number;
+  exercisesCompleted: number;
+  percentage: number;
+  fatigueStatus: string;
+};
+
+export type ActivityByDayPoint = {
+  day: string;
+  activityCount: number;
+  durationSeconds: number;
+  caloriesEstimated: number;
+  exercisesCompleted: number;
+};
+
+export type ActivityHistoryItem = {
+  id: string;
+  title: string;
+  completedAt: string;
+  durationSeconds: number;
+  caloriesEstimated: number;
+  exercisesCompleted: number;
+  muscleGroups: string[];
+  notes?: string | null;
+};
+
+export type ActivitySummary = {
+  rangeInDays: number;
+  daysTrained: number;
+  totalDurationSeconds: number;
+  caloriesEstimated: number;
+  exercisesCompleted: number;
+  seriesCompleted: number;
+  repsCompleted: number;
+  totalLoadKg?: number | null;
+  muscleGroups: ActivitySummaryMuscleGroup[];
+  activityByDay: ActivityByDayPoint[];
+  recentActivities: ActivityHistoryItem[];
+};
+
 export type Membership = {
   id: string;
   branchId: string;
