@@ -43,6 +43,7 @@ void main() {
         Provider.value(value: PromotionApi(client)),
         Provider.value(value: AccessApi(client)),
         Provider.value(value: FitnessProfileApi(client)),
+        Provider.value(value: BodyTrackingApi(client)),
       ],
       child: const DorianApp(),
     ),
@@ -268,6 +269,7 @@ class ApiClient {
   Future<dynamic> get(String path, {bool authenticated = true}) => _send('GET', path, authenticated: authenticated);
   Future<dynamic> post(String path, {bool authenticated = true, Object? body}) => _send('POST', path, authenticated: authenticated, body: body);
   Future<dynamic> put(String path, {bool authenticated = true, Object? body}) => _send('PUT', path, authenticated: authenticated, body: body);
+  Future<dynamic> delete(String path, {bool authenticated = true}) => _send('DELETE', path, authenticated: authenticated);
 
   Future<dynamic> _send(String method, String path, {required bool authenticated, Object? body, bool retry = true}) async {
     final headers = <String, String>{'Content-Type': 'application/json', 'Accept': 'application/json'};
@@ -282,6 +284,8 @@ class ApiClient {
       response = await _client.get(uri, headers: headers);
     } else if (method == 'POST') {
       response = await _client.post(uri, headers: headers, body: payload);
+    } else if (method == 'DELETE') {
+      response = await _client.delete(uri, headers: headers);
     } else {
       response = await _client.put(uri, headers: headers, body: payload);
     }
@@ -373,6 +377,40 @@ class FitnessProfileApi {
   Future<CustomerFitnessProfile> getMyProfile() async => CustomerFitnessProfile.fromJson(await client.get('/customers/me/fitness-profile') as Map<String, dynamic>);
   Future<CustomerFitnessProfile> create(CustomerFitnessProfileInput payload) async => CustomerFitnessProfile.fromJson(await client.post('/customers/me/fitness-profile', body: payload.toJson()) as Map<String, dynamic>);
   Future<CustomerFitnessProfile> update(CustomerFitnessProfileInput payload) async => CustomerFitnessProfile.fromJson(await client.put('/customers/me/fitness-profile', body: payload.toJson()) as Map<String, dynamic>);
+}
+
+class BodyTrackingApi {
+  BodyTrackingApi(this.client);
+  final ApiClient client;
+
+  Future<List<BodyMeasurement>> listMeasurements() async => ((await client.get('/customers/me/body-measurements')) as List<dynamic>).map((item) => BodyMeasurement.fromJson(item as Map<String, dynamic>)).toList();
+  Future<BodyMeasurement?> latestMeasurement() async {
+    try {
+      final payload = await client.get('/customers/me/body-measurements/latest');
+      if (payload == null) return null;
+      return BodyMeasurement.fromJson(payload as Map<String, dynamic>);
+    } catch (error) {
+      if (error.toString().contains('204')) return null;
+      rethrow;
+    }
+  }
+
+  Future<BodyMeasurement> createMeasurement(BodyMeasurementInput payload) async =>
+      BodyMeasurement.fromJson(await client.post('/customers/me/body-measurements', body: payload.toJson()) as Map<String, dynamic>);
+
+  Future<BodyMeasurement> updateMeasurement(String measurementId, BodyMeasurementInput payload) async =>
+      BodyMeasurement.fromJson(await client.put('/customers/me/body-measurements/$measurementId', body: payload.toJson()) as Map<String, dynamic>);
+
+  Future<void> deleteMeasurement(String measurementId) async => client.delete('/customers/me/body-measurements/$measurementId');
+
+  Future<List<BodyProgressPhoto>> listPhotos() async => ((await client.get('/customers/me/body-progress-photos')) as List<dynamic>).map((item) => BodyProgressPhoto.fromJson(item as Map<String, dynamic>)).toList();
+
+  Future<BodyProgressPhoto> createPhoto(BodyProgressPhotoInput payload) async =>
+      BodyProgressPhoto.fromJson(await client.post('/customers/me/body-progress-photos', body: payload.toJson()) as Map<String, dynamic>);
+
+  Future<void> deletePhoto(String photoId) async => client.delete('/customers/me/body-progress-photos/$photoId');
+
+  Future<BodySummary> getSummary() async => BodySummary.fromJson(await client.get('/customers/me/body-summary') as Map<String, dynamic>);
 }
 
 class AuthSession {
@@ -679,6 +717,265 @@ class CustomerFitnessProfileInput {
         'notificationIntensity': notificationIntensity,
         'onboardingCompleted': onboardingCompleted,
       };
+}
+
+class BodyMeasurement {
+  BodyMeasurement({
+    required this.id,
+    required this.customerId,
+    required this.measuredAt,
+    required this.weightKg,
+    required this.heightCm,
+    required this.bodyFatPercentage,
+    required this.muscleMassKg,
+    required this.boneMassKg,
+    required this.residualMassKg,
+    required this.bmi,
+    required this.waistCm,
+    required this.chestCm,
+    required this.hipCm,
+    required this.shouldersCm,
+    required this.leftArmCm,
+    required this.rightArmCm,
+    required this.leftLegCm,
+    required this.rightLegCm,
+    required this.leftCalfCm,
+    required this.rightCalfCm,
+    required this.neckCm,
+    required this.notes,
+  });
+
+  final String id;
+  final String customerId;
+  final DateTime measuredAt;
+  final double weightKg;
+  final double heightCm;
+  final double? bodyFatPercentage;
+  final double? muscleMassKg;
+  final double? boneMassKg;
+  final double? residualMassKg;
+  final double bmi;
+  final double? waistCm;
+  final double? chestCm;
+  final double? hipCm;
+  final double? shouldersCm;
+  final double? leftArmCm;
+  final double? rightArmCm;
+  final double? leftLegCm;
+  final double? rightLegCm;
+  final double? leftCalfCm;
+  final double? rightCalfCm;
+  final double? neckCm;
+  final String? notes;
+
+  factory BodyMeasurement.fromJson(Map<String, dynamic> json) => BodyMeasurement(
+        id: json['id'] as String,
+        customerId: json['customerId'] as String,
+        measuredAt: DateTime.parse(json['measuredAt'] as String),
+        weightKg: (json['weightKg'] as num).toDouble(),
+        heightCm: (json['heightCm'] as num).toDouble(),
+        bodyFatPercentage: (json['bodyFatPercentage'] as num?)?.toDouble(),
+        muscleMassKg: (json['muscleMassKg'] as num?)?.toDouble(),
+        boneMassKg: (json['boneMassKg'] as num?)?.toDouble(),
+        residualMassKg: (json['residualMassKg'] as num?)?.toDouble(),
+        bmi: (json['bmi'] as num).toDouble(),
+        waistCm: (json['waistCm'] as num?)?.toDouble(),
+        chestCm: (json['chestCm'] as num?)?.toDouble(),
+        hipCm: (json['hipCm'] as num?)?.toDouble(),
+        shouldersCm: (json['shouldersCm'] as num?)?.toDouble(),
+        leftArmCm: (json['leftArmCm'] as num?)?.toDouble(),
+        rightArmCm: (json['rightArmCm'] as num?)?.toDouble(),
+        leftLegCm: (json['leftLegCm'] as num?)?.toDouble(),
+        rightLegCm: (json['rightLegCm'] as num?)?.toDouble(),
+        leftCalfCm: (json['leftCalfCm'] as num?)?.toDouble(),
+        rightCalfCm: (json['rightCalfCm'] as num?)?.toDouble(),
+        neckCm: (json['neckCm'] as num?)?.toDouble(),
+        notes: json['notes'] as String?,
+      );
+}
+
+class BodyMeasurementInput {
+  BodyMeasurementInput({
+    required this.measuredAt,
+    required this.weightKg,
+    required this.heightCm,
+    required this.bodyFatPercentage,
+    required this.muscleMassKg,
+    required this.boneMassKg,
+    required this.residualMassKg,
+    required this.waistCm,
+    required this.chestCm,
+    required this.hipCm,
+    required this.shouldersCm,
+    required this.leftArmCm,
+    required this.rightArmCm,
+    required this.leftLegCm,
+    required this.rightLegCm,
+    required this.leftCalfCm,
+    required this.rightCalfCm,
+    required this.neckCm,
+    required this.notes,
+  });
+
+  final DateTime measuredAt;
+  final double weightKg;
+  final double heightCm;
+  final double? bodyFatPercentage;
+  final double? muscleMassKg;
+  final double? boneMassKg;
+  final double? residualMassKg;
+  final double? waistCm;
+  final double? chestCm;
+  final double? hipCm;
+  final double? shouldersCm;
+  final double? leftArmCm;
+  final double? rightArmCm;
+  final double? leftLegCm;
+  final double? rightLegCm;
+  final double? leftCalfCm;
+  final double? rightCalfCm;
+  final double? neckCm;
+  final String? notes;
+
+  Map<String, dynamic> toJson() => {
+        'measuredAt': measuredAt.toUtc().toIso8601String(),
+        'weightKg': weightKg,
+        'heightCm': heightCm,
+        'bodyFatPercentage': bodyFatPercentage,
+        'muscleMassKg': muscleMassKg,
+        'boneMassKg': boneMassKg,
+        'residualMassKg': residualMassKg,
+        'waistCm': waistCm,
+        'chestCm': chestCm,
+        'hipCm': hipCm,
+        'shouldersCm': shouldersCm,
+        'leftArmCm': leftArmCm,
+        'rightArmCm': rightArmCm,
+        'leftLegCm': leftLegCm,
+        'rightLegCm': rightLegCm,
+        'leftCalfCm': leftCalfCm,
+        'rightCalfCm': rightCalfCm,
+        'neckCm': neckCm,
+        'notes': notes,
+      };
+}
+
+class BodyProgressPhoto {
+  BodyProgressPhoto({
+    required this.id,
+    required this.customerId,
+    required this.photoUrl,
+    required this.takenAt,
+    required this.type,
+    required this.notes,
+    required this.createdAtUtc,
+  });
+
+  final String id;
+  final String customerId;
+  final String photoUrl;
+  final DateTime takenAt;
+  final int type;
+  final String? notes;
+  final DateTime createdAtUtc;
+
+  String get typeLabel => switch (type) {
+    1 => 'Frontal',
+    2 => 'Lateral',
+    3 => 'Espalda',
+    _ => 'Otra',
+  };
+
+  factory BodyProgressPhoto.fromJson(Map<String, dynamic> json) => BodyProgressPhoto(
+        id: json['id'] as String,
+        customerId: json['customerId'] as String,
+        photoUrl: json['photoUrl'] as String,
+        takenAt: DateTime.parse(json['takenAt'] as String),
+        type: json['type'] as int,
+        notes: json['notes'] as String?,
+        createdAtUtc: DateTime.parse(json['createdAtUtc'] as String),
+      );
+}
+
+class BodyProgressPhotoInput {
+  BodyProgressPhotoInput({
+    required this.photoUrl,
+    required this.takenAt,
+    required this.type,
+    required this.notes,
+  });
+
+  final String photoUrl;
+  final DateTime takenAt;
+  final int type;
+  final String? notes;
+
+  Map<String, dynamic> toJson() => {
+        'photoUrl': photoUrl,
+        'takenAt': takenAt.toUtc().toIso8601String(),
+        'type': type,
+        'notes': notes,
+      };
+}
+
+class BodyWeightHistoryPoint {
+  BodyWeightHistoryPoint({required this.measuredAt, required this.weightKg, required this.bmi});
+
+  final DateTime measuredAt;
+  final double weightKg;
+  final double bmi;
+
+  factory BodyWeightHistoryPoint.fromJson(Map<String, dynamic> json) => BodyWeightHistoryPoint(
+        measuredAt: DateTime.parse(json['measuredAt'] as String),
+        weightKg: (json['weightKg'] as num).toDouble(),
+        bmi: (json['bmi'] as num).toDouble(),
+      );
+}
+
+class BodySummary {
+  BodySummary({
+    required this.currentWeightKg,
+    required this.targetWeightKg,
+    required this.heightCm,
+    required this.bmi,
+    required this.bmiLabel,
+    required this.latestMeasurementDate,
+    required this.weightHistory,
+    required this.measurementsHistory,
+    required this.progressPhotos,
+    required this.daysSinceLastMeasurement,
+  });
+
+  final double? currentWeightKg;
+  final double? targetWeightKg;
+  final double? heightCm;
+  final double? bmi;
+  final String bmiLabel;
+  final DateTime? latestMeasurementDate;
+  final List<BodyWeightHistoryPoint> weightHistory;
+  final List<Map<String, dynamic>> measurementsHistory;
+  final List<BodyProgressPhoto> progressPhotos;
+  final int? daysSinceLastMeasurement;
+
+  double? get weightDifference => currentWeightKg == null || targetWeightKg == null ? null : currentWeightKg! - targetWeightKg!;
+  double? get estimatedIdealWeightKg {
+    if (heightCm == null || heightCm == 0) return null;
+    final meters = heightCm! / 100;
+    return double.parse((22 * meters * meters).toStringAsFixed(1));
+  }
+
+  factory BodySummary.fromJson(Map<String, dynamic> json) => BodySummary(
+        currentWeightKg: (json['currentWeightKg'] as num?)?.toDouble(),
+        targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
+        heightCm: (json['heightCm'] as num?)?.toDouble(),
+        bmi: (json['bmi'] as num?)?.toDouble(),
+        bmiLabel: json['bmiLabel']?.toString() ?? 'Sin datos',
+        latestMeasurementDate: json['latestMeasurementDate'] == null ? null : DateTime.parse(json['latestMeasurementDate'] as String),
+        weightHistory: (json['weightHistory'] as List<dynamic>? ?? const []).map((item) => BodyWeightHistoryPoint.fromJson(item as Map<String, dynamic>)).toList(),
+        measurementsHistory: (json['measurementsHistory'] as List<dynamic>? ?? const []).map((item) => (item as Map<String, dynamic>)).toList(),
+        progressPhotos: (json['progressPhotos'] as List<dynamic>? ?? const []).map((item) => BodyProgressPhoto.fromJson(item as Map<String, dynamic>)).toList(),
+        daysSinceLastMeasurement: json['daysSinceLastMeasurement'] as int?,
+      );
 }
 
 class GymClass {
@@ -1464,6 +1761,8 @@ class _HomePageState extends State<HomePage> {
             Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresia', subtitle: 'Mi plan', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
             const SizedBox(height: 12),
             QuickActionCard(icon: Icons.event_available, title: 'Mis reservas', subtitle: 'Ver y cancelar clases', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage()))),
+            const SizedBox(height: 12),
+            QuickActionCard(icon: Icons.monitor_weight_outlined, title: 'Cuerpo', subtitle: 'Peso, medidas y progreso', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BodyTrackingPage()))),
             const SizedBox(height: 24),
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -1870,6 +2169,13 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         QuickActionCard(
+          icon: Icons.monitor_weight_outlined,
+          title: 'Mi cuerpo',
+          subtitle: 'Seguimiento corporal',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BodyTrackingPage())),
+        ),
+        const SizedBox(height: 12),
+        QuickActionCard(
           icon: Icons.qr_code_2,
           title: 'Mi QR de acceso',
           subtitle: 'Ver o regenerar',
@@ -2000,6 +2306,941 @@ class AccessPassPage extends StatelessWidget {
       },
     );
   }
+}
+
+class BodyTrackingPage extends StatefulWidget {
+  const BodyTrackingPage({super.key});
+
+  @override
+  State<BodyTrackingPage> createState() => _BodyTrackingPageState();
+}
+
+class _BodyTrackingPageState extends State<BodyTrackingPage> {
+  late Future<_BodyTrackingBundle> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = _load();
+  }
+
+  Future<_BodyTrackingBundle> _load() async {
+    final api = context.read<BodyTrackingApi>();
+    final result = await Future.wait<dynamic>([
+      api.getSummary(),
+      api.listMeasurements(),
+      api.listPhotos(),
+    ]);
+
+    return _BodyTrackingBundle(
+      summary: result[0] as BodySummary,
+      measurements: result[1] as List<BodyMeasurement>,
+      photos: result[2] as List<BodyProgressPhoto>,
+    );
+  }
+
+  Future<void> _reload() async {
+    setState(() => future = _load());
+    await future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<_BodyTrackingBundle>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const PremiumScaffold(title: 'Cuerpo', child: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+          return PremiumScaffold(title: 'Cuerpo', child: Center(child: Text(snapshot.error.toString())));
+        }
+
+        final bundle = snapshot.data!;
+        return DefaultTabController(
+          length: 3,
+          child: PremiumScaffold(
+            title: 'Cuerpo',
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: TabBar(
+                    labelColor: dorianAccent,
+                    unselectedLabelColor: Colors.white70,
+                    indicatorColor: dorianAccent,
+                    tabs: [
+                      Tab(text: 'Peso'),
+                      Tab(text: 'Medidas'),
+                      Tab(text: 'Avanzado'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _BodyWeightTab(bundle: bundle, onRefresh: _reload),
+                      _BodyMeasurementsTab(bundle: bundle, onRefresh: _reload),
+                      _BodyAdvancedTab(bundle: bundle, onRefresh: _reload),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BodyTrackingBundle {
+  const _BodyTrackingBundle({
+    required this.summary,
+    required this.measurements,
+    required this.photos,
+  });
+
+  final BodySummary summary;
+  final List<BodyMeasurement> measurements;
+  final List<BodyProgressPhoto> photos;
+}
+
+class _BodyWeightTab extends StatelessWidget {
+  const _BodyWeightTab({required this.bundle, required this.onRefresh});
+
+  final _BodyTrackingBundle bundle;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = bundle.summary;
+    final measurements = bundle.measurements;
+    final latest = measurements.isEmpty ? null : measurements.first;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        if (measurements.isEmpty) ...[
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Empieza tu seguimiento corporal', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                const Text('Registra tu primera medicion y empieza a ver tu progreso en peso, IMC y medidas.', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _openMeasurementForm(context, onRefresh: onRefresh),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar medicion'),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _BodyMetricCard(title: 'Peso actual', value: '${summary.currentWeightKg?.toStringAsFixed(1) ?? '-'} kg', subtitle: 'Ultima medicion'),
+              _BodyMetricCard(title: 'Peso objetivo', value: '${summary.targetWeightKg?.toStringAsFixed(1) ?? '-'} kg', subtitle: 'Meta personal'),
+              _BodyMetricCard(
+                title: 'Diferencia',
+                value: summary.weightDifference == null ? '-' : '${summary.weightDifference!.toStringAsFixed(1)} kg',
+                subtitle: summary.weightDifference == null ? 'Sin meta' : summary.weightDifference! > 0 ? 'Por bajar' : 'Por mantener',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('Evolucion de peso', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => _openMeasurementForm(context, onRefresh: onRefresh),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Agregar'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                WeightHistoryChart(history: summary.weightHistory),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Diagnostico rapido', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                _BodyInfoLine(label: 'IMC', value: summary.bmi == null ? 'Sin calcular' : '${summary.bmi!.toStringAsFixed(2)} · ${summary.bmiLabel}'),
+                _BodyInfoLine(label: 'Grasa corporal', value: latest?.bodyFatPercentage == null ? 'Sin dato' : '${latest!.bodyFatPercentage!.toStringAsFixed(1)} %'),
+                _BodyInfoLine(label: 'Peso ideal estimado', value: summary.estimatedIdealWeightKg == null ? 'Sin dato' : '${summary.estimatedIdealWeightKg!.toStringAsFixed(1)} kg'),
+                _BodyInfoLine(label: 'Ultima medicion', value: summary.latestMeasurementDate == null ? 'Sin registros' : formatDate(summary.latestMeasurementDate!)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Historial', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                for (final item in measurements) ...[
+                  _MeasurementListItem(
+                    item: item,
+                    onEdit: () => _openMeasurementForm(context, onRefresh: onRefresh, initial: item),
+                    onDelete: () => _deleteMeasurement(context, item.id, onRefresh),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _BodyMeasurementsTab extends StatelessWidget {
+  const _BodyMeasurementsTab({required this.bundle, required this.onRefresh});
+
+  final _BodyTrackingBundle bundle;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = bundle.measurements.isEmpty ? null : bundle.measurements.first;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Medidas clave', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => _openMeasurementForm(context, onRefresh: onRefresh, initial: latest),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Agregar'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (latest == null)
+                const Text('Aun no tienes medidas registradas. Agrega una medicion para ver hombros, pecho, cintura y mas.', style: TextStyle(color: Colors.white70))
+              else
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _BodyMetricCard(title: 'Hombros', value: _formatMeasure(latest.shouldersCm), subtitle: 'Ultima medicion'),
+                    _BodyMetricCard(title: 'Pecho', value: _formatMeasure(latest.chestCm), subtitle: 'Perimetro'),
+                    _BodyMetricCard(title: 'Cintura', value: _formatMeasure(latest.waistCm), subtitle: 'Control central'),
+                    _BodyMetricCard(title: 'Cadera', value: _formatMeasure(latest.hipCm), subtitle: 'Equilibrio'),
+                    _BodyMetricCard(title: 'Brazo izq.', value: _formatMeasure(latest.leftArmCm), subtitle: 'Volumen'),
+                    _BodyMetricCard(title: 'Brazo der.', value: _formatMeasure(latest.rightArmCm), subtitle: 'Volumen'),
+                    _BodyMetricCard(title: 'Pierna izq.', value: _formatMeasure(latest.leftLegCm), subtitle: 'Potencia'),
+                    _BodyMetricCard(title: 'Pierna der.', value: _formatMeasure(latest.rightLegCm), subtitle: 'Potencia'),
+                    _BodyMetricCard(title: 'Gemelo izq.', value: _formatMeasure(latest.leftCalfCm), subtitle: 'Definicion'),
+                    _BodyMetricCard(title: 'Gemelo der.', value: _formatMeasure(latest.rightCalfCm), subtitle: 'Definicion'),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (bundle.measurements.isNotEmpty)
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Historial de medidas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                for (final item in bundle.measurements) ...[
+                  Text(formatDate(item.measuredAt), style: const TextStyle(color: dorianAccentSoft, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Text('Hombros ${_formatMeasure(item.shouldersCm)} · Pecho ${_formatMeasure(item.chestCm)} · Cintura ${_formatMeasure(item.waistCm)} · Cadera ${_formatMeasure(item.hipCm)}', style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _BodyAdvancedTab extends StatelessWidget {
+  const _BodyAdvancedTab({required this.bundle, required this.onRefresh});
+
+  final _BodyTrackingBundle bundle;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = bundle.measurements.isEmpty ? null : bundle.measurements.first;
+    final photos = bundle.photos;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Composicion corporal', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => _openMeasurementForm(context, onRefresh: onRefresh, initial: latest),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Agregar'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (latest == null)
+                const Text('Cuando registres una medicion avanzada veras masa muscular, grasa, masa osea y masa residual.', style: TextStyle(color: Colors.white70))
+              else
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _BodyMetricCard(title: 'Masa muscular', value: latest.muscleMassKg == null ? '-' : '${latest.muscleMassKg!.toStringAsFixed(1)} kg', subtitle: 'Composicion'),
+                    _BodyMetricCard(title: 'Grasa corporal', value: latest.bodyFatPercentage == null ? '-' : '${latest.bodyFatPercentage!.toStringAsFixed(1)} %', subtitle: 'Porcentaje'),
+                    _BodyMetricCard(title: 'Masa osea', value: latest.boneMassKg == null ? '-' : '${latest.boneMassKg!.toStringAsFixed(1)} kg', subtitle: 'Estructura'),
+                    _BodyMetricCard(title: 'Peso residual', value: latest.residualMassKg == null ? '-' : '${latest.residualMassKg!.toStringAsFixed(1)} kg', subtitle: 'Referencia'),
+                    _BodyMetricCard(title: 'Cuello', value: _formatMeasure(latest.neckCm), subtitle: 'Perimetro'),
+                  ],
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Fotos de progreso', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => _openPhotoForm(context, onRefresh: onRefresh),
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Agregar'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (photos.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    color: Colors.white.withValues(alpha: 0.02),
+                  ),
+                  child: const Column(
+                    children: [
+                      Icon(Icons.image_outlined, color: dorianAccent, size: 40),
+                      SizedBox(height: 12),
+                      Text('Aun no hay fotos de progreso. Por ahora puedes registrar una URL y mas adelante conectaremos la carga directa.', style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+                    ],
+                  ),
+                )
+              else
+                for (final photo in photos) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      color: Colors.white.withValues(alpha: 0.02),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 84,
+                          width: 84,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            color: Colors.white.withValues(alpha: 0.06),
+                            image: DecorationImage(
+                              image: NetworkImage(photo.photoUrl),
+                              fit: BoxFit.cover,
+                              onError: (_, stackTrace) {},
+                            ),
+                          ),
+                          child: const Icon(Icons.image, color: Colors.white54),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(photo.typeLabel, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 6),
+                              Text(formatDate(photo.takenAt), style: const TextStyle(color: dorianAccentSoft)),
+                              const SizedBox(height: 6),
+                              Text(photo.notes ?? 'Sin notas', style: const TextStyle(color: Colors.white70)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _deletePhoto(context, photo.id, onRefresh),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BodyMetricCard extends StatelessWidget {
+  const _BodyMetricCard({required this.title, required this.value, required this.subtitle});
+
+  final String title;
+  final String value;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.04),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: dorianTextSoft)),
+          const SizedBox(height: 10),
+          Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BodyInfoLine extends StatelessWidget {
+  const _BodyInfoLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: const TextStyle(color: dorianTextSoft))),
+          const SizedBox(width: 12),
+          Flexible(child: Text(value, textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MeasurementListItem extends StatelessWidget {
+  const _MeasurementListItem({required this.item, required this.onEdit, required this.onDelete});
+
+  final BodyMeasurement item;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(formatDate(item.measuredAt), style: const TextStyle(color: dorianAccentSoft, fontWeight: FontWeight.w700)),
+              const Spacer(),
+              IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+              IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_outline)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text('${item.weightKg.toStringAsFixed(1)} kg · IMC ${item.bmi.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(item.notes ?? 'Sin notas', style: const TextStyle(color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+}
+
+class WeightHistoryChart extends StatelessWidget {
+  const WeightHistoryChart({super.key, required this.history});
+
+  final List<BodyWeightHistoryPoint> history;
+
+  @override
+  Widget build(BuildContext context) {
+    if (history.isEmpty) {
+      return const Text('Sin historial todavia.', style: TextStyle(color: Colors.white70));
+    }
+
+    final minWeight = history.map((item) => item.weightKg).reduce((a, b) => a < b ? a : b);
+    final maxWeight = history.map((item) => item.weightKg).reduce((a, b) => a > b ? a : b);
+    final range = (maxWeight - minWeight).abs() < 0.01 ? 1.0 : maxWeight - minWeight;
+
+    return SizedBox(
+      height: 180,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: history.map((item) {
+          final ratio = ((item.weightKg - minWeight) / range).clamp(0.0, 1.0);
+          final barHeight = 40.0 + (ratio * 100.0);
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(item.weightKg.toStringAsFixed(1), style: const TextStyle(fontSize: 11, color: dorianAccentSoft)),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: barHeight,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: const LinearGradient(colors: [dorianAccent, dorianAccentSoft], begin: Alignment.bottomCenter, end: Alignment.topCenter),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('${item.measuredAt.day}/${item.measuredAt.month}', style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class BodyMeasurementFormPage extends StatefulWidget {
+  const BodyMeasurementFormPage({super.key, this.initial});
+
+  final BodyMeasurement? initial;
+
+  @override
+  State<BodyMeasurementFormPage> createState() => _BodyMeasurementFormPageState();
+}
+
+class _BodyMeasurementFormPageState extends State<BodyMeasurementFormPage> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _weight;
+  late final TextEditingController _height;
+  late final TextEditingController _bodyFat;
+  late final TextEditingController _muscleMass;
+  late final TextEditingController _boneMass;
+  late final TextEditingController _residualMass;
+  late final TextEditingController _waist;
+  late final TextEditingController _chest;
+  late final TextEditingController _hip;
+  late final TextEditingController _shoulders;
+  late final TextEditingController _leftArm;
+  late final TextEditingController _rightArm;
+  late final TextEditingController _leftLeg;
+  late final TextEditingController _rightLeg;
+  late final TextEditingController _leftCalf;
+  late final TextEditingController _rightCalf;
+  late final TextEditingController _neck;
+  late final TextEditingController _notes;
+  late DateTime measuredAt;
+  bool isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    measuredAt = initial?.measuredAt ?? DateTime.now();
+    _weight = TextEditingController(text: initial?.weightKg.toStringAsFixed(1) ?? '');
+    _height = TextEditingController(text: initial?.heightCm.toStringAsFixed(1) ?? '');
+    _bodyFat = TextEditingController(text: initial?.bodyFatPercentage?.toStringAsFixed(1) ?? '');
+    _muscleMass = TextEditingController(text: initial?.muscleMassKg?.toStringAsFixed(1) ?? '');
+    _boneMass = TextEditingController(text: initial?.boneMassKg?.toStringAsFixed(1) ?? '');
+    _residualMass = TextEditingController(text: initial?.residualMassKg?.toStringAsFixed(1) ?? '');
+    _waist = TextEditingController(text: initial?.waistCm?.toStringAsFixed(1) ?? '');
+    _chest = TextEditingController(text: initial?.chestCm?.toStringAsFixed(1) ?? '');
+    _hip = TextEditingController(text: initial?.hipCm?.toStringAsFixed(1) ?? '');
+    _shoulders = TextEditingController(text: initial?.shouldersCm?.toStringAsFixed(1) ?? '');
+    _leftArm = TextEditingController(text: initial?.leftArmCm?.toStringAsFixed(1) ?? '');
+    _rightArm = TextEditingController(text: initial?.rightArmCm?.toStringAsFixed(1) ?? '');
+    _leftLeg = TextEditingController(text: initial?.leftLegCm?.toStringAsFixed(1) ?? '');
+    _rightLeg = TextEditingController(text: initial?.rightLegCm?.toStringAsFixed(1) ?? '');
+    _leftCalf = TextEditingController(text: initial?.leftCalfCm?.toStringAsFixed(1) ?? '');
+    _rightCalf = TextEditingController(text: initial?.rightCalfCm?.toStringAsFixed(1) ?? '');
+    _neck = TextEditingController(text: initial?.neckCm?.toStringAsFixed(1) ?? '');
+    _notes = TextEditingController(text: initial?.notes ?? '');
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [_weight, _height, _bodyFat, _muscleMass, _boneMass, _residualMass, _waist, _chest, _hip, _shoulders, _leftArm, _rightArm, _leftLeg, _rightLeg, _leftCalf, _rightCalf, _neck, _notes]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _pickMeasuredDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: measuredAt,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (selected == null) return;
+    setState(() => measuredAt = DateTime(selected.year, selected.month, selected.day, measuredAt.hour, measuredAt.minute));
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => isSaving = true);
+    try {
+      final api = context.read<BodyTrackingApi>();
+      final payload = BodyMeasurementInput(
+        measuredAt: measuredAt,
+        weightKg: double.parse(_weight.text.trim()),
+        heightCm: double.parse(_height.text.trim()),
+        bodyFatPercentage: _parseDouble(_bodyFat.text),
+        muscleMassKg: _parseDouble(_muscleMass.text),
+        boneMassKg: _parseDouble(_boneMass.text),
+        residualMassKg: _parseDouble(_residualMass.text),
+        waistCm: _parseDouble(_waist.text),
+        chestCm: _parseDouble(_chest.text),
+        hipCm: _parseDouble(_hip.text),
+        shouldersCm: _parseDouble(_shoulders.text),
+        leftArmCm: _parseDouble(_leftArm.text),
+        rightArmCm: _parseDouble(_rightArm.text),
+        leftLegCm: _parseDouble(_leftLeg.text),
+        rightLegCm: _parseDouble(_rightLeg.text),
+        leftCalfCm: _parseDouble(_leftCalf.text),
+        rightCalfCm: _parseDouble(_rightCalf.text),
+        neckCm: _parseDouble(_neck.text),
+        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+      );
+
+      if (widget.initial == null) {
+        await api.createMeasurement(payload);
+      } else {
+        await api.updateMeasurement(widget.initial!.id, payload);
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumScaffold(
+      title: widget.initial == null ? 'Agregar medicion' : 'Editar medicion',
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Fecha de medicion', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      TextButton(onPressed: _pickMeasuredDate, child: Text(formatDate(measuredAt))),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_weight, 'Peso (kg)', required: true),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_height, 'Altura (cm)', required: true),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_bodyFat, 'Grasa corporal (%)'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Medidas', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_shoulders, 'Hombros (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_chest, 'Pecho (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_waist, 'Cintura (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_hip, 'Cadera (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_leftArm, 'Brazo izquierdo (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_rightArm, 'Brazo derecho (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_leftLeg, 'Pierna izquierda (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_rightLeg, 'Pierna derecha (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_leftCalf, 'Gemelo izquierdo (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_rightCalf, 'Gemelo derecho (cm)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_neck, 'Cuello (cm)'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Avanzado', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_muscleMass, 'Masa muscular (kg)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_boneMass, 'Masa osea (kg)'),
+                  const SizedBox(height: 12),
+                  _buildNumberField(_residualMass, 'Peso residual (kg)'),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notes,
+                    minLines: 3,
+                    maxLines: 5,
+                    decoration: const InputDecoration(labelText: 'Notas'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: isSaving ? null : _submit,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(isSaving ? 'Guardando...' : 'Guardar medicion'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberField(TextEditingController controller, String label, {bool required = false}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: label),
+      validator: (value) {
+        final text = value?.trim() ?? '';
+        if (required && text.isEmpty) return 'Campo requerido';
+        if (text.isEmpty) return null;
+        final parsed = double.tryParse(text);
+        if (parsed == null) return 'Ingresa un numero valido';
+        if (parsed < 0) return 'No puede ser negativo';
+        if (required && parsed <= 0) return 'Debe ser mayor a 0';
+        return null;
+      },
+    );
+  }
+}
+
+class BodyPhotoFormPage extends StatefulWidget {
+  const BodyPhotoFormPage({super.key});
+
+  @override
+  State<BodyPhotoFormPage> createState() => _BodyPhotoFormPageState();
+}
+
+class _BodyPhotoFormPageState extends State<BodyPhotoFormPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _photoUrl = TextEditingController();
+  final _notes = TextEditingController();
+  int type = 1;
+  DateTime takenAt = DateTime.now();
+  bool isSaving = false;
+
+  @override
+  void dispose() {
+    _photoUrl.dispose();
+    _notes.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: takenAt,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (selected == null) return;
+    setState(() => takenAt = DateTime(selected.year, selected.month, selected.day));
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => isSaving = true);
+    try {
+      await context.read<BodyTrackingApi>().createPhoto(
+            BodyProgressPhotoInput(
+              photoUrl: _photoUrl.text.trim(),
+              takenAt: takenAt,
+              type: type,
+              notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+            ),
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumScaffold(
+      title: 'Foto de progreso',
+      child: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('URL de la foto', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _photoUrl,
+                    decoration: const InputDecoration(labelText: 'https://...'),
+                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Ingresa una URL de foto' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: type,
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('Frontal')),
+                      DropdownMenuItem(value: 2, child: Text('Lateral')),
+                      DropdownMenuItem(value: 3, child: Text('Espalda')),
+                      DropdownMenuItem(value: 4, child: Text('Otra')),
+                    ],
+                    onChanged: (value) => setState(() => type = value ?? 1),
+                    decoration: const InputDecoration(labelText: 'Tipo'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(child: Text('Fecha: ${formatDate(takenAt)}')),
+                      TextButton(onPressed: _pickDate, child: const Text('Cambiar')),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _notes,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(labelText: 'Notas'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: isSaving ? null : _submit,
+              icon: const Icon(Icons.add_a_photo_outlined),
+              label: Text(isSaving ? 'Guardando...' : 'Guardar foto'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<void> _openMeasurementForm(BuildContext context, {required Future<void> Function() onRefresh, BodyMeasurement? initial}) async {
+  final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => BodyMeasurementFormPage(initial: initial)));
+  if (changed == true) {
+    await onRefresh();
+  }
+}
+
+Future<void> _openPhotoForm(BuildContext context, {required Future<void> Function() onRefresh}) async {
+  final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => const BodyPhotoFormPage()));
+  if (changed == true) {
+    await onRefresh();
+  }
+}
+
+Future<void> _deleteMeasurement(BuildContext context, String measurementId, Future<void> Function() onRefresh) async {
+  await context.read<BodyTrackingApi>().deleteMeasurement(measurementId);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Medicion eliminada.')));
+  await onRefresh();
+}
+
+Future<void> _deletePhoto(BuildContext context, String photoId, Future<void> Function() onRefresh) async {
+  await context.read<BodyTrackingApi>().deletePhoto(photoId);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto eliminada.')));
+  await onRefresh();
+}
+
+String _formatMeasure(double? value) => value == null ? '-' : '${value.toStringAsFixed(1)} cm';
+
+double? _parseDouble(String text) {
+  final normalized = text.trim().replaceAll(',', '.');
+  if (normalized.isEmpty) return null;
+  return double.tryParse(normalized);
 }
 
 class PremiumScaffold extends StatelessWidget {

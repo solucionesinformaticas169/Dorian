@@ -68,6 +68,11 @@ export default function CustomersPage() {
     queryFn: () => customersApi.fitnessProfile(selectedFitnessCustomer!.id),
     enabled: Boolean(selectedFitnessCustomer),
   });
+  const bodySummaryQuery = useQuery({
+    queryKey: ["customer-body-summary", selectedFitnessCustomer?.id],
+    queryFn: () => customersApi.bodySummary(selectedFitnessCustomer!.id),
+    enabled: Boolean(selectedFitnessCustomer),
+  });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -145,6 +150,7 @@ export default function CustomersPage() {
   }
 
   const selectedFitness = fitnessProfileQuery.data;
+  const selectedBodySummary = bodySummaryQuery.data;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -329,10 +335,10 @@ export default function CustomersPage() {
               title={`Resumen de ${selectedFitnessCustomer.firstName} ${selectedFitnessCustomer.lastName}`}
               description="Vista solo lectura del onboarding fitness para soporte del panel."
             />
-            {fitnessProfileQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
-            {fitnessProfileQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error)}</Alert> : null}
+            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
+            {fitnessProfileQuery.error || bodySummaryQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error)}</Alert> : null}
             {selectedFitness ? (
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Objetivo y nivel</p>
                   <p className="mt-2 text-lg font-semibold text-white">{selectedFitness.onboardingCompleted ? "Perfil completo" : "Onboarding pendiente"}</p>
@@ -349,6 +355,14 @@ export default function CustomersPage() {
                   <p className="mt-2 text-sm text-slate-300">
                     Dias disponibles: {selectedFitness.trainingDays.length ? selectedFitness.trainingDays.map((day) => trainingDayMap[day] ?? String(day)).join(", ") : "Sin configurar"}
                   </p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Resumen corporal</p>
+                  <p className="mt-2 text-sm text-slate-300">Peso actual: {selectedBodySummary?.currentWeightKg ? `${selectedBodySummary.currentWeightKg} kg` : "-"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Peso objetivo: {selectedBodySummary?.targetWeightKg ? `${selectedBodySummary.targetWeightKg} kg` : "-"}</p>
+                  <p className="mt-2 text-sm text-slate-300">IMC: {selectedBodySummary?.bmi ? `${selectedBodySummary.bmi} (${selectedBodySummary.bmiLabel})` : "Sin mediciones"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Ultima medicion: {selectedBodySummary?.latestMeasurementDate ? formatDateTime(selectedBodySummary.latestMeasurementDate) : "Sin registros"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Historial: {selectedBodySummary?.weightHistory.length ?? 0} mediciones</p>
                 </div>
               </div>
             ) : null}

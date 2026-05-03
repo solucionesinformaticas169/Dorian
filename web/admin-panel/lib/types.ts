@@ -80,6 +80,35 @@ export type CustomerFitnessProfile = {
   updatedAtUtc?: string | null;
 };
 
+export type BodyWeightHistoryPoint = {
+  measuredAt: string;
+  weightKg: number;
+  bmi: number;
+};
+
+export type BodyProgressPhoto = {
+  id: string;
+  customerId: string;
+  photoUrl: string;
+  takenAt: string;
+  type: number;
+  notes?: string | null;
+  createdAtUtc: string;
+};
+
+export type BodySummary = {
+  currentWeightKg?: number | null;
+  targetWeightKg?: number | null;
+  heightCm?: number | null;
+  bmi?: number | null;
+  bmiLabel: string;
+  latestMeasurementDate?: string | null;
+  weightHistory: BodyWeightHistoryPoint[];
+  measurementsHistory: Array<Record<string, number | string | null>>;
+  progressPhotos: BodyProgressPhoto[];
+  daysSinceLastMeasurement?: number | null;
+};
+
 export type Membership = {
   id: string;
   branchId: string;

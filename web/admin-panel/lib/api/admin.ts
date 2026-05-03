@@ -1,5 +1,5 @@
 import { apiFetch, authFetch } from "@/lib/api/client";
-import type { AccessPass, Booking, Branch, CheckIn, ClassSession, Customer, CustomerFitnessProfile, DashboardSummary, Membership, Promotion, Session } from "@/lib/types";
+import type { AccessPass, BodySummary, Booking, Branch, CheckIn, ClassSession, Customer, CustomerFitnessProfile, DashboardSummary, Membership, Promotion, Session } from "@/lib/types";
 
 export const authApi = {
   login: (payload: { email: string; password: string }) => authFetch<Session>("/login", { method: "POST", body: JSON.stringify(payload) }),
@@ -18,6 +18,7 @@ export const customersApi = {
   list: () => apiFetch<Customer[]>("/customers"),
   listByBranch: (branchId: string) => apiFetch<Customer[]>(`/branches/${branchId}/customers`),
   fitnessProfile: (customerId: string) => apiFetch<CustomerFitnessProfile>(`/customers/${customerId}/fitness-profile`),
+  bodySummary: (customerId: string) => apiFetch<BodySummary>(`/customers/${customerId}/body-summary`),
   create: (payload: unknown) => apiFetch<Customer>("/customers", { method: "POST", body: JSON.stringify(payload) }),
   update: (id: string, payload: unknown) => apiFetch<Customer>(`/customers/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   remove: (id: string) => apiFetch<void>(`/customers/${id}`, { method: "DELETE" }),
