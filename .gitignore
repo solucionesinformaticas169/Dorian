@@ -13,3 +13,4 @@ Thumbs.db
 .idea/
 **/bin/
 **/obj/
+logs/
