@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Dumbbell, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { authApi } from "@/lib/api/admin";
 import { getErrorMessage } from "@/lib/utils";
 import { Alert } from "@/components/ui/alert";
@@ -36,16 +37,16 @@ export function LoginForm() {
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
       <section className="relative hidden overflow-hidden lg:block">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,_rgba(35,214,154,0.35),_transparent_30%),radial-gradient(circle_at_80%_30%,_rgba(14,165,233,0.18),_transparent_24%),linear-gradient(180deg,_#06131f_0%,_#02040a_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,_rgba(255,106,31,0.28),_transparent_30%),radial-gradient(circle_at_80%_30%,_rgba(255,196,150,0.14),_transparent_24%),linear-gradient(180deg,_#1a100b_0%,_#030303_100%)]" />
         <div className="relative flex h-full flex-col justify-between p-12">
           <div className="flex items-center gap-3 text-[var(--accent)]">
-            <div className="rounded-2xl border border-[var(--accent)]/20 bg-[var(--accent)]/10 p-3">
-              <Dumbbell className="h-7 w-7" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--accent)]/20 bg-white/5 p-3">
+              <Image src="/brand/dorian-logo.png" alt="Gimnasio Dorian" width={44} height={44} className="h-auto w-full" priority />
             </div>
-            <span className="font-heading text-2xl font-semibold text-white">Dorian Admin</span>
+            <span className="font-heading text-2xl font-semibold text-white">Gimnasio Dorian</span>
           </div>
           <div className="max-w-xl space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.36em] text-[var(--accent)]">Premium fitness operations</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.36em] text-[var(--accent)]">Operacion administrativa real</p>
             <h1 className="font-heading text-6xl font-semibold leading-none text-white">Una cabina de control para cada sucursal, clase y acceso QR.</h1>
             <p className="max-w-lg text-lg text-slate-300">
               Gestiona membresias, clientes, promociones y check-ins con una interfaz de estilo SaaS enfocada en la operacion diaria del gimnasio.

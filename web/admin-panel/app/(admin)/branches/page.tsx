@@ -21,10 +21,25 @@ type BranchForm = {
   city: string;
   address: string;
   phoneNumber: string;
+  openingHours: string;
+  mapUrl: string;
+  latitude: string;
+  longitude: string;
   isActive: boolean;
 };
 
-const initialForm: BranchForm = { code: "", name: "", city: "", address: "", phoneNumber: "", isActive: true };
+const initialForm: BranchForm = {
+  code: "",
+  name: "",
+  city: "",
+  address: "",
+  phoneNumber: "",
+  openingHours: "",
+  mapUrl: "",
+  latitude: "",
+  longitude: "",
+  isActive: true,
+};
 
 export default function BranchesPage() {
   const queryClient = useQueryClient();
@@ -74,6 +89,10 @@ export default function BranchesPage() {
       city: form.city,
       address: form.address || null,
       phoneNumber: form.phoneNumber || null,
+      openingHours: form.openingHours || null,
+      mapUrl: form.mapUrl || null,
+      latitude: form.latitude ? Number(form.latitude) : null,
+      longitude: form.longitude ? Number(form.longitude) : null,
       ...(editing ? { isActive: form.isActive } : {}),
     };
 
@@ -93,6 +112,10 @@ export default function BranchesPage() {
       city: branch.city,
       address: branch.address ?? "",
       phoneNumber: branch.phoneNumber ?? "",
+      openingHours: branch.openingHours ?? "",
+      mapUrl: branch.mapUrl ?? "",
+      latitude: branch.latitude?.toString() ?? "",
+      longitude: branch.longitude?.toString() ?? "",
       isActive: branch.isActive,
     });
   }
@@ -103,13 +126,17 @@ export default function BranchesPage() {
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
       <Card>
-        <SectionHeading eyebrow="Core network" title={editing ? "Editar sucursal" : "Nueva sucursal"} description="Gestiona la red operativa del gimnasio con un formulario simple y directo." />
+        <SectionHeading eyebrow="Red Dorian" title={editing ? "Editar sucursal" : "Nueva sucursal"} description="Gestiona ubicaciones reales, horarios y enlaces de Google Maps desde un solo formulario." />
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div><Label>Codigo</Label><Input value={form.code} onChange={(event) => setForm((state) => ({ ...state, code: event.target.value }))} /></div>
             <div><Label>Nombre</Label><Input value={form.name} onChange={(event) => setForm((state) => ({ ...state, name: event.target.value }))} /></div>
             <div><Label>Ciudad</Label><Input value={form.city} onChange={(event) => setForm((state) => ({ ...state, city: event.target.value }))} /></div>
             <div><Label>Telefono</Label><Input value={form.phoneNumber} onChange={(event) => setForm((state) => ({ ...state, phoneNumber: event.target.value }))} /></div>
+            <div><Label>Horario</Label><Input value={form.openingHours} onChange={(event) => setForm((state) => ({ ...state, openingHours: event.target.value }))} placeholder="Lun a Vie 06:00 - 22:00" /></div>
+            <div><Label>Mapa URL</Label><Input value={form.mapUrl} onChange={(event) => setForm((state) => ({ ...state, mapUrl: event.target.value }))} placeholder="https://www.google.com/maps/search/?api=1&query=..." /></div>
+            <div><Label>Latitud</Label><Input value={form.latitude} onChange={(event) => setForm((state) => ({ ...state, latitude: event.target.value }))} placeholder="-2.900000" /></div>
+            <div><Label>Longitud</Label><Input value={form.longitude} onChange={(event) => setForm((state) => ({ ...state, longitude: event.target.value }))} placeholder="-79.000000" /></div>
           </div>
           <div><Label>Direccion</Label><Input value={form.address} onChange={(event) => setForm((state) => ({ ...state, address: event.target.value }))} /></div>
           {editing ? (
@@ -133,7 +160,7 @@ export default function BranchesPage() {
         <SectionHeading eyebrow="Live data" title="Sucursales registradas" description="Vista conectada al endpoint real `/branches` del backend." />
         {!sortedBranches.length ? <EmptyState title="Sin sucursales" description="Crea la primera sucursal desde el panel para comenzar el MVP." /> : null}
         {sortedBranches.length ? (
-          <DataTable headers={["Sucursal", "Ciudad", "Estado", "Actualizado", "Acciones"]}>
+          <DataTable headers={["Sucursal", "Ciudad", "Mapa", "Estado", "Actualizado", "Acciones"]}>
             {sortedBranches.map((branch) => (
               <DataRow key={branch.id}>
                 <DataCell>
@@ -141,6 +168,15 @@ export default function BranchesPage() {
                   <div className="text-xs text-slate-500">{branch.code} · {branch.phoneNumber || "Sin telefono"}</div>
                 </DataCell>
                 <DataCell>{branch.city}</DataCell>
+                <DataCell>
+                  {branch.mapUrl ? (
+                    <a href={branch.mapUrl} target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">
+                      Ver mapa
+                    </a>
+                  ) : (
+                    <span className="text-slate-500">Pendiente</span>
+                  )}
+                </DataCell>
                 <DataCell><Badge tone={branch.isActive ? "success" : "warning"}>{branch.isActive ? "Activa" : "Inactiva"}</Badge></DataCell>
                 <DataCell>{formatDateTime(branch.updatedAtUtc ?? branch.createdAtUtc)}</DataCell>
                 <DataCell className="flex gap-2">
@@ -155,4 +191,3 @@ export default function BranchesPage() {
     </div>
   );
 }
-

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Activity, Building2, CalendarClock, CreditCard, LayoutDashboard, LogOut, Megaphone, QrCode, Users, WalletCards } from "lucide-react";
@@ -30,13 +31,20 @@ export function AdminShell({ session, children }: { session: Session; children: 
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(35,214,154,0.18),_transparent_24%),linear-gradient(180deg,_#06131f_0%,_#04070d_55%,_#02040a_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(255,106,31,0.18),_transparent_24%),linear-gradient(180deg,_#1a100b_0%,_#090909_55%,_#030303_100%)] text-white">
       <div className="mx-auto grid min-h-screen max-w-[1600px] gap-6 px-4 py-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-6">
         <aside className="flex flex-col rounded-[32px] border border-white/10 bg-slate-950/80 p-5 shadow-2xl shadow-black/30 backdrop-blur">
           <div className="mb-8 rounded-[28px] border border-white/10 bg-white/[0.03] p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">Dorian</p>
-            <h1 className="mt-3 font-heading text-2xl font-semibold">Admin Fitness Suite</h1>
-            <p className="mt-2 text-sm text-slate-400">Panel premium para operaciones, membresias, promociones y control de acceso.</p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-2">
+                <Image src="/brand/dorian-logo.png" alt="Gimnasio Dorian" width={40} height={40} className="h-auto w-full" priority />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">Gimnasio Dorian</p>
+                <h1 className="mt-2 font-heading text-2xl font-semibold">Panel administrativo</h1>
+              </div>
+            </div>
+            <p className="mt-4 text-sm text-slate-400">Operaciones de sucursales, clientes, promociones y control de acceso con identidad Dorian.</p>
           </div>
 
           <nav className="flex-1 space-y-2">
@@ -90,7 +98,7 @@ export function AdminShell({ session, children }: { session: Session; children: 
               </div>
               <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Sucursal</p>
-                <p className="mt-1 text-sm text-white">{session.user.branchId ?? "Global"}</p>
+                <p className="mt-1 text-sm text-white">{session.user.branchId ?? "Global / multi-sucursal"}</p>
               </div>
             </div>
           </header>

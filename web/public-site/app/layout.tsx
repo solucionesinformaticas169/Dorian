@@ -11,13 +11,13 @@ const space = Space_Grotesk({ subsets: ["latin"], variable: "--font-space" });
 export const metadata: Metadata = {
   metadataBase: new URL("https://dorianfitness.example"),
   title: {
-    default: "Dorian Fitness | Gimnasio premium multi-sucursal",
-    template: "%s | Dorian Fitness",
+    default: "Gimnasio Dorian | Gimnasio premium multi-sucursal",
+    template: "%s | Gimnasio Dorian",
   },
   description: "Gimnasio premium con clases dirigidas, promociones activas, membresias flexibles y una experiencia conectada desde la app.",
   keywords: ["gimnasio", "fitness", "clases", "membresias", "entrenamiento"],
   openGraph: {
-    title: "Dorian Fitness",
+    title: "Gimnasio Dorian",
     description: "Entrenamiento premium, tecnologia y comunidad en una sola experiencia.",
     type: "website",
   },

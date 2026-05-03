@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Dumbbell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const items = [
@@ -13,15 +13,15 @@ const items = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-black/70 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-6">
         <Link href="/" className="flex items-center gap-3 text-white">
-          <div className="rounded-2xl bg-[var(--accent)]/15 p-3 text-[var(--accent)]">
-            <Dumbbell className="h-5 w-5" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-2">
+            <Image src="/brand/dorian-logo.png" alt="Gimnasio Dorian" width={40} height={40} className="h-auto w-full" priority />
           </div>
           <div>
-            <p className="font-heading text-lg font-semibold">Dorian Fitness</p>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Premium training club</p>
+            <p className="font-heading text-lg font-semibold">Gimnasio Dorian</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Cuenca y Azogues</p>
           </div>
         </Link>
         <nav className="hidden items-center gap-6 lg:flex">

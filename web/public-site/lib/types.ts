@@ -5,6 +5,10 @@ export type Branch = {
   city: string;
   address?: string | null;
   phoneNumber?: string | null;
+  openingHours?: string | null;
+  mapUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   isActive: boolean;
 };
 
