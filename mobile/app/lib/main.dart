@@ -650,6 +650,12 @@ const gymTypeLabels = <int, String>{
   2: 'Gimnasio avanzado',
 };
 
+const promotionDiscountTypeLabels = <int, String>{
+  1: 'Porcentaje',
+  2: 'Monto fijo',
+  3: 'Informativa',
+};
+
 const trainingDayLabels = <int, String>{
   1: 'Lunes',
   2: 'Martes',
@@ -1604,10 +1610,17 @@ class PromotionItem {
   PromotionItem({required this.title, required this.description, required this.discountType, required this.discountValue, required this.endsAt});
   final String title;
   final String description;
-  final String discountType;
+  final int discountType;
   final double? discountValue;
   final DateTime endsAt;
-  factory PromotionItem.fromJson(Map<String, dynamic> json) => PromotionItem(title: json['title'] as String, description: json['description'] as String, discountType: json['discountType'] as String, discountValue: (json['discountValue'] as num?)?.toDouble(), endsAt: DateTime.parse(json['endsAt'] as String));
+  String get discountTypeLabel => promotionDiscountTypeLabels[discountType] ?? 'Promocion';
+  factory PromotionItem.fromJson(Map<String, dynamic> json) => PromotionItem(
+        title: json['title'] as String,
+        description: json['description'] as String,
+        discountType: json['discountType'] as int? ?? 0,
+        discountValue: (json['discountValue'] as num?)?.toDouble(),
+        endsAt: DateTime.parse(json['endsAt'] as String),
+      );
 }
 
 class GroupClassCatalogItem {
@@ -2716,7 +2729,7 @@ class PromotionsPage extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     children: [
-                      Chip(label: Text(item.discountType)),
+                      Chip(label: Text(item.discountTypeLabel)),
                       if (item.discountValue != null) Chip(label: Text(item.discountValue!.toStringAsFixed(0))),
                       Chip(label: Text('Hasta ${formatDate(item.endsAt)}')),
                     ],
