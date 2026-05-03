@@ -195,7 +195,8 @@ public sealed class WorkoutActivityService : IWorkoutActivityService
 
         if (rangeInDays.HasValue)
         {
-            var from = DateTimeOffset.UtcNow.Date.AddDays(-(rangeInDays.Value - 1));
+            var fromDate = DateTime.SpecifyKind(DateTime.UtcNow.Date.AddDays(-(rangeInDays.Value - 1)), DateTimeKind.Utc);
+            var from = new DateTimeOffset(fromDate, TimeSpan.Zero);
             query = query.Where(x => x.CompletedAt >= from);
         }
 

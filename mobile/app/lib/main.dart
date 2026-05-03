@@ -4069,20 +4069,35 @@ class _NutritionPageState extends State<NutritionPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(profile.goalLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(
+                    profile.goalLabel,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(profile.disclaimer, style: const TextStyle(color: dorianAccentSoft)),
+                  Text(
+                    profile.disclaimer,
+                    style: const TextStyle(
+                      color: dorianAccentSoft,
+                      fontSize: 14,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      _BodyMetricCard(title: 'Calorias', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario'),
-                      _BodyMetricCard(title: 'Proteina', value: '${profile.proteinGrams} g', subtitle: 'Recuperacion'),
-                      _BodyMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'Energia'),
-                      _BodyMetricCard(title: 'Grasas', value: '${profile.fatGrams} g', subtitle: 'Balance'),
-                      _BodyMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'Hidratacion'),
-                      _BodyMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'Distribucion'),
+                      _NutritionMetricCard(title: 'Calorias', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario'),
+                      _NutritionMetricCard(title: 'Proteina', value: '${profile.proteinGrams} g', subtitle: 'Recuperacion'),
+                      _NutritionMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'Energia'),
+                      _NutritionMetricCard(title: 'Grasas', value: '${profile.fatGrams} g', subtitle: 'Balance'),
+                      _NutritionMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'Hidratacion'),
+                      _NutritionMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'Distribucion'),
                     ],
                   ),
                 ],
@@ -4100,7 +4115,10 @@ class _NutritionPageState extends State<NutritionPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(profile.dietaryRestrictions ?? 'Sin restricciones registradas.', style: const TextStyle(color: Colors.white70)),
+                  Text(
+                    profile.dietaryRestrictions ?? 'Sin restricciones registradas.',
+                    style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.35),
+                  ),
                 ],
               ),
             ),
@@ -4128,14 +4146,30 @@ class _NutritionPageState extends State<NutritionPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(plan.dayLabel, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                        Text(
+                          plan.dayLabel,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 8),
-                        Text(plan.description, style: const TextStyle(color: Colors.white70)),
+                        Text(
+                          plan.description,
+                          style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.35),
+                        ),
                         const SizedBox(height: 14),
                         ...plan.items.map(
                           (item) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: Container(
+                            child: DefaultTextStyle.merge(
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                height: 1.3,
+                              ),
+                              child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(18),
@@ -4151,6 +4185,7 @@ class _NutritionPageState extends State<NutritionPage> {
                                   const SizedBox(height: 6),
                                   Text('${item.calories} kcal · ${item.proteinGrams}P / ${item.carbsGrams}C / ${item.fatGrams}G', style: const TextStyle(color: dorianAccentSoft)),
                                 ],
+                              ),
                               ),
                             ),
                           ),
@@ -4715,6 +4750,63 @@ class _BodyMetricCard extends StatelessWidget {
           Text(
             subtitle,
             maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NutritionMetricCard extends StatelessWidget {
+  const _NutritionMetricCard({required this.title, required this.value, required this.subtitle});
+
+  final String title;
+  final String value;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 156,
+      constraints: const BoxConstraints(minHeight: 118),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFF151515),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: dorianTextSoft,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
