@@ -1,5 +1,6 @@
 using Dorian.Api.Endpoints;
 using Dorian.Api.Extensions;
+using Dorian.Application.Abstractions.Auth;
 using Dorian.Application;
 using Dorian.Infrastructure;
 using Dorian.Infrastructure.Persistence;
@@ -35,6 +36,8 @@ if (app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<IAppPasswordHasher>();
+    var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres") ?? string.Empty;
     if (dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
     {
         await dbContext.Database.MigrateAsync();
@@ -42,6 +45,16 @@ using (var scope = app.Services.CreateScope())
     else
     {
         await dbContext.Database.EnsureCreatedAsync();
+    }
+
+    var shouldSeedDemoData = !app.Environment.IsEnvironment("Testing")
+        && (postgresConnectionString.Contains("Host=localhost", StringComparison.OrdinalIgnoreCase)
+            || postgresConnectionString.Contains("Host=127.0.0.1", StringComparison.OrdinalIgnoreCase)
+            || postgresConnectionString.Contains("Server=localhost", StringComparison.OrdinalIgnoreCase));
+
+    if (shouldSeedDemoData)
+    {
+        await DevelopmentDemoDataSeeder.SeedAsync(dbContext, passwordHasher, CancellationToken.None);
     }
 }
 

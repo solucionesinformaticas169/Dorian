@@ -23,7 +23,7 @@ export function DashboardPage() {
 
   const summary = summaryQuery.data;
   if (!summary) {
-    return <EmptyState title="No hay metricas disponibles" description="El dashboard se mostrara cuando existan sucursales, clientes y operacion minima para el MVP." />;
+    return <EmptyState title="No hay metricas disponibles" description="El dashboard se activara cuando existan sucursales, clientes y operacion minima para la demo." />;
   }
 
   const maxBranchActivity = Math.max(...summary.branchActivity.map((item) => item.activityCount), 1);
@@ -34,7 +34,7 @@ export function DashboardPage() {
       <SectionHeading
         eyebrow="Control room"
         title="Dashboard operativo Dorian"
-        description="Vista consolidada del rendimiento actual del gimnasio, con metricas reales de clientes, check-ins y ocupacion."
+        description="Vista consolidada del rendimiento actual del gimnasio, con metricas reales de clientes, check-ins y ocupacion para la presentacion comercial."
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -65,7 +65,7 @@ export function DashboardPage() {
                   <div>
                     <p className="font-semibold text-white">{item.branchName}</p>
                     <p className="mt-1 text-xs uppercase tracking-[0.24em] text-slate-500">
-                      {item.activeCustomersCount} clientes · {item.todayClassesCount} clases · {item.todayCheckInsCount} check-ins
+                      {item.activeCustomersCount} clientes | {item.todayClassesCount} clases | {item.todayCheckInsCount} check-ins
                     </p>
                   </div>
                   <p className="font-heading text-2xl text-white">{item.activityCount}</p>
@@ -100,7 +100,7 @@ export function DashboardPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold text-white">{item.className}</p>
-                      <p className="mt-1 text-sm text-slate-400">{item.branchName} · {formatDateTime(item.startTime)}</p>
+                      <p className="mt-1 text-sm text-slate-400">{item.branchName} | {formatDateTime(item.startTime)}</p>
                     </div>
                     <p className="font-heading text-xl text-white">{item.occupancyRate.toFixed(0)}%</p>
                   </div>

@@ -320,6 +320,16 @@ class ApiClient {
   }
 }
 
+String presentUiError(Object? error, [String fallback = 'No pudimos completar esta accion.']) {
+  if (error == null) return fallback;
+  final raw = error.toString().replaceFirst('Exception: ', '').replaceFirst('ClientException: ', '').trim();
+  if (raw.isEmpty || raw == 'null') return fallback;
+  if (raw.contains('Failed to fetch') || raw.contains('SocketException')) {
+    return 'No pudimos conectar con Dorian en este momento. Verifica que la API este activa.';
+  }
+  return raw;
+}
+
 class AuthApi {
   AuthApi(this.client);
   final ApiClient client;
@@ -1708,7 +1718,7 @@ class _LoginPageState extends State<LoginPage> {
       await session.login(_email.text.trim(), _password.text);
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(session.errorMessage ?? 'No se pudo iniciar sesion.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(session.errorMessage, 'No pudimos iniciar sesion. Revisa tu correo y tu clave.'))));
     }
   }
 
@@ -2334,7 +2344,7 @@ class _HomePageState extends State<HomePage> {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text(snapshot.error.toString()));
+        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar las sucursales ahora.')));
         final profile = snapshot.data!['profile'] as CustomerProfile;
         final branch = snapshot.data!['branch'] as GymBranch?;
         final classes = snapshot.data!['classes'] as List<GymClass>;
@@ -2383,7 +2393,7 @@ class BranchesPage extends StatelessWidget {
       future: context.read<BranchApi>().listBranches(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text(snapshot.error.toString()));
+        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar las clases disponibles.')));
         final items = snapshot.data!;
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
@@ -2450,7 +2460,7 @@ class ClassesPage extends StatelessWidget {
       ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text(snapshot.error.toString()));
+        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu resumen inicial.')));
         final catalog = snapshot.data![0] as List<GroupClassCatalogItem>;
         final items = snapshot.data![1] as List<GymClass>;
         return ListView(
@@ -2612,7 +2622,7 @@ class BookingsPage extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return Scaffold(body: Center(child: Text(snapshot.error.toString())));
+          return Scaffold(body: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tus reservas.'))));
         }
 
         final bookings = snapshot.data![0] as List<BookingItem>;
@@ -2685,7 +2695,7 @@ class PromotionsPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text(snapshot.error.toString()));
+          return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu perfil.')));
         }
 
         final items = snapshot.data!;
@@ -2880,7 +2890,7 @@ class AccessPassPage extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return Scaffold(body: Center(child: Text(snapshot.error.toString())));
+          return Scaffold(body: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu QR por ahora.'))));
         }
 
         final pass = snapshot.data!;
@@ -2958,7 +2968,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
       await _refresh();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
     }
   }
 
@@ -3001,7 +3011,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
           return const PremiumScaffold(title: 'Mi plan de entrenamiento', child: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return PremiumScaffold(title: 'Mi plan de entrenamiento', child: Center(child: Text(snapshot.error.toString())));
+          return PremiumScaffold(title: 'Mi plan de entrenamiento', child: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu plan de entrenamiento.'))));
         }
 
         final plan = snapshot.data;
@@ -3380,7 +3390,7 @@ class _ActivityPageState extends State<ActivityPage> {
           return const PremiumScaffold(title: 'Actividades', child: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return PremiumScaffold(title: 'Actividades', child: Center(child: Text(snapshot.error.toString())));
+          return PremiumScaffold(title: 'Actividades', child: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tus actividades.'))));
         }
 
         final bundle = snapshot.data!;
@@ -3705,7 +3715,7 @@ class _ManualWorkoutActivityPageState extends State<ManualWorkoutActivityPage> {
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -3937,7 +3947,7 @@ class _NutritionPageState extends State<NutritionPage> {
       await _refresh();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
     }
   }
 
@@ -3987,7 +3997,7 @@ class _NutritionPageState extends State<NutritionPage> {
           return const PremiumScaffold(title: 'Nutricion', child: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return PremiumScaffold(title: 'Nutricion', child: Center(child: Text(snapshot.error.toString())));
+          return PremiumScaffold(title: 'Nutricion', child: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu plan nutricional.'))));
         }
 
         final bundle = snapshot.data!;
@@ -4164,7 +4174,7 @@ class _NutritionRestrictionsPageState extends State<NutritionRestrictionsPage> {
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -4266,7 +4276,7 @@ class _BodyTrackingPageState extends State<BodyTrackingPage> {
           return const PremiumScaffold(title: 'Cuerpo', child: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return PremiumScaffold(title: 'Cuerpo', child: Center(child: Text(snapshot.error.toString())));
+          return PremiumScaffold(title: 'Cuerpo', child: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu progreso corporal.'))));
         }
 
         final bundle = snapshot.data!;
@@ -4884,7 +4894,7 @@ class _BodyMeasurementFormPageState extends State<BodyMeasurementFormPage> {
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -5052,7 +5062,7 @@ class _BodyPhotoFormPageState extends State<BodyPhotoFormPage> {
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
     } finally {
       if (mounted) setState(() => isSaving = false);
     }
@@ -5165,7 +5175,7 @@ Future<void> _toggleTrainingDay(BuildContext context, TrainingPlanDayData day, F
     await onRefresh();
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(error))));
   }
 }
 
