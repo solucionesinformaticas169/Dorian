@@ -37,6 +37,7 @@ void main() {
         ChangeNotifierProvider.value(value: session),
         Provider.value(value: BranchApi(client)),
         Provider.value(value: ClassApi(client)),
+        Provider.value(value: GroupClassApi(client)),
         Provider.value(value: BookingApi(client)),
         Provider.value(value: PromotionApi(client)),
         Provider.value(value: AccessApi(client)),
@@ -302,6 +303,12 @@ class ClassApi {
   Future<List<GymClass>> listClasses() async => ((await client.get('/classes')) as List<dynamic>).map((item) => GymClass.fromJson(item as Map<String, dynamic>)).toList();
 }
 
+class GroupClassApi {
+  GroupClassApi(this.client);
+  final ApiClient client;
+  Future<List<GroupClassCatalogItem>> listCatalog() async => ((await client.get('/group-classes')) as List<dynamic>).map((item) => GroupClassCatalogItem.fromJson(item as Map<String, dynamic>)).toList();
+}
+
 class BookingApi {
   BookingApi(this.client);
   final ApiClient client;
@@ -487,6 +494,42 @@ class PromotionItem {
   final double? discountValue;
   final DateTime endsAt;
   factory PromotionItem.fromJson(Map<String, dynamic> json) => PromotionItem(title: json['title'] as String, description: json['description'] as String, discountType: json['discountType'] as String, discountValue: (json['discountValue'] as num?)?.toDouble(), endsAt: DateTime.parse(json['endsAt'] as String));
+}
+
+class GroupClassCatalogItem {
+  GroupClassCatalogItem({
+    required this.slug,
+    required this.name,
+    required this.emoji,
+    required this.summary,
+    required this.type,
+    required this.subtitle,
+    required this.description,
+    required this.tagline,
+    required this.benefits,
+  });
+
+  final String slug;
+  final String name;
+  final String emoji;
+  final String summary;
+  final String type;
+  final String subtitle;
+  final String description;
+  final String tagline;
+  final List<String> benefits;
+
+  factory GroupClassCatalogItem.fromJson(Map<String, dynamic> json) => GroupClassCatalogItem(
+        slug: json['slug'] as String,
+        name: json['name'] as String,
+        emoji: json['emoji'] as String,
+        summary: json['summary'] as String,
+        type: json['type'] as String,
+        subtitle: json['subtitle'] as String,
+        description: json['description'] as String,
+        tagline: json['tagline'] as String,
+        benefits: (json['benefits'] as List<dynamic>).map((item) => item.toString()).toList(),
+      );
 }
 
 class AccessPass {
@@ -776,21 +819,121 @@ class ClassesPage extends StatelessWidget {
   const ClassesPage({super.key});
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<GymClass>>(
-      future: context.read<ClassApi>().listClasses(),
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        context.read<GroupClassApi>().listCatalog(),
+        context.read<ClassApi>().listClasses(),
+      ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
         if (snapshot.hasError) return Center(child: Text(snapshot.error.toString()));
-        final items = snapshot.data!;
+        final catalog = snapshot.data![0] as List<GroupClassCatalogItem>;
+        final items = snapshot.data![1] as List<GymClass>;
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           children: [
             Row(children: [Expanded(child: Text('Clases disponibles', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage())), child: const Text('Mis reservas'))]),
             const SizedBox(height: 12),
+            Text('Catalogo Dorian', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            for (final item in catalog) ...[
+              InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupClassDetailPage(item: item))),
+                child: GlowCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.emoji, style: const TextStyle(fontSize: 30)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 6),
+                                Text(item.subtitle, style: const TextStyle(color: dorianAccentSoft)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(item.summary, style: const TextStyle(color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            const SizedBox(height: 8),
+            Text('Horarios y reservas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
             for (final item in items) ...[InkWell(borderRadius: BorderRadius.circular(24), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassBookingPage(gymClass: item))), child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} de ${item.capacity} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))]))), const SizedBox(height: 12)],
           ],
         );
       },
+    );
+  }
+}
+
+class GroupClassDetailPage extends StatelessWidget {
+  const GroupClassDetailPage({super.key, required this.item});
+
+  final GroupClassCatalogItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumScaffold(
+      title: item.name,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.emoji, style: const TextStyle(fontSize: 42)),
+                const SizedBox(height: 12),
+                Text(item.type, style: const TextStyle(color: dorianAccentSoft)),
+                const SizedBox(height: 8),
+                Text(item.subtitle, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                Text(item.description, style: const TextStyle(color: Colors.white70, height: 1.5)),
+                const SizedBox(height: 12),
+                Text(item.tagline, style: const TextStyle(color: dorianAccent, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Beneficios', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                for (final benefit in item.benefits) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(Icons.check_circle, color: dorianAccent, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(benefit, style: const TextStyle(color: Colors.white70))),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
