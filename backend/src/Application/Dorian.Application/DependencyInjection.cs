@@ -3,6 +3,7 @@ namespace Dorian.Application;
 using Dorian.Application.Access;
 using Dorian.Application.Auth;
 using Dorian.Application.Bookings;
+using Dorian.Application.BodyTracking;
 using Dorian.Application.Branches;
 using Dorian.Application.Classes;
 using Dorian.Application.Customers;
@@ -24,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IBranchService, BranchService>();
         services.AddScoped<IClassSessionService, ClassSessionService>();
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IBodyTrackingService, BodyTrackingService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerFitnessProfileService, CustomerFitnessProfileService>();
         services.AddScoped<IDashboardService, DashboardService>();

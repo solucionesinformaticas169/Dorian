@@ -80,6 +80,8 @@ public sealed class Customer : AuditableEntity<Guid>
     public User User { get; private set; } = null!;
     public Membership? ActiveMembership { get; private set; }
     public CustomerFitnessProfile? FitnessProfile { get; private set; }
+    public ICollection<BodyMeasurement> BodyMeasurements { get; private set; } = [];
+    public ICollection<BodyProgressPhoto> BodyProgressPhotos { get; private set; } = [];
 
     public void Update(
         Guid branchId,

@@ -20,6 +20,8 @@ public interface IDorianDbContext
     DbSet<Membership> Memberships { get; }
     DbSet<Customer> Customers { get; }
     DbSet<CustomerFitnessProfile> CustomerFitnessProfiles { get; }
+    DbSet<BodyMeasurement> BodyMeasurements { get; }
+    DbSet<BodyProgressPhoto> BodyProgressPhotos { get; }
     DbSet<ClassSession> ClassSessions { get; }
     DbSet<Booking> Bookings { get; }
     DbSet<Promotion> Promotions { get; }

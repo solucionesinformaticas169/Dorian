@@ -30,6 +30,8 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerFitnessProfile> CustomerFitnessProfiles => Set<CustomerFitnessProfile>();
+    public DbSet<BodyMeasurement> BodyMeasurements => Set<BodyMeasurement>();
+    public DbSet<BodyProgressPhoto> BodyProgressPhotos => Set<BodyProgressPhoto>();
     public DbSet<ClassSession> ClassSessions => Set<ClassSession>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Promotion> Promotions => Set<Promotion>();
@@ -89,6 +91,8 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
         || entityType == typeof(Membership)
         || entityType == typeof(Customer)
         || entityType == typeof(CustomerFitnessProfile)
+        || entityType == typeof(BodyMeasurement)
+        || entityType == typeof(BodyProgressPhoto)
         || entityType == typeof(ClassSession)
         || entityType == typeof(Booking)
         || entityType == typeof(Promotion)
