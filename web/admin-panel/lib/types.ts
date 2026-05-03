@@ -109,6 +109,63 @@ export type BodySummary = {
   daysSinceLastMeasurement?: number | null;
 };
 
+export type TrainingPlanExercise = {
+  id: string;
+  exerciseId?: string | null;
+  name: string;
+  muscleGroup: number;
+  sets: number;
+  reps: string;
+  restSeconds: number;
+  weightKg?: number | null;
+  notes?: string | null;
+  order: number;
+};
+
+export type TrainingPlanDay = {
+  id: string;
+  dayOfWeek: number;
+  title: string;
+  estimatedMinutes: number;
+  intensity: number;
+  completedAt?: string | null;
+  exercises: TrainingPlanExercise[];
+};
+
+export type TrainingPlanWeek = {
+  id: string;
+  weekNumber: number;
+  title: string;
+  description: string;
+  days: TrainingPlanDay[];
+};
+
+export type TrainingPlanPhase = {
+  id: string;
+  name: number;
+  description: string;
+  order: number;
+  durationWeeks: number;
+  isCurrent: boolean;
+  weeks: TrainingPlanWeek[];
+};
+
+export type TrainingPlan = {
+  id: string;
+  customerId: string;
+  goal: number;
+  experienceLevel: number;
+  focusMuscleGroup: number;
+  status: number;
+  startDate: string;
+  endDate?: string | null;
+  currentPhaseName: string;
+  completedDaysCount: number;
+  totalDaysCount: number;
+  progressPercent: number;
+  phases: TrainingPlanPhase[];
+};
+
 export type Membership = {
   id: string;
   branchId: string;
@@ -270,6 +327,26 @@ export const classStatusMap: Record<number, string> = {
   1: "Programada",
   2: "Cancelada",
   3: "Completada",
+};
+
+export const trainingPlanStatusMap: Record<number, string> = {
+  1: "Activo",
+  2: "Completado",
+  3: "Pausado",
+  4: "Cancelado",
+};
+
+export const trainingPhaseNameMap: Record<number, string> = {
+  1: "Resistencia",
+  2: "Fuerza",
+  3: "Hipertrofia",
+  4: "Definicion",
+};
+
+export const trainingDayIntensityMap: Record<number, string> = {
+  1: "Baja",
+  2: "Media",
+  3: "Alta",
 };
 
 export const bookingStatusMap: Record<number, string> = {

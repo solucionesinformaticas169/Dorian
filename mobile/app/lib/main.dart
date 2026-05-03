@@ -44,6 +44,7 @@ void main() {
         Provider.value(value: AccessApi(client)),
         Provider.value(value: FitnessProfileApi(client)),
         Provider.value(value: BodyTrackingApi(client)),
+        Provider.value(value: TrainingPlanApi(client)),
       ],
       child: const DorianApp(),
     ),
@@ -413,6 +414,26 @@ class BodyTrackingApi {
   Future<BodySummary> getSummary() async => BodySummary.fromJson(await client.get('/customers/me/body-summary') as Map<String, dynamic>);
 }
 
+class TrainingPlanApi {
+  TrainingPlanApi(this.client);
+  final ApiClient client;
+
+  Future<TrainingPlanData?> getMyPlan() async {
+    final payload = await client.get('/customers/me/training-plan');
+    if (payload == null) return null;
+    return TrainingPlanData.fromJson(payload as Map<String, dynamic>);
+  }
+
+  Future<TrainingPlanData> generateMyPlan() async =>
+      TrainingPlanData.fromJson(await client.post('/customers/me/training-plan/generate') as Map<String, dynamic>);
+
+  Future<TrainingPlanDayData> completeDay(String id) async =>
+      TrainingPlanDayData.fromJson(await client.put('/training-days/$id/complete') as Map<String, dynamic>);
+
+  Future<TrainingPlanDayData> uncompleteDay(String id) async =>
+      TrainingPlanDayData.fromJson(await client.put('/training-days/$id/uncomplete') as Map<String, dynamic>);
+}
+
 class AuthSession {
   AuthSession({required this.accessToken, required this.refreshToken, required this.accessTokenExpiresAtUtc, required this.refreshTokenExpiresAtUtc, required this.user});
   final String accessToken;
@@ -598,6 +619,32 @@ const notificationIntensityLabels = <int, String>{
   1: 'Bajo',
   2: 'Moderada',
   3: 'Intenso',
+};
+
+const trainingPhaseLabels = <int, String>{
+  1: 'Resistencia',
+  2: 'Fuerza',
+  3: 'Hipertrofia',
+  4: 'Definicion',
+};
+
+const trainingIntensityLabels = <int, String>{
+  1: 'Baja',
+  2: 'Media',
+  3: 'Alta',
+};
+
+const exerciseMuscleGroupLabels = <int, String>{
+  1: 'Pecho',
+  2: 'Espalda',
+  3: 'Piernas',
+  4: 'Hombros',
+  5: 'Biceps',
+  6: 'Triceps',
+  7: 'Abdomen',
+  8: 'Gluteos',
+  9: 'Cardio',
+  10: 'Full body',
 };
 
 class CustomerFitnessProfile {
@@ -975,6 +1022,190 @@ class BodySummary {
         measurementsHistory: (json['measurementsHistory'] as List<dynamic>? ?? const []).map((item) => (item as Map<String, dynamic>)).toList(),
         progressPhotos: (json['progressPhotos'] as List<dynamic>? ?? const []).map((item) => BodyProgressPhoto.fromJson(item as Map<String, dynamic>)).toList(),
         daysSinceLastMeasurement: json['daysSinceLastMeasurement'] as int?,
+      );
+}
+
+class TrainingPlanData {
+  TrainingPlanData({
+    required this.id,
+    required this.customerId,
+    required this.goal,
+    required this.experienceLevel,
+    required this.focusMuscleGroup,
+    required this.status,
+    required this.startDate,
+    required this.endDate,
+    required this.currentPhaseName,
+    required this.completedDaysCount,
+    required this.totalDaysCount,
+    required this.progressPercent,
+    required this.phases,
+  });
+
+  final String id;
+  final String customerId;
+  final int goal;
+  final int experienceLevel;
+  final int focusMuscleGroup;
+  final int status;
+  final String startDate;
+  final String? endDate;
+  final String currentPhaseName;
+  final int completedDaysCount;
+  final int totalDaysCount;
+  final int progressPercent;
+  final List<TrainingPlanPhaseData> phases;
+
+  String get goalLabel => fitnessGoalLabels[goal] ?? 'No definido';
+  String get levelLabel => experienceLevelLabels[experienceLevel] ?? 'No definido';
+  TrainingPlanDayData? get firstIncompleteDay => phases.expand((phase) => phase.weeks).expand((week) => week.days).firstWhereOrNull((day) => day.completedAt == null);
+  TrainingPlanDayData? get firstDay => phases.expand((phase) => phase.weeks).expand((week) => week.days).firstOrNull;
+
+  factory TrainingPlanData.fromJson(Map<String, dynamic> json) => TrainingPlanData(
+        id: json['id'] as String,
+        customerId: json['customerId'] as String,
+        goal: json['goal'] as int,
+        experienceLevel: json['experienceLevel'] as int,
+        focusMuscleGroup: json['focusMuscleGroup'] as int,
+        status: json['status'] as int,
+        startDate: json['startDate'] as String,
+        endDate: json['endDate'] as String?,
+        currentPhaseName: json['currentPhaseName'] as String,
+        completedDaysCount: json['completedDaysCount'] as int,
+        totalDaysCount: json['totalDaysCount'] as int,
+        progressPercent: json['progressPercent'] as int,
+        phases: (json['phases'] as List<dynamic>).map((item) => TrainingPlanPhaseData.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+}
+
+class TrainingPlanPhaseData {
+  TrainingPlanPhaseData({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.order,
+    required this.durationWeeks,
+    required this.isCurrent,
+    required this.weeks,
+  });
+
+  final String id;
+  final int name;
+  final String description;
+  final int order;
+  final int durationWeeks;
+  final bool isCurrent;
+  final List<TrainingPlanWeekData> weeks;
+
+  String get label => trainingPhaseLabels[name] ?? 'Fase';
+
+  factory TrainingPlanPhaseData.fromJson(Map<String, dynamic> json) => TrainingPlanPhaseData(
+        id: json['id'] as String,
+        name: json['name'] as int,
+        description: json['description'] as String,
+        order: json['order'] as int,
+        durationWeeks: json['durationWeeks'] as int,
+        isCurrent: json['isCurrent'] as bool? ?? false,
+        weeks: (json['weeks'] as List<dynamic>).map((item) => TrainingPlanWeekData.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+}
+
+class TrainingPlanWeekData {
+  TrainingPlanWeekData({
+    required this.id,
+    required this.weekNumber,
+    required this.title,
+    required this.description,
+    required this.days,
+  });
+
+  final String id;
+  final int weekNumber;
+  final String title;
+  final String description;
+  final List<TrainingPlanDayData> days;
+
+  factory TrainingPlanWeekData.fromJson(Map<String, dynamic> json) => TrainingPlanWeekData(
+        id: json['id'] as String,
+        weekNumber: json['weekNumber'] as int,
+        title: json['title'] as String,
+        description: json['description'] as String,
+        days: (json['days'] as List<dynamic>).map((item) => TrainingPlanDayData.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+}
+
+class TrainingPlanDayData {
+  TrainingPlanDayData({
+    required this.id,
+    required this.dayOfWeek,
+    required this.title,
+    required this.estimatedMinutes,
+    required this.intensity,
+    required this.completedAt,
+    required this.exercises,
+  });
+
+  final String id;
+  final int dayOfWeek;
+  final String title;
+  final int estimatedMinutes;
+  final int intensity;
+  final DateTime? completedAt;
+  final List<TrainingPlanExerciseData> exercises;
+
+  String get dayLabel => trainingDayLabels[dayOfWeek] ?? 'Dia';
+  String get intensityLabel => trainingIntensityLabels[intensity] ?? 'Media';
+  bool get isCompleted => completedAt != null;
+
+  factory TrainingPlanDayData.fromJson(Map<String, dynamic> json) => TrainingPlanDayData(
+        id: json['id'] as String,
+        dayOfWeek: json['dayOfWeek'] as int,
+        title: json['title'] as String,
+        estimatedMinutes: json['estimatedMinutes'] as int,
+        intensity: json['intensity'] as int,
+        completedAt: json['completedAt'] == null ? null : DateTime.parse(json['completedAt'] as String),
+        exercises: (json['exercises'] as List<dynamic>).map((item) => TrainingPlanExerciseData.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+}
+
+class TrainingPlanExerciseData {
+  TrainingPlanExerciseData({
+    required this.id,
+    required this.exerciseId,
+    required this.name,
+    required this.muscleGroup,
+    required this.sets,
+    required this.reps,
+    required this.restSeconds,
+    required this.weightKg,
+    required this.notes,
+    required this.order,
+  });
+
+  final String id;
+  final String? exerciseId;
+  final String name;
+  final int muscleGroup;
+  final int sets;
+  final String reps;
+  final int restSeconds;
+  final double? weightKg;
+  final String? notes;
+  final int order;
+
+  String get muscleGroupLabel => exerciseMuscleGroupLabels[muscleGroup] ?? 'General';
+
+  factory TrainingPlanExerciseData.fromJson(Map<String, dynamic> json) => TrainingPlanExerciseData(
+        id: json['id'] as String,
+        exerciseId: json['exerciseId'] as String?,
+        name: json['name'] as String,
+        muscleGroup: json['muscleGroup'] as int,
+        sets: json['sets'] as int,
+        reps: json['reps'] as String,
+        restSeconds: json['restSeconds'] as int,
+        weightKg: (json['weightKg'] as num?)?.toDouble(),
+        notes: json['notes'] as String?,
+        order: json['order'] as int,
       );
 }
 
@@ -1758,11 +1989,13 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 16),
             GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Sucursal principal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresia activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
             const SizedBox(height: 12),
-            Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresia', subtitle: 'Mi plan', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
+            Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresia', subtitle: 'Mi membresia', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
             const SizedBox(height: 12),
             QuickActionCard(icon: Icons.event_available, title: 'Mis reservas', subtitle: 'Ver y cancelar clases', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage()))),
             const SizedBox(height: 12),
             QuickActionCard(icon: Icons.monitor_weight_outlined, title: 'Cuerpo', subtitle: 'Peso, medidas y progreso', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BodyTrackingPage()))),
+            const SizedBox(height: 12),
+            QuickActionCard(icon: Icons.assignment_outlined, title: 'Mi plan de entrenamiento', subtitle: 'Rutina personalizada', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrainingPlanPage()))),
             const SizedBox(height: 24),
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -2176,6 +2409,13 @@ class ProfilePage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         QuickActionCard(
+          icon: Icons.assignment_outlined,
+          title: 'Mi plan de entrenamiento',
+          subtitle: 'Ver fases y entrenamientos',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrainingPlanPage())),
+        ),
+        const SizedBox(height: 12),
+        QuickActionCard(
           icon: Icons.qr_code_2,
           title: 'Mi QR de acceso',
           subtitle: 'Ver o regenerar',
@@ -2304,6 +2544,398 @@ class AccessPassPage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class TrainingPlanPage extends StatefulWidget {
+  const TrainingPlanPage({super.key});
+
+  @override
+  State<TrainingPlanPage> createState() => _TrainingPlanPageState();
+}
+
+class _TrainingPlanPageState extends State<TrainingPlanPage> {
+  late Future<TrainingPlanData?> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = _load();
+  }
+
+  Future<TrainingPlanData?> _load() => context.read<TrainingPlanApi>().getMyPlan();
+
+  Future<void> _refresh() async {
+    setState(() => future = _load());
+    await future;
+  }
+
+  Future<void> _generatePlan() async {
+    try {
+      await context.read<TrainingPlanApi>().generateMyPlan();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tu plan personalizado ya esta listo.')));
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<SessionController>();
+    final fitnessProfile = session.fitnessProfile;
+
+    if (fitnessProfile?.onboardingCompleted != true) {
+      return PremiumScaffold(
+        title: 'Mi plan de entrenamiento',
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Completa tu onboarding primero', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
+                  const Text('Necesitamos tu objetivo, nivel y dias disponibles para generar un plan realmente personalizado.', style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitnessOnboardingPage(editMode: true))),
+                    icon: const Icon(Icons.flag_circle_outlined),
+                    label: const Text('Completar onboarding'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return FutureBuilder<TrainingPlanData?>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const PremiumScaffold(title: 'Mi plan de entrenamiento', child: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+          return PremiumScaffold(title: 'Mi plan de entrenamiento', child: Center(child: Text(snapshot.error.toString())));
+        }
+
+        final plan = snapshot.data;
+        if (plan == null) {
+          return PremiumScaffold(
+            title: 'Mi plan de entrenamiento',
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                GlowCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Genera tu plan personalizado', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 10),
+                      Text('Tomaremos tu objetivo ${fitnessProfile!.goalLabel.toLowerCase()}, tu nivel ${fitnessProfile.experienceLabel.toLowerCase()} y tus dias disponibles para crear una rutina realista.', style: const TextStyle(color: Colors.white70)),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _generatePlan,
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('Generar mi plan personalizado'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return DefaultTabController(
+          length: 3,
+          child: PremiumScaffold(
+            title: 'Mi plan de entrenamiento',
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: GlowCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(plan.goalLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        Text('${plan.levelLabel} · ${focusMuscleGroupLabels[plan.focusMuscleGroup] ?? 'Balanceado'}', style: const TextStyle(color: dorianAccentSoft)),
+                        const SizedBox(height: 12),
+                        LinearProgressIndicator(
+                          value: plan.totalDaysCount == 0 ? 0 : plan.completedDaysCount / plan.totalDaysCount,
+                          backgroundColor: Colors.white.withValues(alpha: 0.08),
+                          color: dorianAccent,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('${plan.progressPercent}% completado · fase actual: ${plan.currentPhaseName}', style: const TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: TabBar(
+                    labelColor: dorianAccent,
+                    unselectedLabelColor: Colors.white70,
+                    indicatorColor: dorianAccent,
+                    tabs: [
+                      Tab(text: 'Plan'),
+                      Tab(text: 'Entrenamientos'),
+                      Tab(text: 'Rapido'),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _TrainingPlanOverviewTab(plan: plan),
+                      _TrainingPlanWorkoutsTab(plan: plan, onRefresh: _refresh),
+                      _TrainingQuickTab(plan: plan, onRefresh: _refresh),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TrainingPlanOverviewTab extends StatelessWidget {
+  const _TrainingPlanOverviewTab({required this.plan});
+
+  final TrainingPlanData plan;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: plan.phases.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final phase = plan.phases[index];
+              return Container(
+                width: 220,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  gradient: LinearGradient(
+                    colors: phase.isCurrent
+                        ? [dorianAccent.withValues(alpha: 0.32), Colors.white.withValues(alpha: 0.06)]
+                        : [Colors.white.withValues(alpha: 0.04), Colors.white.withValues(alpha: 0.02)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(phase.label, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Text(phase.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
+                    const Spacer(),
+                    Text('${phase.durationWeeks} semanas', style: const TextStyle(color: dorianAccentSoft)),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        for (final phase in plan.phases) ...[
+          GlowCard(
+            child: ExpansionTile(
+              iconColor: dorianAccent,
+              collapsedIconColor: Colors.white70,
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(top: 12),
+              title: Text(phase.label, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              subtitle: Text(phase.description, style: const TextStyle(color: Colors.white70)),
+              children: [
+                for (final week in phase.weeks) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: Colors.white.withValues(alpha: 0.03),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(week.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 6),
+                        Text(week.description, style: const TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 10),
+                        for (final day in week.days) ...[
+                          Row(
+                            children: [
+                              Icon(day.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked, size: 18, color: day.isCompleted ? dorianAccent : Colors.white54),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text('${day.dayLabel} · ${day.title}', style: const TextStyle(color: Colors.white))),
+                              Text('${day.estimatedMinutes} min', style: const TextStyle(color: dorianAccentSoft)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+  }
+}
+
+class _TrainingPlanWorkoutsTab extends StatelessWidget {
+  const _TrainingPlanWorkoutsTab({required this.plan, required this.onRefresh});
+
+  final TrainingPlanData plan;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final days = plan.phases.expand((phase) => phase.weeks).expand((week) => week.days).toList();
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      itemCount: days.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final day = days[index];
+        return GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${day.dayLabel} · ${day.title}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 6),
+                        Text('${day.estimatedMinutes} min · intensidad ${day.intensityLabel.toLowerCase()}', style: const TextStyle(color: dorianAccentSoft)),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _toggleTrainingDay(context, day, onRefresh),
+                    child: Text(day.isCompleted ? 'Desmarcar' : 'Completar'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              for (final exercise in day.exercises) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withValues(alpha: 0.03),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(exercise.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 6),
+                      Text(exercise.muscleGroupLabel, style: const TextStyle(color: dorianAccentSoft)),
+                      const SizedBox(height: 8),
+                      Text('${exercise.sets} series · ${exercise.reps} reps · descanso ${exercise.restSeconds}s', style: const TextStyle(color: Colors.white70)),
+                      if (exercise.notes != null) ...[
+                        const SizedBox(height: 8),
+                        Text(exercise.notes!, style: const TextStyle(color: Colors.white54)),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TrainingQuickTab extends StatelessWidget {
+  const _TrainingQuickTab({required this.plan, required this.onRefresh});
+
+  final TrainingPlanData plan;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final recommended = plan.firstIncompleteDay ?? plan.firstDay;
+
+    if (recommended == null) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Plan completado', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                const Text('Ya cerraste todas las sesiones actuales. Puedes regenerar un plan para seguir avanzando.', style: TextStyle(color: Colors.white70)),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
+      children: [
+        GlowCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Entrenamiento rapido recomendado', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text('${recommended.dayLabel} · ${recommended.title}', style: const TextStyle(color: dorianAccentSoft)),
+              const SizedBox(height: 10),
+              Text('${recommended.estimatedMinutes} minutos · intensidad ${recommended.intensityLabel.toLowerCase()}', style: const TextStyle(color: Colors.white70)),
+              const SizedBox(height: 14),
+              for (final exercise in recommended.exercises.take(4)) ...[
+                Text('• ${exercise.name} · ${exercise.sets} x ${exercise.reps}', style: const TextStyle(color: Colors.white)),
+                const SizedBox(height: 6),
+              ],
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _toggleTrainingDay(context, recommended, onRefresh),
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(recommended.isCompleted ? 'Desmarcar entrenamiento' : 'Marcar como completado'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -3235,12 +3867,44 @@ Future<void> _deletePhoto(BuildContext context, String photoId, Future<void> Fun
   await onRefresh();
 }
 
+Future<void> _toggleTrainingDay(BuildContext context, TrainingPlanDayData day, Future<void> Function() onRefresh) async {
+  try {
+    final api = context.read<TrainingPlanApi>();
+    if (day.isCompleted) {
+      await api.uncompleteDay(day.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Entrenamiento marcado como pendiente.')));
+      }
+    } else {
+      await api.completeDay(day.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Entrenamiento completado.')));
+      }
+    }
+    await onRefresh();
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+  }
+}
+
 String _formatMeasure(double? value) => value == null ? '-' : '${value.toStringAsFixed(1)} cm';
 
 double? _parseDouble(String text) {
   final normalized = text.trim().replaceAll(',', '.');
   if (normalized.isEmpty) return null;
   return double.tryParse(normalized);
+}
+
+extension IterableX<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+
+  T? firstWhereOrNull(bool Function(T item) predicate) {
+    for (final item in this) {
+      if (predicate(item)) return item;
+    }
+    return null;
+  }
 }
 
 class PremiumScaffold extends StatelessWidget {

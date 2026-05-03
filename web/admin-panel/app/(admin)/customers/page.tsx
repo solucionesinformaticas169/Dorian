@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { branchesApi, customersApi, membershipsApi } from "@/lib/api/admin";
 import type { Customer } from "@/lib/types";
-import { customerStatusMap, fitnessExperienceLevelMap, fitnessGoalMap, focusMuscleGroupMap, genderMap, trainingDayMap } from "@/lib/types";
+import { customerStatusMap, fitnessExperienceLevelMap, fitnessGoalMap, focusMuscleGroupMap, genderMap, trainingDayMap, trainingDayIntensityMap, trainingPhaseNameMap, trainingPlanStatusMap } from "@/lib/types";
 import { dateTimeLocalToIso, formatDate, formatDateTime, getErrorMessage, toDateTimeLocalInput } from "@/lib/utils";
 
 type CustomerForm = {
@@ -72,6 +72,19 @@ export default function CustomersPage() {
     queryKey: ["customer-body-summary", selectedFitnessCustomer?.id],
     queryFn: () => customersApi.bodySummary(selectedFitnessCustomer!.id),
     enabled: Boolean(selectedFitnessCustomer),
+  });
+  const trainingPlanQuery = useQuery({
+    queryKey: ["customer-training-plan", selectedFitnessCustomer?.id],
+    queryFn: () => customersApi.trainingPlan(selectedFitnessCustomer!.id),
+    enabled: Boolean(selectedFitnessCustomer),
+  });
+  const generateTrainingPlanMutation = useMutation({
+    mutationFn: async (customerId: string) => customersApi.generateTrainingPlan(customerId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customer-training-plan", selectedFitnessCustomer?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: (mutationError) => setError(getErrorMessage(mutationError)),
   });
 
   const saveMutation = useMutation({
@@ -151,6 +164,7 @@ export default function CustomersPage() {
 
   const selectedFitness = fitnessProfileQuery.data;
   const selectedBodySummary = bodySummaryQuery.data;
+  const selectedTrainingPlan = trainingPlanQuery.data;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -335,10 +349,10 @@ export default function CustomersPage() {
               title={`Resumen de ${selectedFitnessCustomer.firstName} ${selectedFitnessCustomer.lastName}`}
               description="Vista solo lectura del onboarding fitness para soporte del panel."
             />
-            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
-            {fitnessProfileQuery.error || bodySummaryQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error)}</Alert> : null}
+            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading || trainingPlanQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
+            {fitnessProfileQuery.error || bodySummaryQuery.error || trainingPlanQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error ?? trainingPlanQuery.error)}</Alert> : null}
             {selectedFitness ? (
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="mt-5 grid gap-4 md:grid-cols-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Objetivo y nivel</p>
                   <p className="mt-2 text-lg font-semibold text-white">{selectedFitness.onboardingCompleted ? "Perfil completo" : "Onboarding pendiente"}</p>
@@ -363,6 +377,53 @@ export default function CustomersPage() {
                   <p className="mt-2 text-sm text-slate-300">IMC: {selectedBodySummary?.bmi ? `${selectedBodySummary.bmi} (${selectedBodySummary.bmiLabel})` : "Sin mediciones"}</p>
                   <p className="mt-2 text-sm text-slate-300">Ultima medicion: {selectedBodySummary?.latestMeasurementDate ? formatDateTime(selectedBodySummary.latestMeasurementDate) : "Sin registros"}</p>
                   <p className="mt-2 text-sm text-slate-300">Historial: {selectedBodySummary?.weightHistory.length ?? 0} mediciones</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Plan de entrenamiento</p>
+                  <p className="mt-2 text-sm text-slate-300">Plan activo: {selectedTrainingPlan ? "Si" : "No"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Objetivo: {selectedTrainingPlan ? fitnessGoalMap[selectedTrainingPlan.goal] : "Sin plan"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Fase actual: {selectedTrainingPlan?.currentPhaseName ?? "Sin plan"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Progreso: {selectedTrainingPlan ? `${selectedTrainingPlan.progressPercent}%` : "0%"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Estado: {selectedTrainingPlan ? trainingPlanStatusMap[selectedTrainingPlan.status] : "Sin plan"}</p>
+                  <div className="mt-4">
+                    <Button
+                      variant="secondary"
+                      className="px-3 py-2"
+                      onClick={() => generateTrainingPlanMutation.mutate(selectedFitnessCustomer.id)}
+                      disabled={generateTrainingPlanMutation.isPending}
+                    >
+                      {generateTrainingPlanMutation.isPending ? "Generando..." : "Generar plan"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {selectedTrainingPlan ? (
+              <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Estructura del plan</p>
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  {selectedTrainingPlan.phases.map((phase) => (
+                    <div key={phase.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                      <p className="text-sm font-semibold text-white">{trainingPhaseNameMap[phase.name]}</p>
+                      <p className="mt-2 text-sm text-slate-300">{phase.description}</p>
+                      <p className="mt-2 text-xs text-slate-500">{phase.durationWeeks} semanas</p>
+                      <div className="mt-3 space-y-2">
+                        {phase.weeks.map((week) => (
+                          <div key={week.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                            <p className="text-sm font-medium text-white">{week.title}</p>
+                            <p className="mt-1 text-xs text-slate-400">{week.description}</p>
+                            <div className="mt-2 space-y-1">
+                              {week.days.map((day) => (
+                                <p key={day.id} className="text-xs text-slate-300">
+                                  {trainingDayMap[day.dayOfWeek]} · {day.title} · {trainingDayIntensityMap[day.intensity]} · {day.exercises.length} ejercicios
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : null}
