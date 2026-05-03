@@ -69,6 +69,13 @@ class DorianApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Dorian',
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: const TextScaler.linear(1)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: base.copyWith(
         scaffoldBackgroundColor: dorianBackground,
         textTheme: textTheme,
@@ -2872,13 +2879,25 @@ class MembershipPage extends StatelessWidget {
               children: [
                 Text(profile.activeMembershipName ?? 'Sin membresia activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
-                Text('Duracion: ${profile.activeMembershipDurationInDays?.toString() ?? '-'} dias'),
+                Text(
+                  'Duracion: ${profile.activeMembershipDurationInDays?.toString() ?? '-'} dias',
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
                 const SizedBox(height: 8),
-                Text('Precio: ${profile.activeMembershipCurrency ?? 'USD'} ${profile.activeMembershipPrice?.toStringAsFixed(2) ?? '-'}'),
+                Text(
+                  'Precio: ${profile.activeMembershipCurrency ?? 'USD'} ${profile.activeMembershipPrice?.toStringAsFixed(2) ?? '-'}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
                 const SizedBox(height: 8),
-                Text('Inicio: ${profile.activeMembershipStartsAtUtc == null ? '-' : formatDate(profile.activeMembershipStartsAtUtc!)}'),
+                Text(
+                  'Inicio: ${profile.activeMembershipStartsAtUtc == null ? '-' : formatDate(profile.activeMembershipStartsAtUtc!)}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
                 const SizedBox(height: 8),
-                Text('Fin: ${profile.activeMembershipEndsAtUtc == null ? '-' : formatDate(profile.activeMembershipEndsAtUtc!)}'),
+                Text(
+                  'Fin: ${profile.activeMembershipEndsAtUtc == null ? '-' : formatDate(profile.activeMembershipEndsAtUtc!)}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
               ],
             ),
           ),
@@ -3132,26 +3151,27 @@ class _TrainingPlanOverviewTab extends StatelessWidget {
             itemBuilder: (context, index) {
               final phase = plan.phases[index];
               return Container(
-                width: 220,
+                width: 240,
+                constraints: const BoxConstraints(minHeight: 148),
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(22),
                   gradient: LinearGradient(
                     colors: phase.isCurrent
-                        ? [dorianAccent.withValues(alpha: 0.32), Colors.white.withValues(alpha: 0.06)]
-                        : [Colors.white.withValues(alpha: 0.04), Colors.white.withValues(alpha: 0.02)],
+                        ? [dorianAccent.withValues(alpha: 0.22), const Color(0xFF1A1410)]
+                        : [const Color(0xFF151515), const Color(0xFF111111)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(color: phase.isCurrent ? dorianAccent.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(phase.label, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
-                    Text(phase.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
-                    const Spacer(),
+                    Expanded(child: Text(phase.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70))),
+                    const SizedBox(height: 12),
                     Text('${phase.durationWeeks} semanas', style: const TextStyle(color: dorianAccentSoft)),
                   ],
                 ),
@@ -4666,21 +4686,38 @@ class _BodyMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 160,
+      width: 170,
+      constraints: const BoxConstraints(minHeight: 112),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withValues(alpha: 0.04),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: const Color(0xFF141414),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(title, style: const TextStyle(color: dorianTextSoft)),
           const SizedBox(height: 10),
-          Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                  height: 1.1,
+                  color: Colors.white,
+                ),
+          ),
           const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -4766,7 +4803,7 @@ class WeightHistoryChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: history.map((item) {
           final ratio = ((item.weightKg - minWeight) / range).clamp(0.0, 1.0);
-          final barHeight = 40.0 + (ratio * 100.0);
+          final barHeight = 28.0 + (ratio * 88.0);
           return Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -4774,7 +4811,7 @@ class WeightHistoryChart extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Text(item.weightKg.toStringAsFixed(1), style: const TextStyle(fontSize: 11, color: dorianAccentSoft)),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Container(
                     height: barHeight,
                     decoration: BoxDecoration(
@@ -4782,7 +4819,7 @@ class WeightHistoryChart extends StatelessWidget {
                       gradient: const LinearGradient(colors: [dorianAccent, dorianAccentSoft], begin: Alignment.bottomCenter, end: Alignment.topCenter),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text('${item.measuredAt.day}/${item.measuredAt.month}', style: const TextStyle(fontSize: 11, color: Colors.white54)),
                 ],
               ),
@@ -5234,10 +5271,19 @@ class PremiumScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(title: Text(title)),
-      body: child,
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF180F0B), Color(0xFF070707), Color(0xFF1F130D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(title: Text(title)),
+        body: SafeArea(child: child),
+      ),
     );
   }
 }
@@ -5254,11 +5300,18 @@ class GlowCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
-          colors: [dorianAccent.withValues(alpha: 0.12), Colors.white.withValues(alpha: 0.03)],
+          colors: [const Color(0xFF1B1410), const Color(0xFF111111), dorianAccent.withValues(alpha: 0.08)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: dorianAccent.withValues(alpha: 0.16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: child,
     );
