@@ -960,7 +960,7 @@ class ClassBookingPage extends StatelessWidget {
                       final bookingApi = context.read<BookingApi>();
                       await bookingApi.createBooking(gymClass.id, customerId);
                       if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reserva creada con exito.')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reserva creada con exito. Ya puedes verla en Mis reservas.')));
                       Navigator.of(context).pop();
                     },
               icon: const Icon(Icons.check_circle),
@@ -1020,7 +1020,7 @@ class BookingsPage extends StatelessWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Chip(label: Text(booking.status == 1 ? 'Reserved' : booking.status == 2 ? 'Cancelled' : booking.status == 3 ? 'Attended' : booking.status == 4 ? 'NoShow' : 'Unknown')), 
+                        Chip(label: Text(booking.status == 1 ? 'Reservada' : booking.status == 2 ? 'Cancelada' : booking.status == 3 ? 'Asistio' : booking.status == 4 ? 'No asistio' : 'Estado desconocido')),
                         const Spacer(),
                         if (booking.status == 1)
                           TextButton(
@@ -1120,7 +1120,7 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 8),
               Text('Telefono: ${profile.phone ?? 'No registrado'}'),
               const SizedBox(height: 8),
-              Text('Estado: ${profile.status}'),
+              Text('Estado: ${profile.statusLabel}'),
             ],
           ),
         ),

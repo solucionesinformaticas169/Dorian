@@ -25,7 +25,7 @@ public sealed class DashboardService : IDashboardService
         var user = EnsureAuthenticated();
         var scopeBranchId = ResolveBranchScope(user);
         var now = DateTimeOffset.UtcNow;
-        var today = now.Date;
+        var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
         var tomorrow = today.AddDays(1);
 
         var branchesQuery = _dbContext.Branches.AsNoTracking().Where(x => x.IsActive);

@@ -82,8 +82,9 @@ public sealed class AccessService : IAccessService
     public async Task<IReadOnlyCollection<CheckInResponse>> GetBranchCheckInsAsync(Guid branchId, CancellationToken cancellationToken)
     {
         EnsureCanViewBranchCheckIns(branchId);
-        return await Project(_dbContext.CheckIns.AsNoTracking().Where(x => x.BranchId == branchId))
-            .OrderByDescending(x => x.CheckedInAt)
+        return await Project(_dbContext.CheckIns.AsNoTracking()
+                .Where(x => x.BranchId == branchId)
+                .OrderByDescending(x => x.CheckedInAt))
             .ToListAsync(cancellationToken);
     }
 
@@ -91,8 +92,9 @@ public sealed class AccessService : IAccessService
     {
         var customer = await GetCustomerWithUserAsync(customerId, cancellationToken);
         EnsureCanViewCustomerCheckIns(customer);
-        return await Project(_dbContext.CheckIns.AsNoTracking().Where(x => x.CustomerId == customerId))
-            .OrderByDescending(x => x.CheckedInAt)
+        return await Project(_dbContext.CheckIns.AsNoTracking()
+                .Where(x => x.CustomerId == customerId)
+                .OrderByDescending(x => x.CheckedInAt))
             .ToListAsync(cancellationToken);
     }
 
