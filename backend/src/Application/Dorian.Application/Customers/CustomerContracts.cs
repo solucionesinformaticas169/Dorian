@@ -23,6 +23,7 @@ public sealed record CustomerResponse(
     string? EmergencyContactName,
     string? EmergencyContactPhone,
     CustomerStatus Status,
+    bool OnboardingCompleted,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? UpdatedAtUtc);
 

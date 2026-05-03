@@ -137,7 +137,7 @@ public sealed class CustomerService : ICustomerService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private IQueryable<Customer> QueryCustomers() => _dbContext.Customers.AsNoTracking().Include(x => x.User).Include(x => x.ActiveMembership);
+    private IQueryable<Customer> QueryCustomers() => _dbContext.Customers.AsNoTracking().Include(x => x.User).Include(x => x.ActiveMembership).Include(x => x.FitnessProfile);
 
     private CurrentUser EnsureAuthenticated()
     {
@@ -230,6 +230,7 @@ public sealed class CustomerService : ICustomerService
         customer.EmergencyContactName,
         customer.EmergencyContactPhone,
         customer.Status,
+        customer.FitnessProfile != null && customer.FitnessProfile.OnboardingCompleted,
         customer.CreatedAtUtc,
         customer.UpdatedAtUtc);
 
@@ -254,6 +255,7 @@ public sealed class CustomerService : ICustomerService
         customer.EmergencyContactName,
         customer.EmergencyContactPhone,
         customer.Status,
+        customer.FitnessProfile?.OnboardingCompleted == true,
         customer.CreatedAtUtc,
         customer.UpdatedAtUtc);
 

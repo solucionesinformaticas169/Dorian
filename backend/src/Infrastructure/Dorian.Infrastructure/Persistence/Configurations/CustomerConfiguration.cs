@@ -28,5 +28,10 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .WithMany()
             .HasForeignKey(x => x.ActiveMembershipId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.FitnessProfile)
+            .WithOne(x => x.Customer)
+            .HasForeignKey<CustomerFitnessProfile>(x => x.CustomerId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

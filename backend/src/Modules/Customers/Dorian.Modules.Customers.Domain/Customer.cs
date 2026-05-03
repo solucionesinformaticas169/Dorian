@@ -79,6 +79,7 @@ public sealed class Customer : AuditableEntity<Guid>
     public CustomerStatus Status { get; private set; }
     public User User { get; private set; } = null!;
     public Membership? ActiveMembership { get; private set; }
+    public CustomerFitnessProfile? FitnessProfile { get; private set; }
 
     public void Update(
         Guid branchId,
