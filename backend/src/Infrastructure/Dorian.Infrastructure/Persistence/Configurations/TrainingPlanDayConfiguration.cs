@@ -17,5 +17,10 @@ public sealed class TrainingPlanDayConfiguration : IEntityTypeConfiguration<Trai
             .WithOne(x => x.TrainingDay)
             .HasForeignKey(x => x.TrainingDayId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(x => x.WorkoutActivities)
+            .WithOne(x => x.TrainingDay)
+            .HasForeignKey(x => x.TrainingDayId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

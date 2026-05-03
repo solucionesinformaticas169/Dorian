@@ -3,6 +3,7 @@ namespace Dorian.Application.TrainingPlans;
 using Dorian.Application.Abstractions.Auth;
 using Dorian.Application.Abstractions.Errors;
 using Dorian.Application.Abstractions.Persistence;
+using Dorian.Application.WorkoutActivities;
 using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Constants;
 using Dorian.Modules.Training.Domain.Entities;
@@ -12,11 +13,13 @@ public sealed class TrainingPlanService : ITrainingPlanService
 {
     private readonly IDorianDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IWorkoutActivityService _workoutActivityService;
 
-    public TrainingPlanService(IDorianDbContext dbContext, ICurrentUserService currentUserService)
+    public TrainingPlanService(IDorianDbContext dbContext, ICurrentUserService currentUserService, IWorkoutActivityService workoutActivityService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _workoutActivityService = workoutActivityService;
     }
 
     public async Task<TrainingPlanResponse?> GetMyPlanAsync(CancellationToken cancellationToken)
@@ -58,6 +61,7 @@ public sealed class TrainingPlanService : ITrainingPlanService
         await EnsureCanManageDayAsync(day.TrainingWeek.TrainingPhase.TrainingPlan.CustomerId, requireAdmin: false, cancellationToken);
         day.MarkCompleted(DateTimeOffset.UtcNow);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _workoutActivityService.EnsureAutomaticActivityForTrainingDayAsync(day.Id, cancellationToken);
         return Map(day);
     }
 
@@ -74,6 +78,7 @@ public sealed class TrainingPlanService : ITrainingPlanService
         await EnsureCanManageDayAsync(day.TrainingWeek.TrainingPhase.TrainingPlan.CustomerId, requireAdmin: false, cancellationToken);
         day.MarkUncompleted();
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _workoutActivityService.RemoveAutomaticActivityForTrainingDayAsync(day.Id, cancellationToken);
         return Map(day);
     }
 

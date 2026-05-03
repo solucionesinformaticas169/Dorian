@@ -13,6 +13,7 @@ using Dorian.Application.GroupClasses;
 using Dorian.Application.Memberships;
 using Dorian.Application.Promotions;
 using Dorian.Application.TrainingPlans;
+using Dorian.Application.WorkoutActivities;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<ITrainingPlanService, TrainingPlanService>();
         services.AddScoped<IExerciseCatalogService, ExerciseCatalogService>();
+        services.AddScoped<IWorkoutActivityService, WorkoutActivityService>();
         return services;
     }
 }

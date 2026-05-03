@@ -26,6 +26,7 @@ public sealed class TrainingPlanDay : AuditableEntity<Guid>
     public DateTimeOffset? CompletedAt { get; private set; }
     public TrainingWeek TrainingWeek { get; private set; } = null!;
     public ICollection<TrainingExercise> Exercises { get; private set; } = [];
+    public ICollection<WorkoutActivity> WorkoutActivities { get; private set; } = [];
 
     public void MarkCompleted(DateTimeOffset completedAt)
     {

@@ -32,6 +32,8 @@ public interface IDorianDbContext
     DbSet<TrainingPlanDay> TrainingPlanDays { get; }
     DbSet<TrainingExercise> TrainingExercises { get; }
     DbSet<ExerciseCatalog> ExerciseCatalog { get; }
+    DbSet<WorkoutActivity> WorkoutActivities { get; }
+    DbSet<WorkoutExerciseLog> WorkoutExerciseLogs { get; }
     DbSet<AccessPass> AccessPasses { get; }
     DbSet<CheckIn> CheckIns { get; }
     DbSet<AuditLog> AuditLogs { get; }

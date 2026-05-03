@@ -42,6 +42,8 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
     public DbSet<TrainingPlanDay> TrainingPlanDays => Set<TrainingPlanDay>();
     public DbSet<TrainingExercise> TrainingExercises => Set<TrainingExercise>();
     public DbSet<ExerciseCatalog> ExerciseCatalog => Set<ExerciseCatalog>();
+    public DbSet<WorkoutActivity> WorkoutActivities => Set<WorkoutActivity>();
+    public DbSet<WorkoutExerciseLog> WorkoutExerciseLogs => Set<WorkoutExerciseLog>();
     public DbSet<AccessPass> AccessPasses => Set<AccessPass>();
     public DbSet<CheckIn> CheckIns => Set<CheckIn>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -108,6 +110,8 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
         || entityType == typeof(TrainingWeek)
         || entityType == typeof(TrainingPlanDay)
         || entityType == typeof(TrainingExercise)
+        || entityType == typeof(WorkoutActivity)
+        || entityType == typeof(WorkoutExerciseLog)
         || entityType == typeof(AccessPass)
         || entityType == typeof(CheckIn);
 }
