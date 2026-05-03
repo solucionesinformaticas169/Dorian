@@ -44,6 +44,7 @@ void main() {
         Provider.value(value: AccessApi(client)),
         Provider.value(value: FitnessProfileApi(client)),
         Provider.value(value: BodyTrackingApi(client)),
+        Provider.value(value: NutritionApi(client)),
         Provider.value(value: TrainingPlanApi(client)),
         Provider.value(value: ActivityApi(client)),
       ],
@@ -415,6 +416,29 @@ class BodyTrackingApi {
   Future<BodySummary> getSummary() async => BodySummary.fromJson(await client.get('/customers/me/body-summary') as Map<String, dynamic>);
 }
 
+class NutritionApi {
+  NutritionApi(this.client);
+  final ApiClient client;
+
+  Future<NutritionProfileData?> getProfile() async {
+    final payload = await client.get('/customers/me/nutrition-profile');
+    if (payload == null) return null;
+    return NutritionProfileData.fromJson(payload as Map<String, dynamic>);
+  }
+
+  Future<NutritionProfileData> generateProfile() async =>
+      NutritionProfileData.fromJson(await client.post('/customers/me/nutrition-profile/generate') as Map<String, dynamic>);
+
+  Future<NutritionProfileData> updateProfile(NutritionProfileUpdateInput payload) async =>
+      NutritionProfileData.fromJson(await client.put('/customers/me/nutrition-profile', body: payload.toJson()) as Map<String, dynamic>);
+
+  Future<List<MealPlanData>> getMealPlan() async =>
+      ((await client.get('/customers/me/meal-plan')) as List<dynamic>).map((item) => MealPlanData.fromJson(item as Map<String, dynamic>)).toList();
+
+  Future<List<MealPlanData>> generateMealPlan() async =>
+      ((await client.post('/customers/me/meal-plan/generate')) as List<dynamic>).map((item) => MealPlanData.fromJson(item as Map<String, dynamic>)).toList();
+}
+
 class TrainingPlanApi {
   TrainingPlanApi(this.client);
   final ApiClient client;
@@ -650,6 +674,13 @@ const trainingIntensityLabels = <int, String>{
   1: 'Baja',
   2: 'Media',
   3: 'Alta',
+};
+
+const mealTypeLabels = <int, String>{
+  1: 'Desayuno',
+  2: 'Almuerzo',
+  3: 'Cena',
+  4: 'Snack',
 };
 
 const exerciseMuscleGroupLabels = <int, String>{
@@ -1053,6 +1084,129 @@ class BodySummary {
         measurementsHistory: (json['measurementsHistory'] as List<dynamic>? ?? const []).map((item) => (item as Map<String, dynamic>)).toList(),
         progressPhotos: (json['progressPhotos'] as List<dynamic>? ?? const []).map((item) => BodyProgressPhoto.fromJson(item as Map<String, dynamic>)).toList(),
         daysSinceLastMeasurement: json['daysSinceLastMeasurement'] as int?,
+      );
+}
+
+class NutritionProfileData {
+  NutritionProfileData({
+    required this.id,
+    required this.customerId,
+    required this.goal,
+    required this.dailyCaloriesTarget,
+    required this.proteinGrams,
+    required this.carbsGrams,
+    required this.fatGrams,
+    required this.mealsPerDay,
+    required this.waterLitersTarget,
+    required this.dietaryRestrictions,
+    required this.disclaimer,
+  });
+
+  final String id;
+  final String customerId;
+  final int goal;
+  final int dailyCaloriesTarget;
+  final int proteinGrams;
+  final int carbsGrams;
+  final int fatGrams;
+  final int mealsPerDay;
+  final double waterLitersTarget;
+  final String? dietaryRestrictions;
+  final String disclaimer;
+
+  String get goalLabel => fitnessGoalLabels[goal] ?? 'Objetivo';
+
+  factory NutritionProfileData.fromJson(Map<String, dynamic> json) => NutritionProfileData(
+        id: json['id'] as String,
+        customerId: json['customerId'] as String,
+        goal: json['goal'] as int,
+        dailyCaloriesTarget: json['dailyCaloriesTarget'] as int,
+        proteinGrams: json['proteinGrams'] as int,
+        carbsGrams: json['carbsGrams'] as int,
+        fatGrams: json['fatGrams'] as int,
+        mealsPerDay: json['mealsPerDay'] as int,
+        waterLitersTarget: (json['waterLitersTarget'] as num).toDouble(),
+        dietaryRestrictions: json['dietaryRestrictions'] as String?,
+        disclaimer: json['disclaimer'] as String,
+      );
+}
+
+class NutritionProfileUpdateInput {
+  NutritionProfileUpdateInput({
+    required this.mealsPerDay,
+    required this.dietaryRestrictions,
+  });
+
+  final int mealsPerDay;
+  final String? dietaryRestrictions;
+
+  Map<String, dynamic> toJson() => {
+        'mealsPerDay': mealsPerDay,
+        'dietaryRestrictions': dietaryRestrictions,
+      };
+}
+
+class MealPlanData {
+  MealPlanData({
+    required this.id,
+    required this.customerId,
+    required this.title,
+    required this.description,
+    required this.dayOfWeek,
+    required this.items,
+  });
+
+  final String id;
+  final String customerId;
+  final String title;
+  final String description;
+  final int? dayOfWeek;
+  final List<MealItemData> items;
+
+  String get dayLabel => dayOfWeek == null ? 'Plan diario' : trainingDayLabels[dayOfWeek!] ?? 'Plan diario';
+
+  factory MealPlanData.fromJson(Map<String, dynamic> json) => MealPlanData(
+        id: json['id'] as String,
+        customerId: json['customerId'] as String,
+        title: json['title'] as String,
+        description: json['description'] as String,
+        dayOfWeek: json['dayOfWeek'] as int?,
+        items: (json['items'] as List<dynamic>).map((item) => MealItemData.fromJson(item as Map<String, dynamic>)).toList(),
+      );
+}
+
+class MealItemData {
+  MealItemData({
+    required this.id,
+    required this.mealType,
+    required this.name,
+    required this.description,
+    required this.calories,
+    required this.proteinGrams,
+    required this.carbsGrams,
+    required this.fatGrams,
+  });
+
+  final String id;
+  final int mealType;
+  final String name;
+  final String description;
+  final int calories;
+  final int proteinGrams;
+  final int carbsGrams;
+  final int fatGrams;
+
+  String get mealTypeLabel => mealTypeLabels[mealType] ?? 'Comida';
+
+  factory MealItemData.fromJson(Map<String, dynamic> json) => MealItemData(
+        id: json['id'] as String,
+        mealType: json['mealType'] as int,
+        name: json['name'] as String,
+        description: json['description'] as String,
+        calories: json['calories'] as int,
+        proteinGrams: json['proteinGrams'] as int,
+        carbsGrams: json['carbsGrams'] as int,
+        fatGrams: json['fatGrams'] as int,
       );
 }
 
@@ -2204,6 +2358,8 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             QuickActionCard(icon: Icons.assignment_outlined, title: 'Mi plan de entrenamiento', subtitle: 'Rutina personalizada', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrainingPlanPage()))),
             const SizedBox(height: 12),
+            QuickActionCard(icon: Icons.restaurant_menu_outlined, title: 'Nutricion', subtitle: 'Macros y plan diario', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NutritionPage()))),
+            const SizedBox(height: 12),
             QuickActionCard(icon: Icons.insights_outlined, title: 'Actividades', subtitle: 'Progreso y constancia', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage()))),
             const SizedBox(height: 24),
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
@@ -2643,6 +2799,13 @@ class ProfilePage extends StatelessWidget {
           title: 'Actividades',
           subtitle: 'Resumen e historial',
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActivityPage())),
+        ),
+        const SizedBox(height: 12),
+        QuickActionCard(
+          icon: Icons.restaurant_menu_outlined,
+          title: 'Nutricion',
+          subtitle: 'Plan diario y restricciones',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NutritionPage())),
         ),
         const SizedBox(height: 12),
         QuickActionCard(
@@ -3734,6 +3897,328 @@ class _ActivityBundle {
   final ActivitySummaryData summary;
   final List<ActivityHistoryItemData> history;
   final List<MuscleActivityData> muscles;
+}
+
+class NutritionPage extends StatefulWidget {
+  const NutritionPage({super.key});
+
+  @override
+  State<NutritionPage> createState() => _NutritionPageState();
+}
+
+class _NutritionPageState extends State<NutritionPage> {
+  late Future<_NutritionBundle> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = _load();
+  }
+
+  Future<_NutritionBundle> _load() async {
+    final api = context.read<NutritionApi>();
+    final profile = await api.getProfile();
+    final mealPlan = await api.getMealPlan();
+    return _NutritionBundle(profile: profile, mealPlan: mealPlan);
+  }
+
+  Future<void> _refresh() async {
+    setState(() => future = _load());
+    await future;
+  }
+
+  Future<void> _generateNutrition() async {
+    try {
+      final api = context.read<NutritionApi>();
+      await api.generateProfile();
+      await api.generateMealPlan();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tu plan nutricional ya está listo.')));
+      await _refresh();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _openRestrictionsEditor(NutritionProfileData profile) async {
+    final changed = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => NutritionRestrictionsPage(initial: profile)));
+    if (changed == true) {
+      await _refresh();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<SessionController>();
+    final fitnessProfile = session.fitnessProfile;
+
+    if (fitnessProfile?.onboardingCompleted != true) {
+      return PremiumScaffold(
+        title: 'Nutricion',
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Completa tu onboarding primero', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
+                  const Text('Necesitamos tu objetivo, medidas y nivel de actividad para calcular tu nutrición de forma coherente.', style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitnessOnboardingPage(editMode: true))),
+                    icon: const Icon(Icons.flag_circle_outlined),
+                    label: const Text('Completar onboarding'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return FutureBuilder<_NutritionBundle>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const PremiumScaffold(title: 'Nutricion', child: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+          return PremiumScaffold(title: 'Nutricion', child: Center(child: Text(snapshot.error.toString())));
+        }
+
+        final bundle = snapshot.data!;
+        final profile = bundle.profile;
+        if (profile == null) {
+          return PremiumScaffold(
+            title: 'Nutricion',
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                GlowCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Genera tu plan nutricional', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 10),
+                      Text('Usaremos tu objetivo ${fitnessProfile!.goalLabel.toLowerCase()}, tu peso actual y tu constancia reciente para calcular calorías y macros.', style: const TextStyle(color: Colors.white70)),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _generateNutrition,
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('Generar plan nutricional'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+          children: [
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(profile.goalLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  Text(profile.disclaimer, style: const TextStyle(color: dorianAccentSoft)),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      _BodyMetricCard(title: 'Calorias', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario'),
+                      _BodyMetricCard(title: 'Proteina', value: '${profile.proteinGrams} g', subtitle: 'Recuperacion'),
+                      _BodyMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'Energia'),
+                      _BodyMetricCard(title: 'Grasas', value: '${profile.fatGrams} g', subtitle: 'Balance'),
+                      _BodyMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'Hidratacion'),
+                      _BodyMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'Distribucion'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text('Restricciones y ajustes', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700))),
+                      TextButton(onPressed: () => _openRestrictionsEditor(profile), child: const Text('Actualizar')),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(profile.dietaryRestrictions ?? 'Sin restricciones registradas.', style: const TextStyle(color: Colors.white70)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (bundle.mealPlan.isEmpty)
+              GlowCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Aun no generas tus comidas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      onPressed: _generateNutrition,
+                      icon: const Icon(Icons.restaurant_menu),
+                      label: const Text('Ver comidas'),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...bundle.mealPlan.map(
+                (plan) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GlowCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(plan.dayLabel, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        Text(plan.description, style: const TextStyle(color: Colors.white70)),
+                        const SizedBox(height: 14),
+                        ...plan.items.map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                color: Colors.white.withValues(alpha: 0.04),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${item.mealTypeLabel} · ${item.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 6),
+                                  Text(item.description, style: const TextStyle(color: Colors.white70)),
+                                  const SizedBox(height: 6),
+                                  Text('${item.calories} kcal · ${item.proteinGrams}P / ${item.carbsGrams}C / ${item.fatGrams}G', style: const TextStyle(color: dorianAccentSoft)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class NutritionRestrictionsPage extends StatefulWidget {
+  const NutritionRestrictionsPage({super.key, required this.initial});
+
+  final NutritionProfileData initial;
+
+  @override
+  State<NutritionRestrictionsPage> createState() => _NutritionRestrictionsPageState();
+}
+
+class _NutritionRestrictionsPageState extends State<NutritionRestrictionsPage> {
+  late final TextEditingController _restrictions;
+  late int mealsPerDay;
+  bool isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _restrictions = TextEditingController(text: widget.initial.dietaryRestrictions ?? '');
+    mealsPerDay = widget.initial.mealsPerDay;
+  }
+
+  @override
+  void dispose() {
+    _restrictions.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => isSaving = true);
+    try {
+      await context.read<NutritionApi>().updateProfile(
+            NutritionProfileUpdateInput(
+              mealsPerDay: mealsPerDay,
+              dietaryRestrictions: _restrictions.text.trim().isEmpty ? null : _restrictions.text.trim(),
+            ),
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      if (mounted) setState(() => isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumScaffold(
+      title: 'Ajustes de nutricion',
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Restricciones alimentarias', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: mealsPerDay,
+                  decoration: const InputDecoration(labelText: 'Comidas por dia'),
+                  items: [3, 4, 5, 6].map((value) => DropdownMenuItem(value: value, child: Text('$value comidas'))).toList(),
+                  onChanged: (value) => setState(() => mealsPerDay = value ?? 4),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _restrictions,
+                  minLines: 3,
+                  maxLines: 5,
+                  decoration: const InputDecoration(labelText: 'Alergias, intolerancias o preferencias'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: isSaving ? null : _submit,
+            icon: const Icon(Icons.save_outlined),
+            label: Text(isSaving ? 'Guardando...' : 'Guardar ajustes'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NutritionBundle {
+  const _NutritionBundle({
+    required this.profile,
+    required this.mealPlan,
+  });
+
+  final NutritionProfileData? profile;
+  final List<MealPlanData> mealPlan;
 }
 
 class BodyTrackingPage extends StatefulWidget {

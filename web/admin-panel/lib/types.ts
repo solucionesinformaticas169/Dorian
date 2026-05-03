@@ -207,6 +207,43 @@ export type ActivitySummary = {
   recentActivities: ActivityHistoryItem[];
 };
 
+export type NutritionProfile = {
+  id: string;
+  customerId: string;
+  goal: number;
+  dailyCaloriesTarget: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+  mealsPerDay: number;
+  waterLitersTarget: number;
+  dietaryRestrictions?: string | null;
+  disclaimer: string;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+};
+
+export type MealItem = {
+  id: string;
+  mealType: number;
+  name: string;
+  description: string;
+  calories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatGrams: number;
+};
+
+export type MealPlan = {
+  id: string;
+  customerId: string;
+  title: string;
+  description: string;
+  dayOfWeek?: number | null;
+  items: MealItem[];
+  createdAtUtc: string;
+};
+
 export type Membership = {
   id: string;
   branchId: string;
@@ -388,6 +425,13 @@ export const trainingDayIntensityMap: Record<number, string> = {
   1: "Baja",
   2: "Media",
   3: "Alta",
+};
+
+export const mealTypeMap: Record<number, string> = {
+  1: "Desayuno",
+  2: "Almuerzo",
+  3: "Cena",
+  4: "Snack",
 };
 
 export const bookingStatusMap: Record<number, string> = {

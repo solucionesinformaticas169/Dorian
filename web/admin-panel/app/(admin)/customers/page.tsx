@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { branchesApi, customersApi, membershipsApi } from "@/lib/api/admin";
 import type { Customer } from "@/lib/types";
-import { customerStatusMap, fitnessExperienceLevelMap, fitnessGoalMap, focusMuscleGroupMap, genderMap, trainingDayMap, trainingDayIntensityMap, trainingPhaseNameMap, trainingPlanStatusMap } from "@/lib/types";
+import { customerStatusMap, fitnessExperienceLevelMap, fitnessGoalMap, focusMuscleGroupMap, genderMap, mealTypeMap, trainingDayMap, trainingDayIntensityMap, trainingPhaseNameMap, trainingPlanStatusMap } from "@/lib/types";
 import { dateTimeLocalToIso, formatDate, formatDateTime, getErrorMessage, toDateTimeLocalInput } from "@/lib/utils";
 
 type CustomerForm = {
@@ -76,6 +76,16 @@ export default function CustomersPage() {
   const trainingPlanQuery = useQuery({
     queryKey: ["customer-training-plan", selectedFitnessCustomer?.id],
     queryFn: () => customersApi.trainingPlan(selectedFitnessCustomer!.id),
+    enabled: Boolean(selectedFitnessCustomer),
+  });
+  const nutritionProfileQuery = useQuery({
+    queryKey: ["customer-nutrition-profile", selectedFitnessCustomer?.id],
+    queryFn: () => customersApi.nutritionProfile(selectedFitnessCustomer!.id),
+    enabled: Boolean(selectedFitnessCustomer),
+  });
+  const mealPlanQuery = useQuery({
+    queryKey: ["customer-meal-plan", selectedFitnessCustomer?.id],
+    queryFn: () => customersApi.mealPlan(selectedFitnessCustomer!.id),
     enabled: Boolean(selectedFitnessCustomer),
   });
   const activitySummaryQuery = useQuery({
@@ -170,6 +180,8 @@ export default function CustomersPage() {
   const selectedFitness = fitnessProfileQuery.data;
   const selectedBodySummary = bodySummaryQuery.data;
   const selectedTrainingPlan = trainingPlanQuery.data;
+  const selectedNutritionProfile = nutritionProfileQuery.data;
+  const selectedMealPlan = mealPlanQuery.data ?? [];
   const selectedActivitySummary = activitySummaryQuery.data;
 
   return (
@@ -355,8 +367,8 @@ export default function CustomersPage() {
               title={`Resumen de ${selectedFitnessCustomer.firstName} ${selectedFitnessCustomer.lastName}`}
               description="Vista solo lectura del onboarding fitness para soporte del panel."
             />
-            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading || trainingPlanQuery.isLoading || activitySummaryQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
-            {fitnessProfileQuery.error || bodySummaryQuery.error || trainingPlanQuery.error || activitySummaryQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error ?? trainingPlanQuery.error ?? activitySummaryQuery.error)}</Alert> : null}
+            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading || trainingPlanQuery.isLoading || activitySummaryQuery.isLoading || nutritionProfileQuery.isLoading || mealPlanQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
+            {fitnessProfileQuery.error || bodySummaryQuery.error || trainingPlanQuery.error || activitySummaryQuery.error || nutritionProfileQuery.error || mealPlanQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error ?? trainingPlanQuery.error ?? activitySummaryQuery.error ?? nutritionProfileQuery.error ?? mealPlanQuery.error)}</Alert> : null}
             {selectedFitness ? (
               <div className="mt-5 grid gap-4 md:grid-cols-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -426,6 +438,38 @@ export default function CustomersPage() {
                   <p className="mt-2 text-sm text-slate-300">Reps: {selectedActivitySummary.repsCompleted}</p>
                   <p className="mt-2 text-sm text-slate-300">Carga: {selectedActivitySummary.totalLoadKg ? `${selectedActivitySummary.totalLoadKg} kg` : "Sin carga registrada"}</p>
                 </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Nutricion</p>
+                  <p className="mt-2 text-sm text-slate-300">Objetivo: {selectedNutritionProfile ? fitnessGoalMap[selectedNutritionProfile.goal] : "Sin perfil"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Calorias diarias: {selectedNutritionProfile?.dailyCaloriesTarget ?? "-"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Macros: {selectedNutritionProfile ? `${selectedNutritionProfile.proteinGrams}P / ${selectedNutritionProfile.carbsGrams}C / ${selectedNutritionProfile.fatGrams}G` : "Sin macros"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Agua: {selectedNutritionProfile ? `${selectedNutritionProfile.waterLitersTarget} L` : "-"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Plan diario: {selectedMealPlan.length ? `${selectedMealPlan.length} dias generados` : "Sin plan"}</p>
+                </div>
+              </div>
+            ) : null}
+            {selectedNutritionProfile ? (
+              <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Resumen nutricional</p>
+                <p className="mt-3 text-sm text-slate-300">{selectedNutritionProfile.disclaimer}</p>
+                <p className="mt-3 text-sm text-slate-300">Restricciones: {selectedNutritionProfile.dietaryRestrictions ?? "Sin restricciones registradas"}</p>
+                {selectedMealPlan.length ? (
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    {selectedMealPlan.slice(0, 2).map((plan) => (
+                      <div key={plan.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                        <p className="text-sm font-semibold text-white">{plan.title}</p>
+                        <p className="mt-2 text-xs text-slate-400">{plan.description}</p>
+                        <div className="mt-3 space-y-2">
+                          {plan.items.map((item) => (
+                            <p key={item.id} className="text-xs text-slate-300">
+                              {mealTypeMap[item.mealType]} · {item.name} · {item.calories} kcal
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : null}
             {selectedTrainingPlan ? (
