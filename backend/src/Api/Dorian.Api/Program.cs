@@ -59,6 +59,7 @@ app.MapMembershipEndpoints();
 app.MapCustomerEndpoints();
 app.MapCustomerFitnessProfileEndpoints();
 app.MapBodyTrackingEndpoints();
+app.MapTrainingPlanEndpoints();
 app.MapBookingEndpoints();
 app.MapPromotionEndpoints();
 app.Run();

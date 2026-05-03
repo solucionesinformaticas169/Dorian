@@ -11,6 +11,7 @@ using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Entities;
 using Dorian.Modules.Memberships.Domain.Entities;
 using Dorian.Modules.Promotions.Domain.Entities;
+using Dorian.Modules.Training.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 public sealed class AppDbContext : DbContext, IDorianDbContext
@@ -35,6 +36,12 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
     public DbSet<ClassSession> ClassSessions => Set<ClassSession>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<Promotion> Promotions => Set<Promotion>();
+    public DbSet<TrainingPlan> TrainingPlans => Set<TrainingPlan>();
+    public DbSet<TrainingPhase> TrainingPhases => Set<TrainingPhase>();
+    public DbSet<TrainingWeek> TrainingWeeks => Set<TrainingWeek>();
+    public DbSet<TrainingPlanDay> TrainingPlanDays => Set<TrainingPlanDay>();
+    public DbSet<TrainingExercise> TrainingExercises => Set<TrainingExercise>();
+    public DbSet<ExerciseCatalog> ExerciseCatalog => Set<ExerciseCatalog>();
     public DbSet<AccessPass> AccessPasses => Set<AccessPass>();
     public DbSet<CheckIn> CheckIns => Set<CheckIn>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -96,6 +103,11 @@ public sealed class AppDbContext : DbContext, IDorianDbContext
         || entityType == typeof(ClassSession)
         || entityType == typeof(Booking)
         || entityType == typeof(Promotion)
+        || entityType == typeof(TrainingPlan)
+        || entityType == typeof(TrainingPhase)
+        || entityType == typeof(TrainingWeek)
+        || entityType == typeof(TrainingPlanDay)
+        || entityType == typeof(TrainingExercise)
         || entityType == typeof(AccessPass)
         || entityType == typeof(CheckIn);
 }

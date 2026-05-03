@@ -34,14 +34,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .HasForeignKey<CustomerFitnessProfile>(x => x.CustomerId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasMany(x => x.BodyMeasurements)
-            .WithOne(x => x.Customer)
-            .HasForeignKey(x => x.CustomerId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasMany(x => x.BodyProgressPhotos)
-            .WithOne(x => x.Customer)
-            .HasForeignKey(x => x.CustomerId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.BodyMeasurements).WithOne(x => x.Customer).HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(x => x.BodyProgressPhotos).WithOne(x => x.Customer).HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Cascade);
     }
 }

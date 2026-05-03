@@ -8,6 +8,7 @@ using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Entities;
 using Dorian.Modules.Memberships.Domain.Entities;
 using Dorian.Modules.Promotions.Domain.Entities;
+using Dorian.Modules.Training.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 public interface IDorianDbContext
@@ -25,6 +26,12 @@ public interface IDorianDbContext
     DbSet<ClassSession> ClassSessions { get; }
     DbSet<Booking> Bookings { get; }
     DbSet<Promotion> Promotions { get; }
+    DbSet<TrainingPlan> TrainingPlans { get; }
+    DbSet<TrainingPhase> TrainingPhases { get; }
+    DbSet<TrainingWeek> TrainingWeeks { get; }
+    DbSet<TrainingPlanDay> TrainingPlanDays { get; }
+    DbSet<TrainingExercise> TrainingExercises { get; }
+    DbSet<ExerciseCatalog> ExerciseCatalog { get; }
     DbSet<AccessPass> AccessPasses { get; }
     DbSet<CheckIn> CheckIns { get; }
     DbSet<AuditLog> AuditLogs { get; }
