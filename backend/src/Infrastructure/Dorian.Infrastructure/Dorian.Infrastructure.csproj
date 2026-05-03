@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\Modules\Memberships\Dorian.Modules.Memberships.Domain\Dorian.Modules.Memberships.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Customers\Dorian.Modules.Customers.Domain\Dorian.Modules.Customers.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Classes\Dorian.Modules.Classes.Domain\Dorian.Modules.Classes.Domain.csproj" />
+    <ProjectReference Include="..\..\Modules\Nutrition\Dorian.Modules.Nutrition.Domain\Dorian.Modules.Nutrition.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Promotions\Dorian.Modules.Promotions.Domain\Dorian.Modules.Promotions.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Auditing\Dorian.Modules.Auditing.Domain\Dorian.Modules.Auditing.Domain.csproj" />
     <ProjectReference Include="..\..\Modules\Training\Dorian.Modules.Training.Domain\Dorian.Modules.Training.Domain.csproj" />

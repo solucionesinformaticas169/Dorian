@@ -11,6 +11,7 @@ using Dorian.Application.CustomerFitnessProfiles;
 using Dorian.Application.Dashboard;
 using Dorian.Application.GroupClasses;
 using Dorian.Application.Memberships;
+using Dorian.Application.Nutrition;
 using Dorian.Application.Promotions;
 using Dorian.Application.TrainingPlans;
 using Dorian.Application.WorkoutActivities;
@@ -33,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IGroupClassCatalogService, GroupClassCatalogService>();
         services.AddScoped<IMembershipService, MembershipService>();
+        services.AddScoped<INutritionService, NutritionService>();
         services.AddScoped<IPromotionService, PromotionService>();
         services.AddScoped<ITrainingPlanService, TrainingPlanService>();
         services.AddScoped<IExerciseCatalogService, ExerciseCatalogService>();
