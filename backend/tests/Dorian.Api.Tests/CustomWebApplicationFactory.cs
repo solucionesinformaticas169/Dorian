@@ -95,10 +95,6 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 new Role(SeedData.SuperAdminRoleId, RoleNames.SuperAdmin, "Platform super administrator"));
         }
 
-        dbContext.Branches.AddRange(
-            new Branch(MainBranchId, "CENTRAL", "Sucursal Central", "Quito", "Av. Principal", "0999999999"),
-            new Branch(SecondaryBranchId, "SUR", "Sucursal Sur", "Guayaquil", "Av. Sur", "0980000000"));
-
         dbContext.Memberships.AddRange(
             new Membership(MainMembershipId, MainBranchId, "Mensual Central", 30, 35m, "USD", true),
             new Membership(SecondaryMembershipId, SecondaryBranchId, "Mensual Sur", 30, 32m, "USD", true));

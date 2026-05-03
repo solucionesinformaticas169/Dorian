@@ -52,7 +52,7 @@ public sealed class BranchService : IBranchService
         if (await _dbContext.Branches.AnyAsync(x => x.Code == normalizedCode, cancellationToken))
             throw new BranchValidationException("A branch with that code already exists.");
 
-        var branch = new Branch(Guid.NewGuid(), request.Code, request.Name, request.City, request.Address, request.PhoneNumber);
+        var branch = new Branch(Guid.NewGuid(), request.Code, request.Name, request.City, request.Address, request.PhoneNumber, request.OpeningHours, request.MapUrl, request.Latitude, request.Longitude);
         _dbContext.Branches.Add(branch);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Map(branch);
@@ -67,7 +67,7 @@ public sealed class BranchService : IBranchService
         if (await _dbContext.Branches.AnyAsync(x => x.Id != id && x.Code == normalizedCode, cancellationToken))
             throw new BranchValidationException("A branch with that code already exists.");
 
-        branch.Update(request.Code, request.Name, request.City, request.Address, request.PhoneNumber, request.IsActive);
+        branch.Update(request.Code, request.Name, request.City, request.Address, request.PhoneNumber, request.OpeningHours, request.MapUrl, request.Latitude, request.Longitude, request.IsActive);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Map(branch);
     }
@@ -107,8 +107,8 @@ public sealed class BranchService : IBranchService
         throw new ForbiddenException("You cannot update this branch.");
     }
 
-    private static readonly System.Linq.Expressions.Expression<Func<Branch, BranchResponse>> MapExpression = branch => new BranchResponse(branch.Id, branch.Code, branch.Name, branch.City, branch.Address, branch.PhoneNumber, branch.IsActive, branch.CreatedAtUtc, branch.UpdatedAtUtc);
-    private static BranchResponse Map(Branch branch) => new(branch.Id, branch.Code, branch.Name, branch.City, branch.Address, branch.PhoneNumber, branch.IsActive, branch.CreatedAtUtc, branch.UpdatedAtUtc);
+    private static readonly System.Linq.Expressions.Expression<Func<Branch, BranchResponse>> MapExpression = branch => new BranchResponse(branch.Id, branch.Code, branch.Name, branch.City, branch.Address, branch.PhoneNumber, branch.OpeningHours, branch.MapUrl, branch.Latitude, branch.Longitude, branch.IsActive, branch.CreatedAtUtc, branch.UpdatedAtUtc);
+    private static BranchResponse Map(Branch branch) => new(branch.Id, branch.Code, branch.Name, branch.City, branch.Address, branch.PhoneNumber, branch.OpeningHours, branch.MapUrl, branch.Latitude, branch.Longitude, branch.IsActive, branch.CreatedAtUtc, branch.UpdatedAtUtc);
 
     private sealed class BranchValidationException : AppException
     {

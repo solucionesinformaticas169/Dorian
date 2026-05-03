@@ -8,9 +8,9 @@ public sealed class Branch : AuditableEntity<Guid>
     {
     }
 
-    public Branch(Guid id, string code, string name, string city, string? address, string? phoneNumber) : base(id)
+    public Branch(Guid id, string code, string name, string city, string? address, string? phoneNumber, string? openingHours, string? mapUrl, decimal? latitude, decimal? longitude) : base(id)
     {
-        Update(code, name, city, address, phoneNumber, true);
+        Update(code, name, city, address, phoneNumber, openingHours, mapUrl, latitude, longitude, true);
     }
 
     public string Code { get; private set; } = string.Empty;
@@ -23,15 +23,27 @@ public sealed class Branch : AuditableEntity<Guid>
 
     public string? PhoneNumber { get; private set; }
 
+    public string? OpeningHours { get; private set; }
+
+    public string? MapUrl { get; private set; }
+
+    public decimal? Latitude { get; private set; }
+
+    public decimal? Longitude { get; private set; }
+
     public bool IsActive { get; private set; }
 
-    public void Update(string code, string name, string city, string? address, string? phoneNumber, bool isActive)
+    public void Update(string code, string name, string city, string? address, string? phoneNumber, string? openingHours, string? mapUrl, decimal? latitude, decimal? longitude, bool isActive)
     {
         Code = code.Trim().ToUpperInvariant();
         Name = name.Trim();
         City = city.Trim();
         Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();
         PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+        OpeningHours = string.IsNullOrWhiteSpace(openingHours) ? null : openingHours.Trim();
+        MapUrl = string.IsNullOrWhiteSpace(mapUrl) ? null : mapUrl.Trim();
+        Latitude = latitude;
+        Longitude = longitude;
         IsActive = isActive;
     }
 }

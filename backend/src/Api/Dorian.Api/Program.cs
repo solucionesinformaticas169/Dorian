@@ -10,9 +10,21 @@ builder.Services.AddHealthChecks();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddDorianSwagger();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevelopmentWeb", policy =>
+    {
+        policy.AllowAnyHeader()
+            .AllowAnyMethod()
+            .SetIsOriginAllowed(origin =>
+                origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase)
+                || origin.StartsWith("http://127.0.0.1:", StringComparison.OrdinalIgnoreCase));
+    });
+});
 
 var app = builder.Build();
 app.UseDorianExceptionHandling();
+app.UseCors("DevelopmentWeb");
 
 if (app.Environment.IsDevelopment())
 {
