@@ -6,6 +6,8 @@ using Dorian.Application.Bookings;
 using Dorian.Application.Branches;
 using Dorian.Application.Classes;
 using Dorian.Application.Customers;
+using Dorian.Application.Dashboard;
+using Dorian.Application.GroupClasses;
 using Dorian.Application.Memberships;
 using Dorian.Application.Promotions;
 using FluentValidation;
@@ -22,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IClassSessionService, ClassSessionService>();
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<ICustomerService, CustomerService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IGroupClassCatalogService, GroupClassCatalogService>();
         services.AddScoped<IMembershipService, MembershipService>();
         services.AddScoped<IPromotionService, PromotionService>();
         return services;

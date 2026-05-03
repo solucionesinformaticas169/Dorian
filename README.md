@@ -53,14 +53,18 @@ Esta primera fase crea la base del monorepo, la estructura del backend con arqui
 ## Contextos funcionales iniciales
 
 - Identity: usuarios, roles, refresh tokens y permisos.
-- Branches: sucursales y metadatos operativos.`r`n- Customers: perfil operativo de clientes, datos personales y asociacion a usuario, sucursal y membresia activa.
+- Branches: sucursales y metadatos operativos.
+- Customers: perfil operativo de clientes, datos personales y asociacion a usuario, sucursal y membresia activa.
 - Memberships: productos de membresia, vigencia y reglas base.
-- Classes: clases grupales, cupos y reservas.`r`n- Bookings: reservas de clientes, asistencia, cancelaciones y control de aforo.
+- Classes: clases grupales, cupos y reservas.
+- Bookings: reservas de clientes, asistencia, cancelaciones y control de aforo.
 - Promotions: campanas promocionales globales o por sucursal para web, app y panel admin.
 - Training: rutinas del cliente.
 - Nutrition: planes nutricionales basicos.
 - Payments: pagos simulados y preparacion para integracion futura con Kushki o PayPhone.
 - Auditing: bitacora de acciones criticas.
+- Dashboard: resumen agregado de operacion por rol con metricas visuales.
+- Group Classes: catalogo comercial reutilizable para web publica y app movil.
 
 ## Flujo de trabajo propuesto
 
@@ -82,9 +86,11 @@ El detalle operativo esta en `infra/docker/docker-compose.yml` y la vision arqui
 
 ## Estado actual
 
-- Monorepo base en construccion
-- Backend con esqueleto inicial y entidades principales
-- Infra local de desarrollo lista para continuar con casos de uso
+- Backend con modulos operativos para auth, branches, customers, memberships, classes, bookings, promotions y access/check-ins.
+- Dashboard admin con endpoint agregado `GET /dashboard/summary`.
+- Catalogo comercial de clases grupales con `GET /group-classes` y `GET /group-classes/{slug}`.
+- Web publica, panel admin y app Flutter conectados al backend real.
+- Sucursales reales de Dorian sembradas para demo local.
 
 
 

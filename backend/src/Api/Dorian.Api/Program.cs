@@ -53,6 +53,8 @@ app.MapAuthEndpoints();
 app.MapAccessEndpoints();
 app.MapBranchEndpoints();
 app.MapClassEndpoints();
+app.MapDashboardEndpoints();
+app.MapGroupClassEndpoints();
 app.MapMembershipEndpoints();
 app.MapCustomerEndpoints();
 app.MapBookingEndpoints();
