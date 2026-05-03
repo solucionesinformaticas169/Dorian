@@ -6,6 +6,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+const dorianBackground = Color(0xFF070707);
+const dorianSurface = Color(0xFF151515);
+const dorianAccent = Color(0xFFFF6A1F);
+const dorianAccentSoft = Color(0xFFFFB27D);
+const dorianTextSoft = Color(0xFFD2D2D2);
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,10 +53,6 @@ class DorianApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const background = Color(0xFF05070C);
-    const surface = Color(0xFF0D131C);
-    const accent = Color(0xFF7DFFB7);
-    const accent2 = Color(0xFFFF6A3D);
     final base = ThemeData.dark(useMaterial3: true);
     final textTheme = GoogleFonts.spaceGroteskTextTheme(base.textTheme).apply(
       bodyColor: Colors.white,
@@ -60,15 +63,16 @@ class DorianApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Dorian',
       theme: base.copyWith(
-        scaffoldBackgroundColor: background,
+        scaffoldBackgroundColor: dorianBackground,
         textTheme: textTheme,
         colorScheme: const ColorScheme.dark(
-          primary: accent,
-          secondary: accent2,
-          surface: surface,
+          primary: dorianAccent,
+          secondary: dorianAccentSoft,
+          surface: dorianSurface,
           error: Color(0xFFFF6D7E),
         ),
-        cardTheme: const CardThemeData(color: surface, margin: EdgeInsets.zero),
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, foregroundColor: Colors.white, elevation: 0),
+        cardTheme: const CardThemeData(color: dorianSurface, margin: EdgeInsets.zero),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white.withValues(alpha: 0.06),
@@ -78,13 +82,13 @@ class DorianApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: accent, width: 1.2),
+            borderSide: const BorderSide(color: dorianAccent, width: 1.2),
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: background,
+            backgroundColor: dorianAccent,
+            foregroundColor: Colors.black,
             minimumSize: const Size.fromHeight(54),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
@@ -374,7 +378,7 @@ class CustomerProfile {
   final String lastName;
   final String identificationNumber;
   final String? phone;
-  final String status;
+  final int status;
   final String? activeMembershipName;
   final int? activeMembershipDurationInDays;
   final double? activeMembershipPrice;
@@ -382,6 +386,13 @@ class CustomerProfile {
   final DateTime? activeMembershipStartsAtUtc;
   final DateTime? activeMembershipEndsAtUtc;
   String get fullName => '$firstName $lastName';
+  String get statusLabel => switch (status) {
+    1 => 'Activo',
+    2 => 'Inactivo',
+    3 => 'Suspendido',
+    _ => 'Desconocido',
+  };
+
   String get membershipStatusLabel {
     if (activeMembershipEndsAtUtc == null) return 'Sin plan activo';
     final days = activeMembershipEndsAtUtc!.difference(DateTime.now()).inDays;
@@ -397,7 +408,7 @@ class CustomerProfile {
         lastName: json['lastName'] as String,
         identificationNumber: json['identificationNumber'] as String,
         phone: json['phone'] as String?,
-        status: json['status'] as String,
+        status: json['status'] as int,
         activeMembershipName: json['activeMembershipName'] as String?,
         activeMembershipDurationInDays: json['activeMembershipDurationInDays'] as int?,
         activeMembershipPrice: (json['activeMembershipPrice'] as num?)?.toDouble(),
@@ -408,13 +419,44 @@ class CustomerProfile {
 }
 
 class GymBranch {
-  GymBranch({required this.id, required this.name, required this.city, required this.address, required this.phoneNumber});
+  GymBranch({
+    required this.id,
+    required this.name,
+    required this.city,
+    required this.address,
+    required this.phoneNumber,
+    required this.openingHours,
+    required this.mapUrl,
+    required this.latitude,
+    required this.longitude,
+  });
   final String id;
   final String name;
   final String city;
   final String? address;
   final String? phoneNumber;
-  factory GymBranch.fromJson(Map<String, dynamic> json) => GymBranch(id: json['id'] as String, name: json['name'] as String, city: json['city'] as String, address: json['address'] as String?, phoneNumber: json['phoneNumber'] as String?);
+  final String? openingHours;
+  final String? mapUrl;
+  final double? latitude;
+  final double? longitude;
+
+  String get resolvedMapUrl {
+    if (mapUrl != null && mapUrl!.isNotEmpty) return mapUrl!;
+    final query = [address, city, 'Ecuador'].whereType<String>().where((item) => item.isNotEmpty).join(', ');
+    return 'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}';
+  }
+
+  factory GymBranch.fromJson(Map<String, dynamic> json) => GymBranch(
+        id: json['id'] as String,
+        name: json['name'] as String,
+        city: json['city'] as String,
+        address: json['address'] as String?,
+        phoneNumber: json['phoneNumber'] as String?,
+        openingHours: json['openingHours'] as String?,
+        mapUrl: json['mapUrl'] as String?,
+        latitude: (json['latitude'] as num?)?.toDouble(),
+        longitude: (json['longitude'] as num?)?.toDouble(),
+      );
 }
 
 class GymClass {
@@ -433,8 +475,8 @@ class BookingItem {
   BookingItem({required this.id, required this.classSessionId, required this.status});
   final String id;
   final String classSessionId;
-  final String status;
-  factory BookingItem.fromJson(Map<String, dynamic> json) => BookingItem(id: json['id'] as String, classSessionId: json['classSessionId'] as String, status: json['status'] as String);
+  final int status;
+  factory BookingItem.fromJson(Map<String, dynamic> json) => BookingItem(id: json['id'] as String, classSessionId: json['classSessionId'] as String, status: json['status'] as int);
 }
 
 class PromotionItem {
@@ -451,8 +493,8 @@ class AccessPass {
   AccessPass({required this.qrCodeValue, required this.expiresAt, required this.status});
   final String qrCodeValue;
   final DateTime expiresAt;
-  final String status;
-  factory AccessPass.fromJson(Map<String, dynamic> json) => AccessPass(qrCodeValue: json['qrCodeValue'] as String, expiresAt: DateTime.parse(json['expiresAt'] as String), status: json['status'] as String);
+  final int status;
+  factory AccessPass.fromJson(Map<String, dynamic> json) => AccessPass(qrCodeValue: json['qrCodeValue'] as String, expiresAt: DateTime.parse(json['expiresAt'] as String), status: json['status'] as int);
 }
 
 String formatDate(DateTime value) {
@@ -463,6 +505,35 @@ String formatDate(DateTime value) {
 String formatDateTime(DateTime value) {
   final local = value.toLocal();
   return '${formatDate(local)} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+}
+
+Future<void> openBranchMap(BuildContext context, GymBranch branch) async {
+  final uri = Uri.parse(branch.resolvedMapUrl);
+  final launched = await launchUrl(uri);
+  if (!launched && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir Google Maps.')));
+  }
+}
+
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key, this.size = 72});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: size,
+      width: size,
+      padding: EdgeInsets.all(size * 0.18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.28),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        color: Colors.white.withValues(alpha: 0.05),
+      ),
+      child: Image.asset('assets/brand/dorian-logo.png', fit: BoxFit.contain),
+    );
+  }
 }
 
 class LoginPage extends StatefulWidget {
@@ -499,7 +570,7 @@ class _LoginPageState extends State<LoginPage> {
     final session = context.watch<SessionController>();
     return DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [Color(0xFF06121C), Color(0xFF05070C), Color(0xFF171320)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+        gradient: LinearGradient(colors: [Color(0xFF1E120C), Color(0xFF070707), Color(0xFF1A100C)], begin: Alignment.topCenter, end: Alignment.bottomCenter),
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -514,9 +585,11 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Dorian Fitness', style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700)),
+                      const BrandLogo(size: 82),
+                      const SizedBox(height: 18),
+                      Text('Gimnasio Dorian', style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 10),
-                      Text('Tu club premium, tus reservas y tu QR en un solo lugar.', style: const TextStyle(color: Colors.white70)),
+                      Text('Tu club premium, tus reservas y tu QR en un solo lugar.', style: const TextStyle(color: dorianTextSoft)),
                       const SizedBox(height: 24),
                       TextFormField(controller: _email, decoration: const InputDecoration(labelText: 'Correo'), validator: (value) => value == null || value.trim().isEmpty ? 'Ingresa tu correo' : null),
                       const SizedBox(height: 16),
@@ -547,7 +620,7 @@ class _ClientShellState extends State<ClientShell> {
   Widget build(BuildContext context) {
     final pages = [const HomePage(), const BranchesPage(), const ClassesPage(), const PromotionsPage(), const ProfilePage()];
     return DecoratedBox(
-      decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF07111A), Color(0xFF05070C), Color(0xFF11131B)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+      decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF180F0B), Color(0xFF070707), Color(0xFF1F130D)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(child: pages[index]),
@@ -610,9 +683,11 @@ class _HomePageState extends State<HomePage> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           children: [
+            const BrandLogo(size: 64),
+            const SizedBox(height: 16),
             Text('Hola, ${profile.firstName}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            Text('Tu entrenamiento premium empieza aqui.', style: const TextStyle(color: Colors.white70)),
+            Text('Tu entrenamiento premium empieza aqui.', style: const TextStyle(color: dorianTextSoft)),
             const SizedBox(height: 16),
             GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Sucursal principal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresia activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
             const SizedBox(height: 12),
@@ -622,7 +697,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 24),
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
-            for (final item in classes) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} cupos disponibles', style: const TextStyle(color: Color(0xFF7DFFB7)))])), const SizedBox(height: 12)],
+            for (final item in classes) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))])), const SizedBox(height: 12)],
             Text('Promociones activas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             for (final item in promotions) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(item.description, style: const TextStyle(color: Colors.white70))])), const SizedBox(height: 12)],
@@ -652,7 +727,7 @@ class BranchesPage extends StatelessWidget {
             return InkWell(
               borderRadius: BorderRadius.circular(24),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => BranchDetailPage(branch: item))),
-              child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 6), Text(item.city, style: const TextStyle(color: Color(0xFF7DFFB7))), const SizedBox(height: 6), Text(item.address ?? 'Direccion no disponible', style: const TextStyle(color: Colors.white70))])),
+              child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 6), Text(item.city, style: const TextStyle(color: dorianAccentSoft)), const SizedBox(height: 6), Text(item.address ?? 'Direccion no disponible', style: const TextStyle(color: Colors.white70)), if (item.openingHours != null) ...[const SizedBox(height: 8), Text(item.openingHours!, style: const TextStyle(color: dorianTextSoft))]])),
             );
           },
         );
@@ -666,7 +741,34 @@ class BranchDetailPage extends StatelessWidget {
   final GymBranch branch;
   @override
   Widget build(BuildContext context) {
-    return PremiumScaffold(title: branch.name, child: ListView(padding: const EdgeInsets.all(20), children: [GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(branch.city, style: const TextStyle(color: Color(0xFF7DFFB7))), const SizedBox(height: 10), Text(branch.address ?? 'Direccion no disponible'), const SizedBox(height: 10), Text(branch.phoneNumber ?? 'Sin telefono registrado', style: const TextStyle(color: Colors.white70))]))]));
+    return PremiumScaffold(
+      title: branch.name,
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(branch.city, style: const TextStyle(color: dorianAccentSoft)),
+                const SizedBox(height: 10),
+                Text(branch.address ?? 'Direccion no disponible'),
+                const SizedBox(height: 10),
+                Text(branch.phoneNumber ?? 'Sin telefono registrado', style: const TextStyle(color: Colors.white70)),
+                const SizedBox(height: 10),
+                Text(branch.openingHours ?? 'Horario por confirmar', style: const TextStyle(color: dorianTextSoft)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () => openBranchMap(context, branch),
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Ver en mapa'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -685,7 +787,7 @@ class ClassesPage extends StatelessWidget {
           children: [
             Row(children: [Expanded(child: Text('Clases disponibles', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage())), child: const Text('Mis reservas'))]),
             const SizedBox(height: 12),
-            for (final item in items) ...[InkWell(borderRadius: BorderRadius.circular(24), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassBookingPage(gymClass: item))), child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} de ${item.capacity} cupos disponibles', style: const TextStyle(color: Color(0xFF7DFFB7)))]))), const SizedBox(height: 12)],
+            for (final item in items) ...[InkWell(borderRadius: BorderRadius.circular(24), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassBookingPage(gymClass: item))), child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} de ${item.capacity} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))]))), const SizedBox(height: 12)],
           ],
         );
       },
@@ -775,9 +877,9 @@ class BookingsPage extends StatelessWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Chip(label: Text(booking.status)),
+                        Chip(label: Text(booking.status == 1 ? 'Reserved' : booking.status == 2 ? 'Cancelled' : booking.status == 3 ? 'Attended' : booking.status == 4 ? 'NoShow' : 'Unknown')), 
                         const Spacer(),
-                        if (booking.status == 'Reserved')
+                        if (booking.status == 1)
                           TextButton(
                             onPressed: () async {
                               await bookingApi.cancelBooking(booking.id);
@@ -982,7 +1084,7 @@ class AccessPassPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(pass.status, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(pass.status == 1 ? 'Activa' : pass.status == 2 ? 'Expirada' : pass.status == 3 ? 'Revocada' : 'Desconocida', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Text('Expira: ${formatDateTime(pass.expiresAt)}', style: const TextStyle(color: Colors.white70)),
                   ],
@@ -1034,7 +1136,7 @@ class GlowCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
-          colors: [Colors.white.withValues(alpha: 0.08), Colors.white.withValues(alpha: 0.03)],
+          colors: [dorianAccent.withValues(alpha: 0.12), Colors.white.withValues(alpha: 0.03)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

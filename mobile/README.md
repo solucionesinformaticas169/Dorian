@@ -6,6 +6,8 @@ Cliente movil Flutter para usuarios del gimnasio Dorian.
 
 - Proyecto Flutter generado con runners `android/` e `ios/`.
 - App cliente conectada al backend real para auth, perfil, sucursales, clases, reservas, promociones y QR.
+- Branding real de Gimnasio Dorian con logo oficial y paleta naranja, blanco y negro.
+- Vista de sucursales reales con boton `Ver en mapa` usando Google Maps.
 - Validado con `flutter analyze` y `flutter test`.
 
 ## Bloqueo actual de compilacion nativa
