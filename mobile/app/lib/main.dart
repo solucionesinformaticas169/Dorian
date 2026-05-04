@@ -1943,8 +1943,8 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
             Text('Bienvenido a tu configuracion inicial', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             const Text('En pocos pasos definiremos tu objetivo, tus preferencias y tu base fisica para personalizar mejor tu experiencia.', style: TextStyle(color: Colors.white70, height: 1.5)),
-          ],
-        );
+              ],
+            );
       case 1:
         return _optionStep('Cual es tu objetivo principal?', fitnessGoalLabels, goal, (value) => setState(() => goal = value));
       case 2:
@@ -2369,9 +2369,13 @@ class _HomePageState extends State<HomePage> {
         final branch = snapshot.data!['branch'] as GymBranch?;
         final classes = snapshot.data!['classes'] as List<GymClass>;
         final promotions = snapshot.data!['promotions'] as List<PromotionItem>;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-          children: [
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1180),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+              children: [
             const BrandLogo(size: 64),
             const SizedBox(height: 16),
             Text('Hola, ${profile.firstName}', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
@@ -2398,7 +2402,9 @@ class _HomePageState extends State<HomePage> {
             Text('Promociones activas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             for (final item in promotions) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(item.description, style: const TextStyle(color: Colors.white70))])), const SizedBox(height: 12)],
-          ],
+              ],
+            ),
+          ),
         );
       },
     );
@@ -2483,9 +2489,13 @@ class ClassesPage extends StatelessWidget {
         if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu resumen inicial.')));
         final catalog = snapshot.data![0] as List<GroupClassCatalogItem>;
         final items = snapshot.data![1] as List<GymClass>;
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-          children: [
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1180),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+              children: [
             Row(children: [Expanded(child: Text('Clases disponibles', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage())), child: const Text('Mis reservas'))]),
             const SizedBox(height: 12),
             Text('Catalogo Dorian', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
@@ -2527,7 +2537,9 @@ class ClassesPage extends StatelessWidget {
             Text('Horarios y reservas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             for (final item in items) ...[InkWell(borderRadius: BorderRadius.circular(24), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassBookingPage(gymClass: item))), child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} de ${item.capacity} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))]))), const SizedBox(height: 12)],
-          ],
+              ],
+            ),
+          ),
         );
       },
     );
@@ -3084,7 +3096,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                   child: GlowCard(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(plan.goalLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 8),
@@ -4062,9 +4074,13 @@ class _NutritionPageState extends State<NutritionPage> {
           );
         }
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-          children: [
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1180),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+              children: [
             GlowCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -4144,20 +4160,20 @@ class _NutritionPageState extends State<NutritionPage> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: GlowCard(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
                           plan.dayLabel,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           plan.description,
-                          style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.35),
+                          style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.45),
                         ),
                         const SizedBox(height: 14),
                         ...plan.items.map(
@@ -4170,22 +4186,46 @@ class _NutritionPageState extends State<NutritionPage> {
                                 height: 1.3,
                               ),
                               child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(18),
-                                color: Colors.white.withValues(alpha: 0.04),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${item.mealTypeLabel} · ${item.name}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  const SizedBox(height: 6),
-                                  Text(item.description, style: const TextStyle(color: Colors.white70)),
-                                  const SizedBox(height: 6),
-                                  Text('${item.calories} kcal · ${item.proteinGrams}P / ${item.carbsGrams}C / ${item.fatGrams}G', style: const TextStyle(color: dorianAccentSoft)),
-                                ],
-                              ),
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  color: Colors.white.withValues(alpha: 0.04),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${item.mealTypeLabel} - ${item.name}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        height: 1.25,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      item.description,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        height: 1.45,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        _NutritionMacroChip(label: '${item.calories} kcal'),
+                                        _NutritionMacroChip(label: '${item.proteinGrams}P'),
+                                        _NutritionMacroChip(label: '${item.carbsGrams}C'),
+                                        _NutritionMacroChip(label: '${item.fatGrams}G'),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -4195,7 +4235,9 @@ class _NutritionPageState extends State<NutritionPage> {
                   ),
                 ),
               ),
-          ],
+              ],
+            ),
+          ),
         );
       },
     );
@@ -4811,6 +4853,32 @@ class _NutritionMetricCard extends StatelessWidget {
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NutritionMacroChip extends StatelessWidget {
+  const _NutritionMacroChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: dorianAccent.withValues(alpha: 0.12),
+        border: Border.all(color: dorianAccent.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: dorianAccentSoft,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
