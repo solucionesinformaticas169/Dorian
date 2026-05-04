@@ -4042,7 +4042,40 @@ class _NutritionPageState extends State<NutritionPage> {
           return const PremiumScaffold(title: 'Nutricion', child: Center(child: CircularProgressIndicator()));
         }
         if (snapshot.hasError) {
-          return PremiumScaffold(title: 'Nutricion', child: Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu plan nutricional.'))));
+          return PremiumScaffold(
+            title: 'Nutricion',
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: GlowCard(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No pudimos cargar tu nutricion',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          presentUiError(snapshot.error, 'Intenta nuevamente en unos segundos.'),
+                          style: const TextStyle(color: Colors.white70, height: 1.4),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _refresh,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Reintentar'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
         }
 
         final bundle = snapshot.data!;
@@ -4074,30 +4107,31 @@ class _NutritionPageState extends State<NutritionPage> {
           );
         }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final maxWidth = constraints.maxWidth.clamp(0.0, 1180.0).toDouble();
-            final metricColumns = maxWidth > 1100
-                ? 3
-                : maxWidth >= 700
-                    ? 2
-                    : 1;
-            final mealColumns = maxWidth >= 920
-                ? 2
-                : 1;
-            const gap = 12.0;
-            final metricCardWidth = (maxWidth - 40 - (gap * (metricColumns - 1))) / metricColumns;
-            final dayCardWidth = (maxWidth - 40 - (gap * (mealColumns - 1))) / mealColumns;
+        return PremiumScaffold(
+          title: 'Nutricion',
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : 1200.0;
+              final contentWidth = availableWidth > 1200 ? 1200.0 : availableWidth;
+              final metricColumns = contentWidth > 1100
+                  ? 3
+                  : contentWidth >= 700
+                      ? 2
+                      : 1;
+              final mealColumns = contentWidth >= 920 ? 2 : 1;
+              const gap = 12.0;
+              final metricCardWidth = ((contentWidth - 40) - (gap * (metricColumns - 1))) / metricColumns;
+              final dayCardWidth = ((contentWidth - 40) - (gap * (mealColumns - 1))) / mealColumns;
 
-            return DefaultTextStyle.merge(
-              style: const TextStyle(decoration: TextDecoration.none),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: maxWidth,
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-                    children: [
+              return DefaultTextStyle.merge(
+                style: const TextStyle(decoration: TextDecoration.none),
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: contentWidth,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                      children: [
                       GlowCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4372,12 +4406,13 @@ class _NutritionPageState extends State<NutritionPage> {
                               )
                               .toList(),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
