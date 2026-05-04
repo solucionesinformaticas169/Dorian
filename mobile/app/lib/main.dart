@@ -4074,254 +4074,310 @@ class _NutritionPageState extends State<NutritionPage> {
           );
         }
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    color: dorianAccent.withValues(alpha: 0.14),
-                  ),
-                  child: const Icon(Icons.restaurant_menu_rounded, color: dorianAccent),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth.clamp(0.0, 1180.0).toDouble();
+            final metricColumns = maxWidth > 1100
+                ? 3
+                : maxWidth >= 700
+                    ? 2
+                    : 1;
+            final mealColumns = maxWidth >= 920
+                ? 2
+                : 1;
+            const gap = 12.0;
+            final metricCardWidth = (maxWidth - 40 - (gap * (metricColumns - 1))) / metricColumns;
+            final dayCardWidth = (maxWidth - 40 - (gap * (mealColumns - 1))) / mealColumns;
+
+            return DefaultTextStyle.merge(
+              style: const TextStyle(decoration: TextDecoration.none),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: maxWidth,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
                     children: [
-                      Text(
-                        'Nutricion para ${profile.goalLabel.toLowerCase()}',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        profile.disclaimer,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          height: 1.45,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final columns = constraints.maxWidth > 900
-                    ? 3
-                    : constraints.maxWidth > 560
-                        ? 2
-                        : 1;
-                final gap = 12.0;
-                final cardWidth = (constraints.maxWidth - (gap * (columns - 1))) / columns;
-                return Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: [
-                    _NutritionMetricCard(title: 'Calorias', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario', width: cardWidth),
-                    _NutritionMetricCard(title: 'Proteina', value: '${profile.proteinGrams} g', subtitle: 'Recuperacion', width: cardWidth),
-                    _NutritionMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'Energia', width: cardWidth),
-                    _NutritionMetricCard(title: 'Grasas', value: '${profile.fatGrams} g', subtitle: 'Balance', width: cardWidth),
-                    _NutritionMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'Hidratacion', width: cardWidth),
-                    _NutritionMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'Distribucion', width: cardWidth),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            GlowCard(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Restricciones y ajustes',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          profile.dietaryRestrictions ?? 'Sin restricciones registradas.',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 15,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  TextButton(
-                    onPressed: () => _openRestrictionsEditor(profile),
-                    child: const Text('Actualizar'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Comidas sugeridas',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                  ),
-                ),
-                Text(
-                  '${bundle.mealPlan.length} dias',
-                  style: const TextStyle(
-                    color: dorianTextSoft,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (bundle.mealPlan.isEmpty)
-              GlowCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Aun no generas tus comidas',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Genera tu plan para ver una distribucion simple de desayuno, almuerzo, cena y snack.',
-                      style: TextStyle(color: Colors.white70, height: 1.4),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _generateNutrition,
-                      icon: const Icon(Icons.restaurant_menu),
-                      label: const Text('Generar plan nutricional'),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ...bundle.mealPlan.map(
-                (plan) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: GlowCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                      GlowCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                plan.dayLabel,
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                              ),
-                            ),
                             Text(
-                              '${plan.items.length} comidas',
+                              'Tu plan alimenticio Dorian',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    decoration: TextDecoration.none,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Plan nutricional',
                               style: const TextStyle(
                                 color: dorianAccentSoft,
-                                fontSize: 12,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w700,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Macros, hidratacion y comidas alineadas a tu objetivo ${profile.goalLabel.toLowerCase()}.',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                height: 1.45,
+                                decoration: TextDecoration.none,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    profile.disclaimer,
+                                    style: const TextStyle(
+                                      color: dorianTextSoft,
+                                      fontSize: 13,
+                                      height: 1.4,
+                                      decoration: TextDecoration.none,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  onPressed: () => _openRestrictionsEditor(profile),
+                                  icon: const Icon(Icons.tune_rounded),
+                                  label: const Text('Actualizar'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: [
+                          _NutritionMetricCard(title: 'Calorias', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario', width: metricCardWidth),
+                          _NutritionMetricCard(title: 'Proteina', value: '${profile.proteinGrams} g', subtitle: 'Recuperacion', width: metricCardWidth),
+                          _NutritionMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'Energia', width: metricCardWidth),
+                          _NutritionMetricCard(title: 'Grasas', value: '${profile.fatGrams} g', subtitle: 'Balance', width: metricCardWidth),
+                          _NutritionMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'Hidratacion', width: metricCardWidth),
+                          _NutritionMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'Distribucion', width: metricCardWidth),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      GlowCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Restricciones y ajustes',
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          decoration: TextDecoration.none,
+                                        ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => _openRestrictionsEditor(profile),
+                                  child: const Text('Actualizar'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              profile.dietaryRestrictions ?? 'Sin restricciones registradas.',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 15,
+                                height: 1.45,
+                                decoration: TextDecoration.none,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          plan.description,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        ...plan.items.map(
-                          (item) => Container(
-                            width: double.infinity,
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
-                              color: Colors.white.withValues(alpha: 0.04),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.mealTypeLabel,
-                                  style: const TextStyle(
-                                    color: dorianAccentSoft,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Plan de comidas',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    decoration: TextDecoration.none,
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  item.name,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  item.description,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                    height: 1.45,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _NutritionMacroChip(label: '${item.calories} kcal'),
-                                    _NutritionMacroChip(label: '${item.proteinGrams}P'),
-                                    _NutritionMacroChip(label: '${item.carbsGrams}C'),
-                                    _NutritionMacroChip(label: '${item.fatGrams}G'),
-                                  ],
-                                ),
-                              ],
                             ),
                           ),
+                          Text(
+                            '${bundle.mealPlan.length} dias',
+                            style: const TextStyle(
+                              color: dorianTextSoft,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (bundle.mealPlan.isEmpty)
+                        GlowCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Aun no generas tus comidas',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      decoration: TextDecoration.none,
+                                    ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Genera tu plan para ver una distribucion simple de desayuno, almuerzo, cena y snack.',
+                                style: TextStyle(color: Colors.white70, height: 1.4, decoration: TextDecoration.none),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: _generateNutrition,
+                                icon: const Icon(Icons.restaurant_menu),
+                                label: const Text('Generar plan nutricional'),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Wrap(
+                          spacing: gap,
+                          runSpacing: gap,
+                          children: bundle.mealPlan
+                              .map(
+                                (plan) => SizedBox(
+                                  width: dayCardWidth,
+                                  child: GlowCard(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                plan.dayLabel,
+                                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                                      fontWeight: FontWeight.w800,
+                                                      color: Colors.white,
+                                                      decoration: TextDecoration.none,
+                                                    ),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(999),
+                                                color: dorianAccent.withValues(alpha: 0.14),
+                                              ),
+                                              child: Text(
+                                                '${plan.items.length} comidas',
+                                                style: const TextStyle(
+                                                  color: dorianAccentSoft,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  decoration: TextDecoration.none,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          plan.description,
+                                          style: const TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 14,
+                                            height: 1.4,
+                                            decoration: TextDecoration.none,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 14),
+                                        ...plan.items.map(
+                                          (item) => Container(
+                                            width: double.infinity,
+                                            margin: const EdgeInsets.only(bottom: 10),
+                                            padding: const EdgeInsets.all(14),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(18),
+                                              color: Colors.white.withValues(alpha: 0.03),
+                                              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.mealTypeLabel,
+                                                  style: const TextStyle(
+                                                    color: dorianAccentSoft,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                    decoration: TextDecoration.none,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  item.name,
+                                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                        fontWeight: FontWeight.w800,
+                                                        color: Colors.white,
+                                                        decoration: TextDecoration.none,
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  item.description,
+                                                  style: const TextStyle(
+                                                    color: Colors.white70,
+                                                    fontSize: 14,
+                                                    height: 1.45,
+                                                    decoration: TextDecoration.none,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 12),
+                                                Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 8,
+                                                  children: [
+                                                    _NutritionMacroChip(label: '${item.calories} kcal'),
+                                                    _NutritionMacroChip(label: '${item.proteinGrams}P'),
+                                                    _NutritionMacroChip(label: '${item.carbsGrams}C'),
+                                                    _NutritionMacroChip(label: '${item.fatGrams}G'),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
-          ],
+            );
+          },
         );
       },
     );
