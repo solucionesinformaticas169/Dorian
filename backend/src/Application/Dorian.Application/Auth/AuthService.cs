@@ -3,6 +3,7 @@ namespace Dorian.Application.Auth;
 using Dorian.Application.Abstractions.Auth;
 using Dorian.Application.Abstractions.Errors;
 using Dorian.Application.Abstractions.Persistence;
+using Dorian.Modules.Customers.Domain.Entities;
 using Dorian.Modules.Identity.Domain.Constants;
 using Dorian.Modules.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -28,17 +29,40 @@ public sealed class AuthService : IAuthService
         if (await _dbContext.Users.AnyAsync(x => x.Email == normalizedEmail, cancellationToken))
             throw new ValidationAppException("A user with that email already exists.");
 
-        if (request.BranchId.HasValue && !await _dbContext.Branches.AnyAsync(x => x.Id == request.BranchId.Value, cancellationToken))
+        var branchId = request.BranchId;
+        if (branchId.HasValue && !await _dbContext.Branches.AnyAsync(x => x.Id == branchId.Value, cancellationToken))
             throw new NotFoundException("The selected branch does not exist.");
+
+        branchId ??= await _dbContext.Branches.OrderBy(x => x.Name).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(cancellationToken);
+        if (!branchId.HasValue)
+            throw new NotFoundException("No branches are available for registration.");
 
         var customerRoleId = await _dbContext.Roles.Where(x => x.Name == RoleNames.Customer).Select(x => x.Id).SingleAsync(cancellationToken);
         var user = new User(Guid.NewGuid(), normalizedEmail, request.FullName, _passwordHasher.Hash(request.Password));
         user.UpdateProfile(request.FullName, request.PhoneNumber);
-        user.AssignToBranch(request.BranchId);
+        user.AssignToBranch(branchId);
         user.SetRoles([customerRoleId]);
+        user.SetActive(true);
+
+        var (firstName, lastName) = SplitName(request.FullName);
+        var customer = new Customer(
+            Guid.NewGuid(),
+            user.Id,
+            branchId.Value,
+            firstName,
+            lastName,
+            $"SELF-{user.Id.ToString("N")[..8].ToUpperInvariant()}",
+            request.PhoneNumber,
+            null,
+            Gender.Unspecified,
+            null,
+            null,
+            null,
+            CustomerStatus.Active);
 
         var response = IssueTokens(user, [RoleNames.Customer], ipAddress);
         _dbContext.Users.Add(user);
+        _dbContext.Customers.Add(customer);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return response;
     }
@@ -96,6 +120,24 @@ public sealed class AuthService : IAuthService
         user.AddRefreshToken(refreshTokenEntity);
         _dbContext.RefreshTokens.Add(refreshTokenEntity);
         return new AuthResponse(accessToken.Token, refreshToken.Token, accessToken.ExpiresAtUtc, refreshToken.ExpiresAtUtc, new AuthenticatedUserResponse(user.Id, user.Email, user.FullName, user.BranchId, roles));
+    }
+
+    private static (string FirstName, string LastName) SplitName(string fullName)
+    {
+        var parts = fullName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length == 0)
+        {
+            return ("Cliente", "Dorian");
+        }
+
+        if (parts.Length == 1)
+        {
+            return (parts[0], "Dorian");
+        }
+
+        return (parts[0], string.Join(' ', parts.Skip(1)));
     }
 
     private sealed class ValidationAppException : AppException

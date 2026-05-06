@@ -319,7 +319,24 @@ class ApiClient {
     try {
       final json = jsonDecode(response.body);
       if (json is Map<String, dynamic>) {
-        return (json['detail'] ?? json['message'] ?? json['title'] ?? 'Error ${response.statusCode}').toString();
+        final detail = json['detail'];
+        if (detail is List && detail.isNotEmpty) {
+          final messages = detail
+              .map((item) {
+                if (item is Map<String, dynamic>) {
+                  return (item['errorMessage'] ?? item['ErrorMessage'] ?? item['message'] ?? item['Message'])?.toString();
+                }
+                return item?.toString();
+              })
+              .whereType<String>()
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList();
+          if (messages.isNotEmpty) {
+            return messages.join('\n');
+          }
+        }
+        return (json['error'] ?? json['message'] ?? json['title'] ?? 'Error ${response.statusCode}').toString();
       }
     } catch (_) {
       return response.body;
@@ -335,7 +352,14 @@ String presentUiError(Object? error, [String fallback = 'No pudimos completar es
   if (raw.contains('Failed to fetch') || raw.contains('SocketException')) {
     return 'No pudimos conectar con Dorian en este momento. Verifica que la API este activa.';
   }
-  return raw;
+  final normalized = raw
+      .replaceAll('Password', 'Contrasena')
+      .replaceAll('A user with that email already exists.', 'Ya existe una cuenta registrada con ese correo.')
+      .replaceAll('Customer profile not found.', 'Tu cuenta fue creada, pero aun no tiene un perfil de cliente listo. Intenta nuevamente en unos segundos.')
+      .replaceAll('Invalid credentials.', 'Correo o contrasena incorrectos.')
+      .replaceAll('The selected branch does not exist.', 'La sucursal seleccionada no existe.')
+      .replaceAll('The selected membership does not exist.', 'La membresia seleccionada no existe.');
+  return normalized;
 }
 
 class AuthApi {
@@ -1785,7 +1809,7 @@ class _LoginPageState extends State<LoginPage> {
     _password.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Cuenta creada. Recepcion debe completar tu perfil antes de usar la app.'),
+        content: Text('Cuenta creada. Ahora inicia sesion y completa tu configuracion inicial.'),
       ),
     );
   }
@@ -2427,7 +2451,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
         Navigator.of(context).pop();
       }
     } catch (error) {
-      setState(() => errorMessage = error.toString());
+      setState(() => errorMessage = presentUiError(error, 'No pudimos guardar tu perfil fitness.'));
     } finally {
       if (mounted) {
         setState(() => isSaving = false);
