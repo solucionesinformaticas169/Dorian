@@ -100,6 +100,32 @@ public sealed class PromotionsEndpointsTests : IClassFixture<CustomWebApplicatio
     }
 
     [Fact]
+    public async Task Newly_Registered_Customer_Without_Branch_Still_Sees_Global_Active_Promotions()
+    {
+        var client = _factory.CreateClient();
+        var email = $"promo-new-{Guid.NewGuid():N}@dorian.test";
+
+        var registerResponse = await client.PostAsJsonAsync("/auth/register", new
+        {
+            email,
+            fullName = "Promo New Customer",
+            password = _factory.Password
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var token = await _factory.LoginAsync(client, email, _factory.Password);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.GetAsync("/promotions");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var payload = await response.Content.ReadFromJsonAsync<List<PromotionItem>>();
+        payload.Should().NotBeNull();
+        payload!.Should().Contain(x => x.Id == _factory.ActiveGlobalPromotionId);
+    }
+
+    [Fact]
     public async Task SuperAdmin_Can_Activate_And_Disable_Promotion()
     {
         var client = _factory.CreateClient();

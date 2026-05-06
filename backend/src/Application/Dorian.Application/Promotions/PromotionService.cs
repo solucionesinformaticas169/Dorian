@@ -29,8 +29,8 @@ public sealed class PromotionService : IPromotionService
         if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && user.BranchId.HasValue)
             return await query.Where(x => x.BranchId == null || x.BranchId == user.BranchId.Value).OrderByDescending(x => x.StartsAt).Select(MapExpression).ToListAsync(cancellationToken);
 
-        if (user.IsInRole(RoleNames.Customer) && user.BranchId.HasValue)
-            return await query.Where(IsVisibleForCustomers(user.BranchId.Value)).OrderByDescending(x => x.StartsAt).Select(MapExpression).ToListAsync(cancellationToken);
+        if (user.IsInRole(RoleNames.Customer))
+            return await query.Where(IsVisibleForCustomers(user.BranchId)).OrderByDescending(x => x.StartsAt).Select(MapExpression).ToListAsync(cancellationToken);
 
         throw new ForbiddenException("You do not have access to promotions.");
     }
@@ -151,15 +151,20 @@ public sealed class PromotionService : IPromotionService
             throw new NotFoundException("Branch not found.");
     }
 
-    private static System.Linq.Expressions.Expression<Func<Promotion, bool>> IsVisibleForCustomers(Guid branchId)
+    private static System.Linq.Expressions.Expression<Func<Promotion, bool>> IsVisibleForCustomers(Guid? branchId)
     {
-        return promotion => promotion.Status == PromotionStatus.Active && promotion.StartsAt <= DateTimeOffset.UtcNow && promotion.EndsAt >= DateTimeOffset.UtcNow && (promotion.BranchId == null || promotion.BranchId == branchId);
+        return promotion => promotion.Status == PromotionStatus.Active
+            && promotion.StartsAt <= DateTimeOffset.UtcNow
+            && promotion.EndsAt >= DateTimeOffset.UtcNow
+            && (promotion.BranchId == null || (branchId.HasValue && promotion.BranchId == branchId.Value));
     }
 
     private static bool IsVisibleForCustomerEntity(Guid? branchId, Promotion promotion)
     {
-        if (!branchId.HasValue) return false;
-        return promotion.Status == PromotionStatus.Active && promotion.StartsAt <= DateTimeOffset.UtcNow && promotion.EndsAt >= DateTimeOffset.UtcNow && (promotion.BranchId == null || promotion.BranchId == branchId.Value);
+        return promotion.Status == PromotionStatus.Active
+            && promotion.StartsAt <= DateTimeOffset.UtcNow
+            && promotion.EndsAt >= DateTimeOffset.UtcNow
+            && (promotion.BranchId == null || (branchId.HasValue && promotion.BranchId == branchId.Value));
     }
 
     private static readonly System.Linq.Expressions.Expression<Func<Promotion, PromotionResponse>> MapExpression = promotion => new PromotionResponse(promotion.Id, promotion.BranchId, promotion.Title, promotion.Description, promotion.ImageUrl, promotion.DiscountType, promotion.DiscountValue, promotion.StartsAt, promotion.EndsAt, promotion.Status, promotion.CreatedAtUtc, promotion.UpdatedAtUtc);
