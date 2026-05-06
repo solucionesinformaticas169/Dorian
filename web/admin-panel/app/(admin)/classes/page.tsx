@@ -59,7 +59,7 @@ export default function ClassesPage() {
       </Card>
       <div className="space-y-4">
         <SectionHeading eyebrow="Agenda live" title="Clases configuradas" description="Visualiza aforo, horario y estado con datos reales del backend." />
-        {!classes.length ? <EmptyState title="Sin clases" description="Todavia no existen clases configuradas en el sistema." /> : null}
+{!classes.length ? <EmptyState title="Sin clases" description="Todavía no existen clases configuradas en el sistema." /> : null}
         {classes.length ? <DataTable headers={["Clase", "Sucursal", "Horario", "Aforo", "Estado", "Acciones"]}>{classes.map((item) => <DataRow key={item.id}><DataCell><div className="font-semibold text-white">{item.name}</div><div className="text-xs text-slate-500">Trainer: {item.trainerUserId || "Sin asignar"}</div></DataCell><DataCell>{branchMap[item.branchId] ?? item.branchId}</DataCell><DataCell>{formatDateTime(item.startTime)} ? {formatDateTime(item.endTime)}</DataCell><DataCell>{item.reservedSpots}/{item.capacity}</DataCell><DataCell><Badge tone={item.status === 1 ? "success" : item.status === 2 ? "warning" : "neutral"}>{classStatusMap[item.status]}</Badge></DataCell><DataCell className="flex gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(item)}>Editar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(item.id)}>Eliminar</Button></DataCell></DataRow>)}</DataTable> : null}
       </div>
     </div>

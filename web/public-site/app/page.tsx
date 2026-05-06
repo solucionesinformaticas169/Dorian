@@ -11,8 +11,8 @@ import { pickTone } from "@/lib/utils";
 
 const benefits = [
   { icon: Trophy, title: "Entrenamiento con criterio", description: "Programas y clases pensados para mejorar rendimiento, salud y consistencia." },
-  { icon: ShieldCheck, title: "Acceso inteligente", description: "Check-ins QR, reservas de clases y operacion conectada a tu cuenta." },
-  { icon: Sparkles, title: "Experiencia premium", description: "Espacios cuidados, coaches cercanos y una marca local con energia contemporanea." },
+  { icon: ShieldCheck, title: "Acceso inteligente", description: "Check-ins QR, reservas de clases y operación conectada a tu cuenta." },
+  { icon: Sparkles, title: "Experiencia premium", description: "Espacios cuidados, coaches cercanos y una marca local con energía contemporánea." },
 ];
 
 export default async function HomePage() {
@@ -28,8 +28,8 @@ export default async function HomePage() {
               <Image src="/brand/dorian-logo.png" alt="Gimnasio Dorian" width={26} height={26} className="h-auto w-[26px]" priority />
               <span className="text-xs font-semibold uppercase tracking-[0.38em]">Gimnasio Dorian</span>
             </div>
-            <h1 className="font-heading text-5xl font-semibold leading-none text-white md:text-7xl">Entrena con la energia Dorian en cada sucursal.</h1>
-            <p className="max-w-2xl text-lg leading-8 text-slate-300">Dorian combina entrenamiento funcional, clases dirigidas y tecnologia para que tu progreso se vea y se sienta desde el primer dia en Cuenca y Azogues.</p>
+            <h1 className="font-heading text-5xl font-semibold leading-none text-white md:text-7xl">Entrena con la energía Dorian en cada sucursal.</h1>
+            <p className="max-w-2xl text-lg leading-8 text-slate-300">Dorian combina entrenamiento funcional, clases dirigidas y tecnología para que tu progreso se vea y se sienta desde el primer día en Cuenca y Azogues.</p>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button href={process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL ?? "https://example.com/app"} className="gap-2">Descargar app <ArrowRight className="h-4 w-4" /></Button>
               <Button href="/planes" variant="secondary">Ver planes</Button>
@@ -52,7 +52,7 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <SectionTitle eyebrow="Por que Dorian" title="Un gimnasio pensado para quedarse en tu rutina" description="Espacios de entrenamiento, operacion moderna y un ecosistema digital que respalda la experiencia." />
+        <SectionTitle eyebrow="Por qué Dorian" title="Un gimnasio pensado para quedarse en tu rutina" description="Espacios de entrenamiento, operación moderna y un ecosistema digital que respalda la experiencia." />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {benefits.map((benefit, index) => {
             const Icon = benefit.icon;
@@ -73,7 +73,7 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <SectionTitle eyebrow="Clases grupales" title="Disciplinas con identidad propia" description="Dorian combina energia comercial y agenda real para ayudarte a descubrir la clase ideal antes de reservar." />
+        <SectionTitle eyebrow="Clases grupales" title="Disciplinas con identidad propia" description="Dorian combina energía comercial y agenda real para ayudarte a descubrir la clase ideal antes de reservar." />
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">{groupClasses.map((item) => <GroupClassCard key={item.slug} item={item} />)}</div>
         <div className="mt-8 rounded-[30px] border border-white/10 bg-white/[0.03] p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Agenda activa</p>
@@ -90,9 +90,10 @@ export default async function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <SectionTitle eyebrow="Planes" title="Membresias claras para entrenar mejor" description="Elige una opcion que acompane tu frecuencia, tu sede y tu forma de progresar." />
+        <SectionTitle eyebrow="Planes" title="Membresías claras para entrenar mejor" description="Elige una opción que acompañe tu frecuencia, tu sede y tu forma de progresar." />
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{memberships.slice(0, 3).map((plan) => <PlanCard key={plan.id} plan={plan} branchName={branchMap[plan.branchId]} />)}</div>
       </section>
     </main>
   );
 }
+

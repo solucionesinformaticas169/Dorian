@@ -79,7 +79,7 @@ export default function AccessPage() {
         {!selectedBranchId ? <EmptyState title="Selecciona una sucursal" description="Elige una sede para consultar su actividad de acceso." /> : null}
         {checkInsQuery.isLoading ? <LoadingState label="Cargando check-ins..." /> : null}
         {checkInsQuery.error ? <Alert>{getErrorMessage(checkInsQuery.error)}</Alert> : null}
-        {selectedBranchId && !checkInsQuery.isLoading && !checkInsQuery.data?.length ? <EmptyState title="Sin registros de ingreso" description="Todavia no hay eventos de acceso para esta sucursal." /> : null}
+{selectedBranchId && !checkInsQuery.isLoading && !checkInsQuery.data?.length ? <EmptyState title="Sin registros de ingreso" description="Todavía no hay eventos de acceso para esta sucursal." /> : null}
         {checkInsQuery.data?.length ? <DataTable headers={["Cliente", "Momento", "Fuente", "Estado", "Detalle"]}>{checkInsQuery.data.map((item) => <DataRow key={item.id}><DataCell>{customersQuery.data?.find((customer) => customer.id === item.customerId)?.firstName ?? item.customerId}</DataCell><DataCell>{formatDateTime(item.checkedInAt)}</DataCell><DataCell>{checkInSourceMap[item.source]}</DataCell><DataCell><Badge tone={item.status === 1 ? "success" : "danger"}>{checkInStatusMap[item.status]}</Badge></DataCell><DataCell>{item.rejectionReason || "Ingreso correcto"}</DataCell></DataRow>)}</DataTable> : null}
       </div>
     </div>

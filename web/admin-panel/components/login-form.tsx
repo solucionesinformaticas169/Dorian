@@ -46,10 +46,10 @@ export function LoginForm() {
             <span className="font-heading text-2xl font-semibold text-white">Gimnasio Dorian</span>
           </div>
           <div className="max-w-xl space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.36em] text-[var(--accent)]">Operacion administrativa real</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.36em] text-[var(--accent)]">Operación administrativa real</p>
             <h1 className="font-heading text-6xl font-semibold leading-none text-white">Una cabina de control para cada sucursal, clase y acceso QR.</h1>
             <p className="max-w-lg text-lg text-slate-300">
-              Gestiona membresias, clientes, promociones y check-ins con una interfaz de estilo SaaS enfocada en la operacion diaria del gimnasio.
+              Gestiona membresías, clientes, promociones y check-ins con una interfaz de estilo SaaS enfocada en la operación diaria del gimnasio.
             </p>
           </div>
           <div className="flex items-center gap-3 rounded-[28px] border border-white/10 bg-white/5 p-5 text-slate-300 backdrop-blur">
@@ -90,4 +90,5 @@ export function LoginForm() {
     </div>
   );
 }
+
 

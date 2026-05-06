@@ -14,11 +14,11 @@ export const metadata: Metadata = {
     default: "Gimnasio Dorian | Gimnasio premium multi-sucursal",
     template: "%s | Gimnasio Dorian",
   },
-  description: "Gimnasio premium con clases dirigidas, promociones activas, membresias flexibles y una experiencia conectada desde la app.",
-  keywords: ["gimnasio", "fitness", "clases", "membresias", "entrenamiento"],
+  description: "Gimnasio premium con clases dirigidas, promociones activas, membresías flexibles y una experiencia conectada desde la app.",
+  keywords: ["gimnasio", "fitness", "clases", "membresías", "entrenamiento"],
   openGraph: {
     title: "Gimnasio Dorian",
-    description: "Entrenamiento premium, tecnologia y comunidad en una sola experiencia.",
+    description: "Entrenamiento premium, tecnología y comunidad en una sola experiencia.",
     type: "website",
   },
 };
@@ -35,3 +35,4 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
+

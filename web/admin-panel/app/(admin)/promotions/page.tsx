@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,23 +48,25 @@ export default function PromotionsPage() {
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <Card>
-        <SectionHeading eyebrow="Growth" title={editing ? "Editar promocion" : "Nueva promocion"} description="Publica campañas globales o por sucursal para web, app y admin." />
+        <SectionHeading eyebrow="Growth" title={editing ? "Editar promoción" : "Nueva promoción"} description="Publica campañas globales o por sucursal para web, app y admin." />
         <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); saveMutation.mutate(); }}>
           <div><Label>Sucursal</Label><Select value={form.branchId} onChange={(event) => setForm((state) => ({ ...state, branchId: event.target.value }))}><option value="">Global</option>{branchesQuery.data?.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</Select></div>
-          <div><Label>Titulo</Label><Input value={form.title} onChange={(event) => setForm((state) => ({ ...state, title: event.target.value }))} /></div>
-          <div><Label>Descripcion</Label><Textarea value={form.description} onChange={(event) => setForm((state) => ({ ...state, description: event.target.value }))} /></div>
-          <div className="grid gap-4 md:grid-cols-3"><div><Label>Imagen URL</Label><Input value={form.imageUrl} onChange={(event) => setForm((state) => ({ ...state, imageUrl: event.target.value }))} /></div><div><Label>Tipo descuento</Label><Select value={form.discountType} onChange={(event) => setForm((state) => ({ ...state, discountType: event.target.value }))}><option value="1">Porcentaje</option><option value="2">Monto fijo</option><option value="3">Informativa</option></Select></div><div><Label>Valor</Label><Input type="number" step="0.01" value={form.discountValue} onChange={(event) => setForm((state) => ({ ...state, discountValue: event.target.value }))} /></div></div>
+          <div><Label>Título</Label><Input value={form.title} onChange={(event) => setForm((state) => ({ ...state, title: event.target.value }))} /></div>
+          <div><Label>Descripción</Label><Textarea value={form.description} onChange={(event) => setForm((state) => ({ ...state, description: event.target.value }))} /></div>
+          <div className="grid gap-4 md:grid-cols-3"><div><Label>Imagen URL</Label><Input value={form.imageUrl} onChange={(event) => setForm((state) => ({ ...state, imageUrl: event.target.value }))} /></div><div><Label>Tipo de descuento</Label><Select value={form.discountType} onChange={(event) => setForm((state) => ({ ...state, discountType: event.target.value }))}><option value="1">Porcentaje</option><option value="2">Monto fijo</option><option value="3">Informativa</option></Select></div><div><Label>Valor</Label><Input type="number" step="0.01" value={form.discountValue} onChange={(event) => setForm((state) => ({ ...state, discountValue: event.target.value }))} /></div></div>
           <div className="grid gap-4 md:grid-cols-3"><div><Label>Inicio</Label><Input type="datetime-local" value={form.startsAt} onChange={(event) => setForm((state) => ({ ...state, startsAt: event.target.value }))} /></div><div><Label>Fin</Label><Input type="datetime-local" value={form.endsAt} onChange={(event) => setForm((state) => ({ ...state, endsAt: event.target.value }))} /></div><div><Label>Estado</Label><Select value={form.status} onChange={(event) => setForm((state) => ({ ...state, status: event.target.value }))}><option value="1">Borrador</option><option value="2">Activa</option><option value="3">Expirada</option><option value="4">Deshabilitada</option></Select></div></div>
           {error ? <Alert>{error}</Alert> : null}
-          <div className="flex gap-3"><Button type="submit" disabled={saveMutation.isPending}>{editing ? "Guardar cambios" : "Crear promocion"}</Button>{editing ? <Button variant="ghost" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</Button> : null}</div>
+          <div className="flex gap-3"><Button type="submit" disabled={saveMutation.isPending}>{editing ? "Guardar cambios" : "Crear promoción"}</Button>{editing ? <Button variant="ghost" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</Button> : null}</div>
         </form>
       </Card>
       <div className="space-y-4">
         <SectionHeading eyebrow="Campaigns" title="Promociones publicadas" description="Activa o deshabilita promociones en caliente desde el panel." />
-        {!promotions.length ? <EmptyState title="Sin promociones" description="Todavia no hay campañas creadas para mostrar." /> : null}
-        {promotions.length ? <DataTable headers={["Promocion", "Cobertura", "Vigencia", "Estado", "Acciones"]}>{promotions.map((promotion) => <DataRow key={promotion.id}><DataCell><div className="font-semibold text-white">{promotion.title}</div><div className="text-xs text-slate-500">{promotionDiscountTypeMap[promotion.discountType]} {promotion.discountValue ? `· ${promotion.discountValue}` : ""}</div></DataCell><DataCell>{promotion.branchId ? branchMap[promotion.branchId] ?? promotion.branchId : "Global"}</DataCell><DataCell>{formatDateTime(promotion.startsAt)} ? {formatDateTime(promotion.endsAt)}</DataCell><DataCell><Badge tone={promotion.status === 2 ? "success" : promotion.status === 4 ? "warning" : "neutral"}>{promotionStatusMap[promotion.status]}</Badge></DataCell><DataCell className="flex flex-wrap gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(promotion)}>Editar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => activateMutation.mutate(promotion.id)}>Activar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => disableMutation.mutate(promotion.id)}>Deshabilitar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(promotion.id)}>Eliminar</Button></DataCell></DataRow>)}</DataTable> : null}
+        {!promotions.length ? <EmptyState title="Sin promociones" description="Todavía no hay campañas creadas para mostrar." /> : null}
+        {promotions.length ? <DataTable headers={["Promoción", "Cobertura", "Vigencia", "Estado", "Acciones"]}>{promotions.map((promotion) => <DataRow key={promotion.id}><DataCell><div className="font-semibold text-white">{promotion.title}</div><div className="text-xs text-slate-500">{promotionDiscountTypeMap[promotion.discountType]} {promotion.discountValue ? `· ${promotion.discountValue}` : ""}</div></DataCell><DataCell>{promotion.branchId ? branchMap[promotion.branchId] ?? promotion.branchId : "Global"}</DataCell><DataCell>{formatDateTime(promotion.startsAt)} ? {formatDateTime(promotion.endsAt)}</DataCell><DataCell><Badge tone={promotion.status === 2 ? "success" : promotion.status === 4 ? "warning" : "neutral"}>{promotionStatusMap[promotion.status]}</Badge></DataCell><DataCell className="flex flex-wrap gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(promotion)}>Editar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => activateMutation.mutate(promotion.id)}>Activar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => disableMutation.mutate(promotion.id)}>Deshabilitar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(promotion.id)}>Eliminar</Button></DataCell></DataRow>)}</DataTable> : null}
       </div>
     </div>
   );
 }
+
+
 

@@ -13,7 +13,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/branches", label: "Sucursales", icon: Building2 },
   { href: "/customers", label: "Clientes", icon: Users },
-  { href: "/memberships", label: "Membresias", icon: WalletCards },
+  { href: "/memberships", label: "Membresías", icon: WalletCards },
   { href: "/classes", label: "Clases", icon: Activity },
   { href: "/bookings", label: "Reservas", icon: CalendarClock },
   { href: "/promotions", label: "Promociones", icon: Megaphone },
@@ -68,7 +68,7 @@ export function AdminShell({ session, children }: { session: Session; children: 
           </nav>
 
           <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Sesion activa</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Sesión activa</p>
             <p className="mt-3 font-heading text-lg text-white">{session.user.fullName}</p>
             <p className="text-sm text-slate-400">{session.user.email}</p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
@@ -80,7 +80,7 @@ export function AdminShell({ session, children }: { session: Session; children: 
             </div>
             <Button variant="secondary" className="mt-4 w-full justify-center" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
-              Cerrar sesion
+              Cerrar sesión
             </Button>
           </div>
         </aside>
@@ -88,7 +88,7 @@ export function AdminShell({ session, children }: { session: Session; children: 
         <div className="space-y-6">
           <header className="flex flex-col gap-4 rounded-[32px] border border-white/10 bg-white/[0.03] px-6 py-5 backdrop-blur md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">Operacion multi-sucursal</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">Operación multi-sucursal</p>
               <h2 className="mt-2 font-heading text-3xl font-semibold">Centro de control del gimnasio</h2>
             </div>
             <div className="grid grid-cols-2 gap-3 md:flex">
@@ -108,4 +108,5 @@ export function AdminShell({ session, children }: { session: Session; children: 
     </div>
   );
 }
+
 

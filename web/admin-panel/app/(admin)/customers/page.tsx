@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -190,7 +190,7 @@ export default function CustomersPage() {
         <SectionHeading
           eyebrow="CRM"
           title={editing ? "Editar cliente" : "Nuevo cliente"}
-          description="Administra altas de clientes y la vigencia de su membresia activa."
+          description="Administra altas de clientes y la vigencia de su membresía activa."
         />
         <form
           className="mt-6 space-y-4"
@@ -244,7 +244,7 @@ export default function CustomersPage() {
               </Select>
             </div>
             <div>
-              <Label>Genero</Label>
+              <Label>Género</Label>
               <Select value={form.gender} onChange={(event) => setForm((state) => ({ ...state, gender: event.target.value }))}>
                 <option value="1">Masculino</option>
                 <option value="2">Femenino</option>
@@ -276,9 +276,9 @@ export default function CustomersPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <Label>Membresia activa</Label>
+              <Label>Membresía activa</Label>
               <Select value={form.activeMembershipId} onChange={(event) => setForm((state) => ({ ...state, activeMembershipId: event.target.value }))}>
-                <option value="">Sin membresia</option>
+                <option value="">Sin membresía</option>
                 {availableMemberships.map((membership) => (
                   <option key={membership.id} value={membership.id}>
                     {membership.name}
@@ -317,9 +317,9 @@ export default function CustomersPage() {
 
       <div className="space-y-4">
         <SectionHeading eyebrow="Client base" title="Clientes registrados" description="Tabla alimentada por los endpoints reales de customers y memberships." />
-        {!customers.length ? <EmptyState title="Sin clientes" description="Aun no se han registrado clientes en la plataforma." /> : null}
+        {!customers.length ? <EmptyState title="Sin clientes" description="Aún no se han registrado clientes en la plataforma." /> : null}
         {customers.length ? (
-          <DataTable headers={["Cliente", "Sucursal", "Membresia", "Estado", "Onboarding", "Acciones"]}>
+          <DataTable headers={["Cliente", "Sucursal", "Membresía", "Estado", "Onboarding", "Acciones"]}>
             {customers.map((customer) => (
               <DataRow key={customer.id}>
                 <DataCell>
@@ -327,14 +327,14 @@ export default function CustomersPage() {
                     {customer.firstName} {customer.lastName}
                   </div>
                   <div className="text-xs text-slate-500">
-                    {customer.email} · {genderMap[customer.gender]}
+                        {customer.email} · {genderMap[customer.gender]}
                   </div>
                 </DataCell>
                 <DataCell>{branchMap[customer.branchId] ?? customer.branchId}</DataCell>
                 <DataCell>
                   {customer.activeMembershipId
                     ? `${formatDateTime(customer.activeMembershipStartsAtUtc)} a ${formatDateTime(customer.activeMembershipEndsAtUtc)}`
-                    : "Sin membresia"}
+                    : "Sin membresía"}
                 </DataCell>
                 <DataCell>
                   <Badge tone={customer.status === 1 ? "success" : customer.status === 2 ? "warning" : "danger"}>{customerStatusMap[customer.status]}</Badge>
@@ -385,7 +385,7 @@ export default function CustomersPage() {
                   <p className="mt-2 text-sm text-slate-300">Altura: {selectedFitness.heightCm ? `${selectedFitness.heightCm} cm` : "-"}</p>
                   <p className="mt-2 text-sm text-slate-300">Horario preferido: {selectedFitness.preferredTrainingTime ?? "Horarios variables"}</p>
                   <p className="mt-2 text-sm text-slate-300">
-                    Dias disponibles: {selectedFitness.trainingDays.length ? selectedFitness.trainingDays.map((day) => trainingDayMap[day] ?? String(day)).join(", ") : "Sin configurar"}
+                    Días disponibles: {selectedFitness.trainingDays.length ? selectedFitness.trainingDays.map((day) => trainingDayMap[day] ?? String(day)).join(", ") : "Sin configurar"}
                   </p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -393,7 +393,7 @@ export default function CustomersPage() {
                   <p className="mt-2 text-sm text-slate-300">Peso actual: {selectedBodySummary?.currentWeightKg ? `${selectedBodySummary.currentWeightKg} kg` : "-"}</p>
                   <p className="mt-2 text-sm text-slate-300">Peso objetivo: {selectedBodySummary?.targetWeightKg ? `${selectedBodySummary.targetWeightKg} kg` : "-"}</p>
                   <p className="mt-2 text-sm text-slate-300">IMC: {selectedBodySummary?.bmi ? `${selectedBodySummary.bmi} (${selectedBodySummary.bmiLabel})` : "Sin mediciones"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Ultima medicion: {selectedBodySummary?.latestMeasurementDate ? formatDateTime(selectedBodySummary.latestMeasurementDate) : "Sin registros"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Última medición: {selectedBodySummary?.latestMeasurementDate ? formatDateTime(selectedBodySummary.latestMeasurementDate) : "Sin registros"}</p>
                   <p className="mt-2 text-sm text-slate-300">Historial: {selectedBodySummary?.weightHistory.length ?? 0} mediciones</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -420,12 +420,12 @@ export default function CustomersPage() {
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Actividad semanal</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.daysTrained} dias entrenados</p>
-                  <p className="mt-2 text-sm text-slate-300">Duracion acumulada: {Math.round(selectedActivitySummary.totalDurationSeconds / 60)} min</p>
-                  <p className="mt-2 text-sm text-slate-300">Calorias estimadas: {selectedActivitySummary.caloriesEstimated}</p>
+                  <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.daysTrained} días entrenados</p>
+                  <p className="mt-2 text-sm text-slate-300">Duración acumulada: {Math.round(selectedActivitySummary.totalDurationSeconds / 60)} min</p>
+                  <p className="mt-2 text-sm text-slate-300">Calorías estimadas: {selectedActivitySummary.caloriesEstimated}</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Ultima actividad</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Última actividad</p>
                   <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.recentActivities[0]?.title ?? "Sin actividades"}</p>
                   <p className="mt-2 text-sm text-slate-300">
                     {selectedActivitySummary.recentActivities[0]?.completedAt ? formatDateTime(selectedActivitySummary.recentActivities[0].completedAt) : "Sin registros"}
@@ -439,12 +439,12 @@ export default function CustomersPage() {
                   <p className="mt-2 text-sm text-slate-300">Carga: {selectedActivitySummary.totalLoadKg ? `${selectedActivitySummary.totalLoadKg} kg` : "Sin carga registrada"}</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Nutricion</p>
+                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Nutrición</p>
                   <p className="mt-2 text-sm text-slate-300">Objetivo: {selectedNutritionProfile ? fitnessGoalMap[selectedNutritionProfile.goal] : "Sin perfil"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Calorias diarias: {selectedNutritionProfile?.dailyCaloriesTarget ?? "-"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Calorías diarias: {selectedNutritionProfile?.dailyCaloriesTarget ?? "-"}</p>
                   <p className="mt-2 text-sm text-slate-300">Macros: {selectedNutritionProfile ? `${selectedNutritionProfile.proteinGrams}P / ${selectedNutritionProfile.carbsGrams}C / ${selectedNutritionProfile.fatGrams}G` : "Sin macros"}</p>
                   <p className="mt-2 text-sm text-slate-300">Agua: {selectedNutritionProfile ? `${selectedNutritionProfile.waterLitersTarget} L` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Plan diario: {selectedMealPlan.length ? `${selectedMealPlan.length} dias generados` : "Sin plan"}</p>
+                  <p className="mt-2 text-sm text-slate-300">Plan diario: {selectedMealPlan.length ? `${selectedMealPlan.length} días generados` : "Sin plan"}</p>
                 </div>
               </div>
             ) : null}
@@ -462,7 +462,7 @@ export default function CustomersPage() {
                         <div className="mt-3 space-y-2">
                           {plan.items.map((item) => (
                             <p key={item.id} className="text-xs text-slate-300">
-                              {mealTypeMap[item.mealType]} · {item.name} · {item.calories} kcal
+                        {mealTypeMap[item.mealType]} · {item.name} · {item.calories} kcal
                             </p>
                           ))}
                         </div>
@@ -489,7 +489,7 @@ export default function CustomersPage() {
                             <div className="mt-2 space-y-1">
                               {week.days.map((day) => (
                                 <p key={day.id} className="text-xs text-slate-300">
-                                  {trainingDayMap[day.dayOfWeek]} · {day.title} · {trainingDayIntensityMap[day.intensity]} · {day.exercises.length} ejercicios
+                        {trainingDayMap[day.dayOfWeek]} · {day.title} · {trainingDayIntensityMap[day.intensity]} · {day.exercises.length} ejercicios
                                 </p>
                               ))}
                             </div>
@@ -507,3 +507,4 @@ export default function CustomersPage() {
     </div>
   );
 }
+

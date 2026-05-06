@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { getBackendUrl } from "@/lib/api/backend";
 import { applyAuthCookies } from "@/lib/auth/cookies";
 import type { ApiErrorPayload, AuthResponse } from "@/lib/types";
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
-    return NextResponse.json(errorPayload ?? { message: "No se pudo iniciar sesion." }, { status: response.status });
+    return NextResponse.json(errorPayload ?? { message: "No se pudo iniciar sesión." }, { status: response.status });
   }
 
   const auth = (await response.json()) as AuthResponse;
@@ -26,4 +26,5 @@ export async function POST(request: NextRequest) {
   applyAuthCookies(nextResponse.cookies, auth);
   return nextResponse;
 }
+
 

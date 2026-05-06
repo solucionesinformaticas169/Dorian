@@ -19,9 +19,10 @@ export default async function ClassesPage() {
       <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">{groupClasses.map((item) => <GroupClassCard key={item.slug} item={item} />)}</div>
 
       <section className="mt-16">
-        <SectionTitle eyebrow="Horario activo" title="Clases disponibles hoy y proximas" description="Cada sesion combina energia, estructura y aforo controlado para una mejor experiencia." />
+        <SectionTitle eyebrow="Horario activo" title="Clases disponibles hoy y próximas" description="Cada sesión combina energía, estructura y aforo controlado para una mejor experiencia." />
         <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">{classes.map((item) => <ClassCard key={item.id} item={item} branchName={branchMap[item.branchId]} />)}</div>
       </section>
     </main>
   );
 }
+

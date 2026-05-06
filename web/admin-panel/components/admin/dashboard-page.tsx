@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { BarChart3, TrendingUp, UsersRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +23,7 @@ export function DashboardPage() {
 
   const summary = summaryQuery.data;
   if (!summary) {
-    return <EmptyState title="No hay metricas disponibles" description="El dashboard se activara cuando existan sucursales, clientes y operacion minima para la demo." />;
+    return <EmptyState title="No hay métricas disponibles" description="El dashboard se activará cuando existan sucursales, clientes y operación mínima para la demo." />;
   }
 
   const maxBranchActivity = Math.max(...summary.branchActivity.map((item) => item.activityCount), 1);
@@ -39,10 +39,10 @@ export function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Clientes activos" value={summary.activeCustomersCount} helper="Perfiles activos dentro del alcance del rol actual" />
-        <StatCard label="Clases del dia" value={summary.todayClassesCount} helper="Sesiones programadas para hoy" />
-        <StatCard label="Check-ins del dia" value={summary.todayCheckInsCount} helper="Ingresos aceptados durante la jornada" />
-        <StatCard label="Ingresos estimados" value={formatCurrency(summary.estimatedRevenue)} helper="Basado en membresias activas asignadas" />
-        <StatCard label="Sucursal lider" value={summary.mostActiveBranchName} helper="Mayor actividad operativa en el tablero" />
+        <StatCard label="Clases del día" value={summary.todayClassesCount} helper="Sesiones programadas para hoy" />
+        <StatCard label="Check-ins del día" value={summary.todayCheckInsCount} helper="Ingresos aceptados durante la jornada" />
+        <StatCard label="Ingresos estimados" value={formatCurrency(summary.estimatedRevenue)} helper="Basado en membresías activas asignadas" />
+        <StatCard label="Sucursal líder" value={summary.mostActiveBranchName} helper="Mayor actividad operativa en el tablero" />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -84,7 +84,7 @@ export function DashboardPage() {
         <Card>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Ocupacion de clases</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Ocupación de clases</p>
               <h3 className="mt-3 font-heading text-2xl text-white">Aforo de hoy</h3>
               <p className="mt-2 text-sm text-slate-400">Ideal para recepcion y coordinacion de entrenadores durante la demo operativa.</p>
             </div>
@@ -115,7 +115,7 @@ export function DashboardPage() {
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.03] p-5 text-sm text-slate-400">
-                Aun no hay clases programadas para hoy dentro del alcance de este usuario.
+                Aún no hay clases programadas para hoy dentro del alcance de este usuario.
               </div>
             )}
           </div>
@@ -157,3 +157,5 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+
