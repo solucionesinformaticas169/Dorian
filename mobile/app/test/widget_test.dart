@@ -1,4 +1,4 @@
-import 'package:dorian_mobile/main.dart';
+import '../lib/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -25,3 +25,4 @@ void main() {
     expect(restored.user.roles, session.user.roles);
   });
 }
+

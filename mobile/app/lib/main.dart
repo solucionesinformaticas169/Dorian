@@ -192,6 +192,12 @@ class SessionController extends ChangeNotifier {
     await refreshFitnessProfile();
   }
 
+  Future<CustomerProfile> ensureProfile() async {
+    if (profile != null) return profile!;
+    await refreshProfile();
+    return profile!;
+  }
+
   Future<void> refreshProfile() async {
     profile = await customerApi.getMe();
     notifyListeners();
@@ -355,10 +361,13 @@ String presentUiError(Object? error, [String fallback = 'No pudimos completar es
   final normalized = raw
       .replaceAll('Password', 'Contrasena')
       .replaceAll('A user with that email already exists.', 'Ya existe una cuenta registrada con ese correo.')
-      .replaceAll('Customer profile not found.', 'Tu cuenta fue creada, pero aún no tiene un perfil de cliente listo. Intenta nuevamente en unos segundos.')
+      .replaceAll('Customer profile not found.', 'Tu cuenta fue creada, pero aun no tiene un perfil de cliente listo. Intenta nuevamente en unos segundos.')
       .replaceAll('Invalid credentials.', 'Correo o contrasena incorrectos.')
       .replaceAll('The selected branch does not exist.', 'La sucursal seleccionada no existe.')
-      .replaceAll('The selected membership does not exist.', 'La membresía seleccionada no existe.');
+      .replaceAll('The selected membership does not exist.', 'La membresia seleccionada no existe.')
+      .replaceAll('You do not have access to classes.', 'Todavia no hay clases disponibles para esta cuenta.')
+      .replaceAll('You do not have access to promotions.', 'Todavia no hay promociones disponibles para esta cuenta.')
+      .replaceAll('Only customers can access their own mobile profile.', 'Tu cuenta aun esta terminando de preparar el perfil movil.');
   return normalized;
 }
 
@@ -616,19 +625,25 @@ class CustomerProfile {
   String get membershipStatusLabel {
     if (activeMembershipEndsAtUtc == null) return 'Sin plan activo';
     final days = activeMembershipEndsAtUtc!.difference(DateTime.now()).inDays;
-    if (days < 0) return 'Membresía vencida';
+    if (days < 0) return 'MembresÃ­a vencida';
     if (days == 0) return 'Vence hoy';
-    return 'Vence en $days días';
+    return 'Vence en $days dÃ­as';
   }
   factory CustomerProfile.fromJson(Map<String, dynamic> json) => CustomerProfile(
         id: json['id'] as String,
         email: json['email'] as String,
-        branchId: json['branchId'] as String,
-        firstName: json['firstName'] as String,
-        lastName: json['lastName'] as String,
-        identificationNumber: json['identificationNumber'] as String,
+        branchId: (json['branchId'] as String?) ?? '',
+        firstName: ((json['firstName'] as String?)?.trim().isNotEmpty ?? false)
+            ? (json['firstName'] as String).trim()
+            : ((((json['fullName'] as String?) ?? '').trim().split(' ').firstOrNull ?? 'Cliente').trim()),
+        lastName: ((json['lastName'] as String?)?.trim().isNotEmpty ?? false)
+            ? (json['lastName'] as String).trim()
+            : ((((json['fullName'] as String?) ?? '').trim().split(' ').skip(1).join(' ')).trim()),
+        identificationNumber: ((json['identificationNumber'] as String?)?.trim().isNotEmpty ?? false)
+            ? (json['identificationNumber'] as String).trim()
+            : 'No registrado',
         phone: json['phone'] as String?,
-        status: json['status'] as int,
+        status: (json['status'] as int?) ?? 1,
         activeMembershipName: json['activeMembershipName'] as String?,
         activeMembershipDurationInDays: json['activeMembershipDurationInDays'] as int?,
         activeMembershipPrice: (json['activeMembershipPrice'] as num?)?.toDouble(),
@@ -1796,7 +1811,7 @@ class _LoginPageState extends State<LoginPage> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(session.errorMessage, 'No pudimos iniciar sesión. Revisa tu correo y tu clave.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(presentUiError(session.errorMessage, 'No pudimos iniciar sesiÃ³n. Revisa tu correo y tu clave.'))));
     }
   }
 
@@ -1809,7 +1824,7 @@ class _LoginPageState extends State<LoginPage> {
     _password.clear();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Cuenta creada. Ahora inicia sesión y completa tu configuración inicial.'),
+        content: Text('Cuenta creada. Ahora inicia sesiÃ³n y completa tu configuraciÃ³n inicial.'),
       ),
     );
   }
@@ -1959,7 +1974,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _phone,
-                        decoration: const InputDecoration(labelText: 'Teléfono (opcional)'),
+                        decoration: const InputDecoration(labelText: 'TelÃ©fono (opcional)'),
                         keyboardType: TextInputType.phone,
                       ),
                       const SizedBox(height: 16),
@@ -2157,7 +2172,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Bienvenido a tu configuración inicial', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text('Bienvenido a tu configuraciÃ³n inicial', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             const Text('En pocos pasos definiremos tu objetivo, tus preferencias y tu base fisica para personalizar mejor tu experiencia.', style: TextStyle(color: Colors.white70, height: 1.5)),
               ],
@@ -2236,9 +2251,9 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('¿Qué días tienes disponibles?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text('Â¿QuÃ© dÃ­as tienes disponibles?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
-        const Text('Selecciona al menos un día para construir una rutina realista.', style: TextStyle(color: Colors.white70)),
+        const Text('Selecciona al menos un dÃ­a para construir una rutina realista.', style: TextStyle(color: Colors.white70)),
         const SizedBox(height: 16),
         Wrap(
           spacing: 10,
@@ -2268,12 +2283,12 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Cuéntanos tus datos físicos', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text('CuÃ©ntanos tus datos fÃ­sicos', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 16),
         DropdownButtonFormField<int>(
           key: ValueKey(gender),
           initialValue: gender,
-          decoration: const InputDecoration(labelText: 'Género'),
+          decoration: const InputDecoration(labelText: 'GÃ©nero'),
           items: fitnessGenderLabels.entries.map((entry) => DropdownMenuItem<int>(value: entry.key, child: Text(entry.value))).toList(),
           onChanged: (value) => setState(() => gender = value ?? gender),
         ),
@@ -2306,8 +2321,8 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
           contentPadding: EdgeInsets.zero,
           value: flexibleSchedule,
           activeThumbColor: dorianAccent,
-          title: const Text('Horarios diferentes cada día'),
-          subtitle: const Text('Usaremos tus días disponibles sin fijar una sola hora.'),
+          title: const Text('Horarios diferentes cada dÃ­a'),
+          subtitle: const Text('Usaremos tus dÃ­as disponibles sin fijar una sola hora.'),
           onChanged: (value) => setState(() => flexibleSchedule = value),
         ),
         const SizedBox(height: 8),
@@ -2417,7 +2432,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
     final height = double.tryParse(heightController.text.replaceAll(',', '.'));
     final targetWeight = double.tryParse(targetWeightController.text.replaceAll(',', '.'));
     if (birthDate == null || weight == null || height == null || targetWeight == null) {
-      setState(() => errorMessage = 'Completa tus datos físicos antes de finalizar.');
+      setState(() => errorMessage = 'Completa tus datos fÃ­sicos antes de finalizar.');
       return;
     }
 
@@ -2444,11 +2459,17 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
       final api = context.read<FitnessProfileApi>();
       final session = context.read<SessionController>();
       final response = session.fitnessProfile?.id == null ? await api.create(payload) : await api.update(payload);
+      await session.refreshProfile();
       session.updateFitnessProfile(response);
       if (!mounted) return;
       if (widget.editMode) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Perfil fitness actualizado.')));
         Navigator.of(context).pop();
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ClientShell()),
+          (route) => false,
+        );
       }
     } catch (error) {
       setState(() => errorMessage = presentUiError(error, 'No pudimos guardar tu perfil fitness.'));
@@ -2564,10 +2585,16 @@ class _HomePageState extends State<HomePage> {
     final branchApi = context.read<BranchApi>();
     final classApi = context.read<ClassApi>();
     final promotionApi = context.read<PromotionApi>();
-    final profile = session.profile!;
+    final profile = session.profile ?? await session.ensureProfile();
     final branches = await branchApi.listBranches();
-    final classes = await classApi.listClasses();
-    final promotions = await promotionApi.listPromotions();
+    List<GymClass> classes = const [];
+    List<PromotionItem> promotions = const [];
+    try {
+      classes = await classApi.listClasses();
+    } catch (_) {}
+    try {
+      promotions = await promotionApi.listPromotions();
+    } catch (_) {}
     GymBranch? branch;
     for (final item in branches) {
       if (item.id == profile.branchId) branch = item;
@@ -2599,9 +2626,9 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 8),
             Text('Tu entrenamiento premium empieza aqui.', style: const TextStyle(color: dorianTextSoft)),
             const SizedBox(height: 16),
-            GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Sucursal principal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresía activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
+            GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Sucursal principal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresÃ­a activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
             const SizedBox(height: 12),
-            Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresía', subtitle: 'Mi membresía', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
+            Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresia', subtitle: 'Mi membresia', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
             const SizedBox(height: 12),
             QuickActionCard(icon: Icons.event_available, title: 'Mis reservas', subtitle: 'Ver y cancelar clases', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage()))),
             const SizedBox(height: 12),
@@ -2615,10 +2642,20 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 24),
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
-            for (final item in classes) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))])), const SizedBox(height: 12)],
+            if (classes.isEmpty) ...[
+              const GlowCard(child: Text('Aun no hay clases programadas para tu sucursal.')),
+              const SizedBox(height: 12),
+            ] else ...[
+              for (final item in classes) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))])), const SizedBox(height: 12)],
+            ],
             Text('Promociones activas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
-            for (final item in promotions) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(item.description, style: const TextStyle(color: Colors.white70))])), const SizedBox(height: 12)],
+            if (promotions.isEmpty) ...[
+              const GlowCard(child: Text('Aun no hay promociones activas para mostrarte.')),
+              const SizedBox(height: 12),
+            ] else ...[
+              for (final item in promotions) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(item.description, style: const TextStyle(color: Colors.white70))])), const SizedBox(height: 12)],
+            ],
               ],
             ),
           ),
@@ -2636,8 +2673,16 @@ class BranchesPage extends StatelessWidget {
       future: context.read<BranchApi>().listBranches(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar las clases disponibles.')));
+        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar las sucursales disponibles.')));
         final items = snapshot.data!;
+        if (items.isEmpty) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+            children: const [
+              GlowCard(child: Text('AÃºn no hay promociones activas para tu cuenta.')),
+            ],
+          );
+        }
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           itemCount: items.length,
@@ -2696,16 +2741,20 @@ class ClassesPage extends StatelessWidget {
   const ClassesPage({super.key});
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: Future.wait([
-        context.read<GroupClassApi>().listCatalog(),
-        context.read<ClassApi>().listClasses(),
-      ]),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: () async {
+        final catalog = await context.read<GroupClassApi>().listCatalog();
+        List<GymClass> items = const [];
+        try {
+          items = await context.read<ClassApi>().listClasses();
+        } catch (_) {}
+        return {'catalog': catalog, 'items': items};
+      }(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu resumen inicial.')));
-        final catalog = snapshot.data![0] as List<GroupClassCatalogItem>;
-        final items = snapshot.data![1] as List<GymClass>;
+        if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar el catalogo de clases.')));
+        final catalog = snapshot.data!['catalog'] as List<GroupClassCatalogItem>;
+        final items = snapshot.data!['items'] as List<GymClass>;
         return Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
@@ -2713,47 +2762,70 @@ class ClassesPage extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
               children: [
-            Row(children: [Expanded(child: Text('Clases disponibles', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage())), child: const Text('Mis reservas'))]),
-            const SizedBox(height: 12),
-            Text('Catalogo Dorian', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 10),
-            for (final item in catalog) ...[
-              InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupClassDetailPage(item: item))),
-                child: GlowCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                Row(children: [Expanded(child: Text('Clases disponibles', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))), TextButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsPage())), child: const Text('Mis reservas'))]),
+                const SizedBox(height: 12),
+                Text('Catalogo Dorian', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                for (final item in catalog) ...[
+                  InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupClassDetailPage(item: item))),
+                    child: GlowCard(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(item.emoji, style: const TextStyle(fontSize: 30)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                                const SizedBox(height: 6),
-                                Text(item.subtitle, style: const TextStyle(color: dorianAccentSoft)),
-                              ],
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.emoji, style: const TextStyle(fontSize: 30)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 6),
+                                    Text(item.subtitle, style: const TextStyle(color: dorianAccentSoft)),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
+                          const SizedBox(height: 10),
+                          Text(item.summary, style: const TextStyle(color: Colors.white70)),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Text(item.summary, style: const TextStyle(color: Colors.white70)),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            const SizedBox(height: 8),
-            Text('Horarios y reservas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            for (final item in items) ...[InkWell(borderRadius: BorderRadius.circular(24), onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassBookingPage(gymClass: item))), child: GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} de ${item.capacity} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))]))), const SizedBox(height: 12)],
+                  const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 8),
+                Text('Horarios y reservas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                if (items.isEmpty) ...[
+                  const GlowCard(child: Text('Aun no hay horarios publicados para tu sucursal.')),
+                  const SizedBox(height: 12),
+                ] else ...[
+                  for (final item in items) ...[
+                    InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClassBookingPage(gymClass: item))),
+                      child: GlowCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)),
+                            const SizedBox(height: 8),
+                            Text(' de  cupos disponibles', style: const TextStyle(color: dorianAccentSoft)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
               ],
             ),
           ),
@@ -2938,16 +3010,30 @@ class PromotionsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<PromotionItem>>(
-      future: context.read<PromotionApi>().listPromotions(),
+      future: () async {
+        try {
+          return await context.read<PromotionApi>().listPromotions();
+        } catch (_) {
+          return <PromotionItem>[];
+        }
+      }(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu perfil.')));
+          return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar las promociones.')));
         }
 
-        final items = snapshot.data!;
+        final items = snapshot.data ?? const <PromotionItem>[];
+        if (items.isEmpty) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+            children: const [
+              GlowCard(child: Text('Aun no hay promociones activas para mostrarte.')),
+            ],
+          );
+        }
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
           itemCount: items.length,
@@ -2967,7 +3053,7 @@ class PromotionsPage extends StatelessWidget {
                     children: [
                       Chip(label: Text(item.discountTypeLabel)),
                       if (item.discountValue != null) Chip(label: Text(item.discountValue!.toStringAsFixed(0))),
-                      Chip(label: Text('Hasta ${formatDate(item.endsAt)}')),
+                      Chip(label: Text('Hasta ')),
                     ],
                   ),
                 ],
@@ -2986,8 +3072,23 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
-    final profile = session.profile!;
+    final profile = session.profile;
     final fitnessProfile = session.fitnessProfile;
+
+    if (profile == null) {
+      return FutureBuilder<void>(
+        future: context.read<SessionController>().refreshProfile(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu perfil.')));
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+    }
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
@@ -3017,8 +3118,8 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 fitnessProfile?.onboardingCompleted == true
-                      ? '${fitnessProfile!.goalLabel} · ${fitnessProfile.focusLabel} · ${fitnessProfile.experienceLabel}'
-                    : 'Aún no completas tu onboarding fitness.',
+                      ? '${fitnessProfile!.goalLabel} Â· ${fitnessProfile.focusLabel} Â· ${fitnessProfile.experienceLabel}'
+                    : 'AÃºn no completas tu onboarding fitness.',
                 style: const TextStyle(color: Colors.white70),
               ),
             ],
@@ -3069,7 +3170,7 @@ class ProfilePage extends StatelessWidget {
         const SizedBox(height: 12),
         QuickActionCard(
           icon: Icons.card_membership,
-        title: 'Mi membresía',
+        title: 'Mi membresÃ­a',
           subtitle: 'Detalle del plan',
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage())),
         ),
@@ -3084,7 +3185,7 @@ class ProfilePage extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () => session.logout(),
           icon: const Icon(Icons.logout),
-          label: const Text('Cerrar sesión'),
+          label: const Text('Cerrar sesiÃ³n'),
         ),
       ],
     );
@@ -3096,9 +3197,26 @@ class MembershipPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profile = context.watch<SessionController>().profile!;
+    final profile = context.watch<SessionController>().profile;
+    if (profile == null) {
+      return PremiumScaffold(
+        title: 'Mi membresÃ­a',
+        child: FutureBuilder<void>(
+          future: context.read<SessionController>().refreshProfile(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar tu membresÃ­a.')));
+            }
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
+      );
+    }
     return PremiumScaffold(
-      title: 'Mi membresía',
+      title: 'Mi membresÃ­a',
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -3106,10 +3224,10 @@ class MembershipPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                    Text(profile.activeMembershipName ?? 'Sin membresía activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(profile.activeMembershipName ?? 'Sin membresÃ­a activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
                 Text(
-                    'Duración: ${profile.activeMembershipDurationInDays?.toString() ?? '-'} días',
+                    'DuraciÃ³n: ${profile.activeMembershipDurationInDays?.toString() ?? '-'} dÃ­as',
                   style: const TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
@@ -3250,7 +3368,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                 children: [
                   Text('Completa tu onboarding primero', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
-                  const Text('Necesitamos tu objetivo, nivel y días disponibles para generar un plan realmente personalizado.', style: TextStyle(color: Colors.white70)),
+                  const Text('Necesitamos tu objetivo, nivel y dÃ­as disponibles para generar un plan realmente personalizado.', style: TextStyle(color: Colors.white70)),
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitnessOnboardingPage(editMode: true))),
@@ -3288,7 +3406,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                     children: [
                       Text('Genera tu plan personalizado', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: 10),
-                      Text('Tomaremos tu objetivo ${fitnessProfile!.goalLabel.toLowerCase()}, tu nivel ${fitnessProfile.experienceLabel.toLowerCase()} y tus días disponibles para crear una rutina realista.', style: const TextStyle(color: Colors.white70)),
+                      Text('Tomaremos tu objetivo ${fitnessProfile!.goalLabel.toLowerCase()}, tu nivel ${fitnessProfile.experienceLabel.toLowerCase()} y tus dÃ­as disponibles para crear una rutina realista.', style: const TextStyle(color: Colors.white70)),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _generatePlan,
@@ -3317,7 +3435,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                       children: [
                         Text(plan.goalLabel, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 8),
-                        Text('${plan.levelLabel} · ${focusMuscleGroupLabels[plan.focusMuscleGroup] ?? 'Balanceado'}', style: const TextStyle(color: dorianAccentSoft)),
+                        Text('${plan.levelLabel} Â· ${focusMuscleGroupLabels[plan.focusMuscleGroup] ?? 'Balanceado'}', style: const TextStyle(color: dorianAccentSoft)),
                         const SizedBox(height: 12),
                         LinearProgressIndicator(
                           value: plan.totalDaysCount == 0 ? 0 : plan.completedDaysCount / plan.totalDaysCount,
@@ -3325,7 +3443,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                           color: dorianAccent,
                         ),
                         const SizedBox(height: 8),
-                        Text('${plan.progressPercent}% completado · fase actual: ${plan.currentPhaseName}', style: const TextStyle(color: Colors.white70)),
+                        Text('${plan.progressPercent}% completado Â· fase actual: ${plan.currentPhaseName}', style: const TextStyle(color: Colors.white70)),
                       ],
                     ),
                   ),
@@ -3339,7 +3457,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                     tabs: [
                       Tab(text: 'Plan'),
                       Tab(text: 'Entrenamientos'),
-                      Tab(text: 'Rápido'),
+                      Tab(text: 'RÃ¡pido'),
                     ],
                   ),
                 ),
@@ -3440,7 +3558,7 @@ class _TrainingPlanOverviewTab extends StatelessWidget {
                             children: [
                               Icon(day.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked, size: 18, color: day.isCompleted ? dorianAccent : Colors.white54),
                               const SizedBox(width: 8),
-                              Expanded(child: Text('${day.dayLabel} · ${day.title}', style: const TextStyle(color: Colors.white))),
+                              Expanded(child: Text('${day.dayLabel} Â· ${day.title}', style: const TextStyle(color: Colors.white))),
                               Text('${day.estimatedMinutes} min', style: const TextStyle(color: dorianAccentSoft)),
                             ],
                           ),
@@ -3486,9 +3604,9 @@ class _TrainingPlanWorkoutsTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${day.dayLabel} · ${day.title}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                        Text('${day.dayLabel} Â· ${day.title}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 6),
-                        Text('${day.estimatedMinutes} min · intensidad ${day.intensityLabel.toLowerCase()}', style: const TextStyle(color: dorianAccentSoft)),
+                        Text('${day.estimatedMinutes} min Â· intensidad ${day.intensityLabel.toLowerCase()}', style: const TextStyle(color: dorianAccentSoft)),
                       ],
                     ),
                   ),
@@ -3515,7 +3633,7 @@ class _TrainingPlanWorkoutsTab extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(exercise.muscleGroupLabel, style: const TextStyle(color: dorianAccentSoft)),
                       const SizedBox(height: 8),
-                      Text('${exercise.sets} series · ${exercise.reps} reps · descanso ${exercise.restSeconds}s', style: const TextStyle(color: Colors.white70)),
+                      Text('${exercise.sets} series Â· ${exercise.reps} reps Â· descanso ${exercise.restSeconds}s', style: const TextStyle(color: Colors.white70)),
                       if (exercise.notes != null) ...[
                         const SizedBox(height: 8),
                         Text(exercise.notes!, style: const TextStyle(color: Colors.white54)),
@@ -3567,14 +3685,14 @@ class _TrainingQuickTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Entrenamiento rápido recomendado', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text('Entrenamiento rÃ¡pido recomendado', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
-              Text('${recommended.dayLabel} · ${recommended.title}', style: const TextStyle(color: dorianAccentSoft)),
+              Text('${recommended.dayLabel} Â· ${recommended.title}', style: const TextStyle(color: dorianAccentSoft)),
               const SizedBox(height: 10),
-              Text('${recommended.estimatedMinutes} minutos · intensidad ${recommended.intensityLabel.toLowerCase()}', style: const TextStyle(color: Colors.white70)),
+              Text('${recommended.estimatedMinutes} minutos Â· intensidad ${recommended.intensityLabel.toLowerCase()}', style: const TextStyle(color: Colors.white70)),
               const SizedBox(height: 14),
               for (final exercise in recommended.exercises.take(4)) ...[
-                Text('• ${exercise.name} · ${exercise.sets} x ${exercise.reps}', style: const TextStyle(color: Colors.white)),
+                Text('â€¢ ${exercise.name} Â· ${exercise.sets} x ${exercise.reps}', style: const TextStyle(color: Colors.white)),
                 const SizedBox(height: 6),
               ],
               const SizedBox(height: 16),
@@ -3670,7 +3788,7 @@ class _ActivityPageState extends State<ActivityPage> {
                       children: [
                         Text('Tu consistencia Dorian', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 8),
-                        const Text('Entrena y registra tus actividades para ver estadísticas.', style: TextStyle(color: Colors.white70)),
+                        const Text('Entrena y registra tus actividades para ver estadÃ­sticas.', style: TextStyle(color: Colors.white70)),
                         const SizedBox(height: 14),
                         Wrap(
                           spacing: 8,
@@ -3678,7 +3796,7 @@ class _ActivityPageState extends State<ActivityPage> {
                           children: [7, 14, 28, 90]
                               .map(
                                 (value) => ChoiceChip(
-                                  label: Text('$value días'),
+                                  label: Text('$value dÃ­as'),
                                   selected: range == value,
                                   selectedColor: dorianAccent.withValues(alpha: 0.24),
                                   onSelected: (_) => _changeRange(value),
@@ -3738,14 +3856,14 @@ class _ActivitySummaryTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Aún no hay actividad registrada', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text('AÃºn no hay actividad registrada', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
-                const Text('Entrena y registra tus actividades para ver estadísticas.', style: TextStyle(color: Colors.white70)),
+                const Text('Entrena y registra tus actividades para ver estadÃ­sticas.', style: TextStyle(color: Colors.white70)),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_circle_outline),
-                  label: const Text('Añadir actividad manual'),
+                  label: const Text('AÃ±adir actividad manual'),
                 ),
               ],
             ),
@@ -3761,8 +3879,8 @@ class _ActivitySummaryTab extends StatelessWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-              _BodyMetricCard(title: 'Duración', value: formatDuration(summary.totalDurationSeconds), subtitle: '${summary.daysTrained} días entrenados'),
-              _BodyMetricCard(title: 'Calorías', value: '${summary.caloriesEstimated}', subtitle: 'Estimación total'),
+              _BodyMetricCard(title: 'DuraciÃ³n', value: formatDuration(summary.totalDurationSeconds), subtitle: '${summary.daysTrained} dÃ­as entrenados'),
+              _BodyMetricCard(title: 'CalorÃ­as', value: '${summary.caloriesEstimated}', subtitle: 'EstimaciÃ³n total'),
             _BodyMetricCard(title: 'Ejercicios', value: '${summary.exercisesCompleted}', subtitle: '${summary.seriesCompleted} series'),
               _BodyMetricCard(title: 'Reps', value: '${summary.repsCompleted}', subtitle: summary.totalLoadKg == null ? 'Sin carga' : '${summary.totalLoadKg!.toStringAsFixed(1)} kg'),
           ],
@@ -3772,7 +3890,7 @@ class _ActivitySummaryTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Actividad por día', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text('Actividad por dÃ­a', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
               ActivityBarChart(points: summary.activityByDay),
             ],
@@ -3783,7 +3901,7 @@ class _ActivitySummaryTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Regiones más entrenadas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text('Regiones mÃ¡s entrenadas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 14),
               for (final muscle in muscles) ...[
                 Row(
@@ -3799,7 +3917,7 @@ class _ActivitySummaryTab extends StatelessWidget {
                   color: dorianAccent,
                 ),
                 const SizedBox(height: 4),
-                Text('${muscle.exercisesCompleted} ejercicios · ${muscle.fatigueStatus}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                Text('${muscle.exercisesCompleted} ejercicios Â· ${muscle.fatigueStatus}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 12),
               ],
             ],
@@ -3865,7 +3983,7 @@ class _ActivityHistoryTab extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: Text('Calendario mensual', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700))),
-                  TextButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Añadir')),
+                  TextButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('AÃ±adir')),
                 ],
               ),
               const SizedBox(height: 12),
@@ -3879,9 +3997,9 @@ class _ActivityHistoryTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Sin actividades todavía', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text('Sin actividades todavÃ­a', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
-                const Text('Entrena y registra tus actividades para ver estadísticas.', style: TextStyle(color: Colors.white70)),
+                const Text('Entrena y registra tus actividades para ver estadÃ­sticas.', style: TextStyle(color: Colors.white70)),
               ],
             ),
           )
@@ -3897,7 +4015,7 @@ class _ActivityHistoryTab extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(formatDateTime(activity.completedAt), style: const TextStyle(color: dorianAccentSoft)),
                     const SizedBox(height: 8),
-                    Text('${formatDuration(activity.durationSeconds)} · ${activity.caloriesEstimated} kcal · ${activity.exercisesCompleted} ejercicios', style: const TextStyle(color: Colors.white70)),
+                    Text('${formatDuration(activity.durationSeconds)} Â· ${activity.caloriesEstimated} kcal Â· ${activity.exercisesCompleted} ejercicios', style: const TextStyle(color: Colors.white70)),
                     if (activity.notes != null && activity.notes!.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(activity.notes!, style: const TextStyle(color: dorianTextSoft)),
@@ -3986,7 +4104,7 @@ class _ManualWorkoutActivityPageState extends State<ManualWorkoutActivityPage> {
   @override
   Widget build(BuildContext context) {
     return PremiumScaffold(
-      title: 'Añadir actividad',
+      title: 'AÃ±adir actividad',
       child: Form(
         key: _formKey,
         child: ListView(
@@ -4017,9 +4135,9 @@ class _ManualWorkoutActivityPageState extends State<ManualWorkoutActivityPage> {
                     onChanged: (value) => setState(() => muscleGroup = value ?? 10),
                   ),
                   const SizedBox(height: 12),
-                  _buildIntField(_durationMinutes, 'Duración (min)', min: 1),
+                  _buildIntField(_durationMinutes, 'DuraciÃ³n (min)', min: 1),
                   const SizedBox(height: 12),
-                  _buildIntField(_calories, 'Calorías estimadas', min: 0),
+                  _buildIntField(_calories, 'CalorÃ­as estimadas', min: 0),
                   const SizedBox(height: 12),
                   _buildIntField(_sets, 'Series', min: 0),
                   const SizedBox(height: 12),
@@ -4205,7 +4323,7 @@ class _NutritionPageState extends State<NutritionPage> {
       await api.generateProfile();
       await api.generateMealPlan();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tu plan nutricional ya está listo.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tu plan nutricional ya estÃ¡ listo.')));
       await _refresh();
     } catch (error) {
       if (!mounted) return;
@@ -4240,7 +4358,7 @@ class _NutritionPageState extends State<NutritionPage> {
                   children: [
                     Text('Completa tu onboarding primero', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
                     const SizedBox(height: 10),
-                    const Text('Necesitamos tu objetivo, medidas y nivel de actividad para calcular tu nutrición de forma coherente.', style: TextStyle(color: Colors.white70, decoration: TextDecoration.none)),
+                    const Text('Necesitamos tu objetivo, medidas y nivel de actividad para calcular tu nutriciÃ³n de forma coherente.', style: TextStyle(color: Colors.white70, decoration: TextDecoration.none)),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FitnessOnboardingPage(editMode: true))),
@@ -4282,7 +4400,7 @@ class _NutritionPageState extends State<NutritionPage> {
                       children: [
                         Text('Genera tu plan nutricional', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
                         const SizedBox(height: 10),
-                        Text('Usaremos tu objetivo ${fitnessProfile!.goalLabel.toLowerCase()}, tu peso actual y tu constancia reciente para calcular calorías y macros.', style: const TextStyle(color: Colors.white70, decoration: TextDecoration.none)),
+                        Text('Usaremos tu objetivo ${fitnessProfile!.goalLabel.toLowerCase()}, tu peso actual y tu constancia reciente para calcular calorÃ­as y macros.', style: const TextStyle(color: Colors.white70, decoration: TextDecoration.none)),
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: _generateNutrition,
@@ -4332,12 +4450,12 @@ class _NutritionPageState extends State<NutritionPage> {
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _NutritionMetricCard(title: 'Calorías', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario'),
-                        _NutritionMetricCard(title: 'Proteína', value: '${profile.proteinGrams} g', subtitle: 'Recuperación'),
-                        _NutritionMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'Energía'),
+                        _NutritionMetricCard(title: 'CalorÃ­as', value: '${profile.dailyCaloriesTarget}', subtitle: 'Objetivo diario'),
+                        _NutritionMetricCard(title: 'ProteÃ­na', value: '${profile.proteinGrams} g', subtitle: 'RecuperaciÃ³n'),
+                        _NutritionMetricCard(title: 'Carbos', value: '${profile.carbsGrams} g', subtitle: 'EnergÃ­a'),
                         _NutritionMetricCard(title: 'Grasas', value: '${profile.fatGrams} g', subtitle: 'Balance'),
-                        _NutritionMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'Hidratación'),
-                        _NutritionMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'Distribución'),
+                        _NutritionMetricCard(title: 'Agua', value: '${profile.waterLitersTarget.toStringAsFixed(1)} L', subtitle: 'HidrataciÃ³n'),
+                        _NutritionMetricCard(title: 'Comidas', value: '${profile.mealsPerDay}', subtitle: 'DistribuciÃ³n'),
                       ],
                     ),
                   ],
@@ -4368,7 +4486,7 @@ class _NutritionPageState extends State<NutritionPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Aún no generas tus comidas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
+                      Text('AÃºn no generas tus comidas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
                       const SizedBox(height: 10),
                       ElevatedButton.icon(
                         onPressed: _generateNutrition,
@@ -4421,11 +4539,11 @@ class _NutritionPageState extends State<NutritionPage> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('${item.mealTypeLabel} · ${item.name}', style: const TextStyle(fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
+                                      Text('${item.mealTypeLabel} Â· ${item.name}', style: const TextStyle(fontWeight: FontWeight.w700, decoration: TextDecoration.none)),
                                       const SizedBox(height: 6),
                                       Text(item.description, style: const TextStyle(color: Colors.white70, decoration: TextDecoration.none)),
                                       const SizedBox(height: 6),
-                                      Text('${item.calories} kcal · ${item.proteinGrams}P / ${item.carbsGrams}C / ${item.fatGrams}G', style: const TextStyle(color: dorianAccentSoft, decoration: TextDecoration.none)),
+                                      Text('${item.calories} kcal Â· ${item.proteinGrams}P / ${item.carbsGrams}C / ${item.fatGrams}G', style: const TextStyle(color: dorianAccentSoft, decoration: TextDecoration.none)),
                                     ],
                                   ),
                                 ),
@@ -4680,7 +4798,7 @@ class _BodyWeightTab extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             children: [
-              _BodyMetricCard(title: 'Peso actual', value: '${summary.currentWeightKg?.toStringAsFixed(1) ?? '-'} kg', subtitle: 'Última medición'),
+              _BodyMetricCard(title: 'Peso actual', value: '${summary.currentWeightKg?.toStringAsFixed(1) ?? '-'} kg', subtitle: 'Ãšltima mediciÃ³n'),
               _BodyMetricCard(title: 'Peso objetivo', value: '${summary.targetWeightKg?.toStringAsFixed(1) ?? '-'} kg', subtitle: 'Meta personal'),
               _BodyMetricCard(
                 title: 'Diferencia',
@@ -4715,12 +4833,12 @@ class _BodyWeightTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Diagnóstico rápido', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                Text('DiagnÃ³stico rÃ¡pido', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
-                _BodyInfoLine(label: 'IMC', value: summary.bmi == null ? 'Sin calcular' : '${summary.bmi!.toStringAsFixed(2)} · ${summary.bmiLabel}'),
+                _BodyInfoLine(label: 'IMC', value: summary.bmi == null ? 'Sin calcular' : '${summary.bmi!.toStringAsFixed(2)} Â· ${summary.bmiLabel}'),
                 _BodyInfoLine(label: 'Grasa corporal', value: latest?.bodyFatPercentage == null ? 'Sin dato' : '${latest!.bodyFatPercentage!.toStringAsFixed(1)} %'),
                 _BodyInfoLine(label: 'Peso ideal estimado', value: summary.estimatedIdealWeightKg == null ? 'Sin dato' : '${summary.estimatedIdealWeightKg!.toStringAsFixed(1)} kg'),
-                _BodyInfoLine(label: 'Última medición', value: summary.latestMeasurementDate == null ? 'Sin registros' : formatDate(summary.latestMeasurementDate!)),
+                _BodyInfoLine(label: 'Ãšltima mediciÃ³n', value: summary.latestMeasurementDate == null ? 'Sin registros' : formatDate(summary.latestMeasurementDate!)),
               ],
             ),
           ),
@@ -4778,14 +4896,14 @@ class _BodyMeasurementsTab extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               if (latest == null)
-                const Text('Aún no tienes medidas registradas. Agrega una medición para ver hombros, pecho, cintura y más.', style: TextStyle(color: Colors.white70))
+                const Text('AÃºn no tienes medidas registradas. Agrega una mediciÃ³n para ver hombros, pecho, cintura y mÃ¡s.', style: TextStyle(color: Colors.white70))
               else
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _BodyMetricCard(title: 'Hombros', value: _formatMeasure(latest.shouldersCm), subtitle: 'Última medición'),
-                    _BodyMetricCard(title: 'Pecho', value: _formatMeasure(latest.chestCm), subtitle: 'Perímetro'),
+                    _BodyMetricCard(title: 'Hombros', value: _formatMeasure(latest.shouldersCm), subtitle: 'Ãšltima mediciÃ³n'),
+                    _BodyMetricCard(title: 'Pecho', value: _formatMeasure(latest.chestCm), subtitle: 'PerÃ­metro'),
                     _BodyMetricCard(title: 'Cintura', value: _formatMeasure(latest.waistCm), subtitle: 'Control central'),
                     _BodyMetricCard(title: 'Cadera', value: _formatMeasure(latest.hipCm), subtitle: 'Equilibrio'),
                     _BodyMetricCard(title: 'Brazo izq.', value: _formatMeasure(latest.leftArmCm), subtitle: 'Volumen'),
@@ -4810,7 +4928,7 @@ class _BodyMeasurementsTab extends StatelessWidget {
                 for (final item in bundle.measurements) ...[
                   Text(formatDate(item.measuredAt), style: const TextStyle(color: dorianAccentSoft, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
-                  Text('Hombros ${_formatMeasure(item.shouldersCm)} · Pecho ${_formatMeasure(item.chestCm)} · Cintura ${_formatMeasure(item.waistCm)} · Cadera ${_formatMeasure(item.hipCm)}', style: const TextStyle(color: Colors.white70)),
+                  Text('Hombros ${_formatMeasure(item.shouldersCm)} Â· Pecho ${_formatMeasure(item.chestCm)} Â· Cintura ${_formatMeasure(item.waistCm)} Â· Cadera ${_formatMeasure(item.hipCm)}', style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 8),
                 ],
               ],
@@ -4862,7 +4980,7 @@ class _BodyAdvancedTab extends StatelessWidget {
                     _BodyMetricCard(title: 'Grasa corporal', value: latest.bodyFatPercentage == null ? '-' : '${latest.bodyFatPercentage!.toStringAsFixed(1)} %', subtitle: 'Porcentaje'),
                     _BodyMetricCard(title: 'Masa osea', value: latest.boneMassKg == null ? '-' : '${latest.boneMassKg!.toStringAsFixed(1)} kg', subtitle: 'Estructura'),
                     _BodyMetricCard(title: 'Peso residual', value: latest.residualMassKg == null ? '-' : '${latest.residualMassKg!.toStringAsFixed(1)} kg', subtitle: 'Referencia'),
-                    _BodyMetricCard(title: 'Cuello', value: _formatMeasure(latest.neckCm), subtitle: 'Perímetro'),
+                    _BodyMetricCard(title: 'Cuello', value: _formatMeasure(latest.neckCm), subtitle: 'PerÃ­metro'),
                   ],
                 ),
             ],
@@ -4897,7 +5015,7 @@ class _BodyAdvancedTab extends StatelessWidget {
                     children: [
                       Icon(Icons.image_outlined, color: dorianAccent, size: 40),
                       SizedBox(height: 12),
-                      Text('Aún no hay fotos de progreso. Por ahora puedes registrar una URL y más adelante conectaremos la carga directa.', style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
+                      Text('AÃºn no hay fotos de progreso. Por ahora puedes registrar una URL y mÃ¡s adelante conectaremos la carga directa.', style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
                     ],
                   ),
                 )
@@ -5117,7 +5235,7 @@ class _MeasurementListItem extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text('${item.weightKg.toStringAsFixed(1)} kg · IMC ${item.bmi.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text('${item.weightKg.toStringAsFixed(1)} kg Â· IMC ${item.bmi.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
           Text(item.notes ?? 'Sin notas', style: const TextStyle(color: Colors.white70)),
         ],
@@ -5134,7 +5252,7 @@ class WeightHistoryChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (history.isEmpty) {
-      return const Text('Sin historial todavía.', style: TextStyle(color: Colors.white70));
+      return const Text('Sin historial todavÃ­a.', style: TextStyle(color: Colors.white70));
     }
 
     final minWeight = history.map((item) => item.weightKg).reduce((a, b) => a < b ? a : b);
@@ -5699,6 +5817,12 @@ class QuickActionCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
 
 
 
