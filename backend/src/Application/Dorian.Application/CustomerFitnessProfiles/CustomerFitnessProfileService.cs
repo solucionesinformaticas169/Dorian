@@ -102,8 +102,39 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
             throw new ForbiddenException("Only customers can manage their own fitness onboarding.");
         }
 
-        return await _dbContext.Customers.AsNoTracking().SingleOrDefaultAsync(x => x.UserId == user.UserId.Value, cancellationToken)
-            ?? throw new NotFoundException("Customer profile not found.");
+        var customer = await _dbContext.Customers.SingleOrDefaultAsync(x => x.UserId == user.UserId.Value, cancellationToken);
+        if (customer is not null)
+        {
+            return customer;
+        }
+
+        var identityUser = await _dbContext.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == user.UserId.Value, cancellationToken)
+            ?? throw new NotFoundException("User not found.");
+
+        var branchId = identityUser.BranchId
+            ?? user.BranchId
+            ?? await _dbContext.Branches.OrderBy(x => x.Name).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("No branches are available for customer onboarding.");
+
+        var (firstName, lastName) = SplitName(identityUser.FullName);
+        customer = new Customer(
+            Guid.NewGuid(),
+            identityUser.Id,
+            branchId,
+            firstName,
+            lastName,
+            $"SELF-{identityUser.Id.ToString("N")[..8].ToUpperInvariant()}",
+            identityUser.PhoneNumber,
+            null,
+            Gender.Unspecified,
+            null,
+            null,
+            null,
+            CustomerStatus.Active);
+
+        _dbContext.Customers.Add(customer);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return customer;
     }
 
     private void EnsureCanViewCustomer(Customer customer)
@@ -120,6 +151,24 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
         var user = _currentUserService.User;
         if (!user.IsAuthenticated) throw new UnauthorizedException("Authentication is required.");
         return user;
+    }
+
+    private static (string FirstName, string LastName) SplitName(string fullName)
+    {
+        var parts = fullName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length == 0)
+        {
+            return ("Cliente", "Dorian");
+        }
+
+        if (parts.Length == 1)
+        {
+            return (parts[0], "Dorian");
+        }
+
+        return (parts[0], string.Join(' ', parts.Skip(1)));
     }
 
     private static CustomerFitnessProfileResponse CreateEmptyResponse(Guid customerId) => new(

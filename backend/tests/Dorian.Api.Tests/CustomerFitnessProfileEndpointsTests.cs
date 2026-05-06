@@ -3,7 +3,9 @@ namespace Dorian.Api.Tests;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Dorian.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 
 public sealed class CustomerFitnessProfileEndpointsTests : IClassFixture<CustomWebApplicationFactory>
 {
@@ -45,6 +47,46 @@ public sealed class CustomerFitnessProfileEndpointsTests : IClassFixture<CustomW
         payload!.OnboardingCompleted.Should().BeTrue();
         payload.Goal.Should().Be(3);
         payload.TrainingDays.Should().BeEquivalentTo([1, 3, 5]);
+    }
+
+    [Fact]
+    public async Task Customer_Can_Create_Fitness_Profile_Even_If_Customer_Record_Was_Missing()
+    {
+        var client = _factory.CreateClient();
+        var email = $"regression+{Guid.NewGuid():N}@dorian.test";
+
+        var registerResponse = await client.PostAsJsonAsync("/auth/register", new
+        {
+            fullName = "Regression Customer",
+            email,
+            password = _factory.Password,
+            phoneNumber = "0991234567"
+        });
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = dbContext.Users.Single(x => x.Email == email);
+            var customer = dbContext.Customers.Single(x => x.UserId == user.Id);
+            dbContext.Customers.Remove(customer);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var token = await _factory.LoginAsync(client, email, _factory.Password);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.PostAsJsonAsync("/customers/me/fitness-profile", CreatePayload("18:30"));
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var payload = await response.Content.ReadFromJsonAsync<FitnessProfileItem>();
+        payload.Should().NotBeNull();
+        payload!.OnboardingCompleted.Should().BeTrue();
+        payload.CustomerId.Should().NotBeNullOrEmpty();
+
+        using var verificationScope = _factory.Services.CreateScope();
+        var verificationDb = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        verificationDb.Customers.Count(x => x.User.Email == email).Should().Be(1);
     }
 
     [Fact]
@@ -129,6 +171,7 @@ public sealed class CustomerFitnessProfileEndpointsTests : IClassFixture<CustomW
     };
 
     private sealed record FitnessProfileItem(
+        string? CustomerId,
         bool OnboardingCompleted,
         int? Goal,
         int? FocusMuscleGroup,
