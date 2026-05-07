@@ -90,14 +90,14 @@ public static class DevelopmentDemoDataSeeder
 
     private static async Task EnsureBranchesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        await EnsureBranchAsync(dbContext, SeedData.ElCebollarBranchId, "CEBOLLAR", "El Cebollar", "Cuenca", "Av. Abelardo J Andrade y Reinaldo Chico Penaherrera", "0990001001", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.ElCebollar, cancellationToken);
-        await EnsureBranchAsync(dbContext, SeedData.GonzalesSuarezBranchId, "GONSUAREZ", "Gonzales Suarez", "Cuenca", "Av. Gonzales Suarez y Jijon de Caamano", "0990001002", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.GonzalesSuarez, cancellationToken);
-        await EnsureBranchAsync(dbContext, SeedData.ParqueIndustrialBranchId, "PARQUEIND", "Parque Industrial", "Cuenca", "Octavio Chacon Moscoso y Cornelio Vintimilla", "0990001003", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.ParqueIndustrial, cancellationToken);
-        await EnsureBranchAsync(dbContext, SeedData.ElTiempoBranchId, "ELTIEMPO", "El Tiempo", "Cuenca", "Av. Loja y Rodrigo de Triana", "0990001004", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.ElTiempo, cancellationToken);
-        await EnsureBranchAsync(dbContext, SeedData.AzoguesBranchId, "AZOGUES", "Azogues", "Azogues", "Calle Simon Bolivar", "0990001005", "Lun a Vie 06:00 - 21:00 | Sab 08:00 - 13:00", SeedData.BranchMaps.Azogues, cancellationToken);
+        await EnsureBranchAsync(dbContext, SeedData.ElCebollarBranchId, "CEBOLLAR", "El Cebollar", "Cuenca", "Av. Abelardo J Andrade y Reinaldo Chico Penaherrera", "0990001001", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.ElCebollar, -2.8852267m, -79.0142288m, cancellationToken);
+        await EnsureBranchAsync(dbContext, SeedData.GonzalesSuarezBranchId, "GONSUAREZ", "Gonzales Suarez", "Cuenca", "Av. Gonzales Suarez y Jijon de Caamano", "0990001002", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.GonzalesSuarez, -2.8996747m, -78.9895041m, cancellationToken);
+        await EnsureBranchAsync(dbContext, SeedData.ParqueIndustrialBranchId, "PARQUEIND", "Parque Industrial", "Cuenca", "Octavio Chacon Moscoso y Cornelio Vintimilla", "0990001003", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.ParqueIndustrial, -2.8777373m, -78.9793991m, cancellationToken);
+        await EnsureBranchAsync(dbContext, SeedData.ElTiempoBranchId, "ELTIEMPO", "El Tiempo", "Cuenca", "Av. Loja y Rodrigo de Triana", "0990001004", "Lun a Vie 06:00 - 22:00 | Sab 08:00 - 14:00", SeedData.BranchMaps.ElTiempo, null, null, cancellationToken);
+        await EnsureBranchAsync(dbContext, SeedData.AzoguesBranchId, "AZOGUES", "Azogues", "Azogues", "Calle Simon Bolivar", "0990001005", "Lun a Vie 06:00 - 21:00 | Sab 08:00 - 13:00", SeedData.BranchMaps.Azogues, -2.7403717m, -78.8459882m, cancellationToken);
     }
 
-    private static async Task EnsureBranchAsync(AppDbContext dbContext, Guid id, string code, string name, string city, string address, string phoneNumber, string openingHours, string mapUrl, CancellationToken cancellationToken)
+    private static async Task EnsureBranchAsync(AppDbContext dbContext, Guid id, string code, string name, string city, string address, string phoneNumber, string openingHours, string mapUrl, decimal? latitude, decimal? longitude, CancellationToken cancellationToken)
     {
         var branch = await dbContext.Branches.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (branch is null)
@@ -105,7 +105,7 @@ public static class DevelopmentDemoDataSeeder
             return;
         }
 
-        branch.Update(code, name, city, address, phoneNumber, openingHours, mapUrl, null, null, true);
+        branch.Update(code, name, city, address, phoneNumber, openingHours, mapUrl, latitude, longitude, true);
     }
 
     private static async Task EnsureMembershipsAsync(AppDbContext dbContext, CancellationToken cancellationToken)
