@@ -32,8 +32,8 @@ public sealed class ClassSessionService : IClassSessionService
         if (user.IsInRole(RoleNames.Trainer) && user.UserId.HasValue)
             return await Project(query.Where(x => x.TrainerUserId == user.UserId.Value)).ToListAsync(cancellationToken);
 
-        if (user.IsInRole(RoleNames.Customer) && user.BranchId.HasValue)
-            return await Project(query.Where(x => x.BranchId == user.BranchId.Value && x.Status == ClassSessionStatus.Scheduled)).ToListAsync(cancellationToken);
+        if (user.IsInRole(RoleNames.Customer))
+            return await Project(query.Where(x => x.Status == ClassSessionStatus.Scheduled)).ToListAsync(cancellationToken);
 
         throw new ForbiddenException("You do not have access to classes.");
     }
@@ -95,7 +95,8 @@ public sealed class ClassSessionService : IClassSessionService
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Customer)) && user.BranchId == branchId) return;
+        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && user.BranchId == branchId) return;
+        if (user.IsInRole(RoleNames.Customer)) return;
         throw new ForbiddenException("You cannot view classes for this branch.");
     }
 
@@ -103,7 +104,8 @@ public sealed class ClassSessionService : IClassSessionService
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Customer)) && user.BranchId == classSession.BranchId) return;
+        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && user.BranchId == classSession.BranchId) return;
+        if (user.IsInRole(RoleNames.Customer)) return;
         if (user.IsInRole(RoleNames.Trainer) && user.UserId == classSession.TrainerUserId) return;
         throw new ForbiddenException("You cannot view this class.");
     }

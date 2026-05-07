@@ -2626,7 +2626,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 8),
             Text('Tu entrenamiento premium empieza aqui.', style: const TextStyle(color: dorianTextSoft)),
             const SizedBox(height: 16),
-            GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Sucursal principal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresía activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
+            GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Dorian multi-sucursal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresía activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
             const SizedBox(height: 12),
             Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresía', subtitle: 'Mi membresía', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
             const SizedBox(height: 12),
@@ -2643,7 +2643,7 @@ class _HomePageState extends State<HomePage> {
             Text('Clases disponibles', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             if (classes.isEmpty) ...[
-              const GlowCard(child: Text('Aun no hay clases programadas para tu sucursal.')),
+              const GlowCard(child: Text('Aún no hay clases programadas para mostrarte.')),
               const SizedBox(height: 12),
             ] else ...[
               for (final item in classes) ...[GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)), const SizedBox(height: 8), Text(formatDateTime(item.startTime), style: const TextStyle(color: Colors.white70)), const SizedBox(height: 8), Text('${item.availableSpots} cupos disponibles', style: const TextStyle(color: dorianAccentSoft))])), const SizedBox(height: 12)],
@@ -2803,7 +2803,7 @@ class ClassesPage extends StatelessWidget {
                 Text('Horarios y reservas', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
                 if (items.isEmpty) ...[
-                  const GlowCard(child: Text('Aun no hay horarios publicados para tu sucursal.')),
+                  const GlowCard(child: Text('Aún no hay horarios publicados por ahora.')),
                   const SizedBox(height: 12),
                 ] else ...[
                   for (final item in items) ...[
@@ -3010,13 +3010,7 @@ class PromotionsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<PromotionItem>>(
-      future: () async {
-        try {
-          return await context.read<PromotionApi>().listPromotions();
-        } catch (_) {
-          return <PromotionItem>[];
-        }
-      }(),
+      future: context.read<PromotionApi>().listPromotions(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
@@ -3030,7 +3024,7 @@ class PromotionsPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
             children: const [
-              GlowCard(child: Text('Aun no hay promociones activas para mostrarte.')),
+              GlowCard(child: Text('Aún no hay promociones activas para mostrarte.')),
             ],
           );
         }
@@ -3053,7 +3047,7 @@ class PromotionsPage extends StatelessWidget {
                     children: [
                       Chip(label: Text(item.discountTypeLabel)),
                       if (item.discountValue != null) Chip(label: Text(item.discountValue!.toStringAsFixed(0))),
-                      Chip(label: Text('Hasta ')),
+                      Chip(label: Text('Hasta ${formatDate(item.endsAt)}')),
                     ],
                   ),
                 ],

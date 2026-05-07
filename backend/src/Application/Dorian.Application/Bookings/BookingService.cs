@@ -51,7 +51,7 @@ public sealed class BookingService : IBookingService
         var customer = await _dbContext.Customers.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.CustomerId, cancellationToken) ?? throw new NotFoundException("Customer not found.");
         var classSession = await _dbContext.ClassSessions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == classSessionId, cancellationToken) ?? throw new NotFoundException("Class not found.");
 
-        EnsureCanCreateBooking(currentUser, customer.UserId, customer.BranchId, classSession.BranchId);
+        EnsureCanCreateBooking(currentUser, customer.UserId, classSession.BranchId);
 
         if (classSession.Status != ClassSessionStatus.Scheduled)
             throw new BookingValidationException("Only scheduled classes can be booked.");
@@ -113,9 +113,8 @@ public sealed class BookingService : IBookingService
         throw new ForbiddenException("You cannot view this customer's bookings.");
     }
 
-    private void EnsureCanCreateBooking(CurrentUser currentUser, Guid customerUserId, Guid customerBranchId, Guid classBranchId)
+    private void EnsureCanCreateBooking(CurrentUser currentUser, Guid customerUserId, Guid classBranchId)
     {
-        if (customerBranchId != classBranchId) throw new BookingValidationException("The customer and class must belong to the same branch.");
         if (currentUser.IsInRole(RoleNames.SuperAdmin)) return;
         if (currentUser.IsInRole(RoleNames.BranchAdmin) && currentUser.BranchId == classBranchId) return;
         if (currentUser.IsInRole(RoleNames.Customer) && currentUser.UserId == customerUserId) return;

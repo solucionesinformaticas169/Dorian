@@ -30,7 +30,7 @@ public sealed class PromotionService : IPromotionService
             return await query.Where(x => x.BranchId == null || x.BranchId == user.BranchId.Value).OrderByDescending(x => x.StartsAt).Select(MapExpression).ToListAsync(cancellationToken);
 
         if (user.IsInRole(RoleNames.Customer))
-            return await query.Where(IsVisibleForCustomers(user.BranchId)).OrderByDescending(x => x.StartsAt).Select(MapExpression).ToListAsync(cancellationToken);
+            return await query.Where(IsVisibleForCustomers()).OrderByDescending(x => x.StartsAt).Select(MapExpression).ToListAsync(cancellationToken);
 
         throw new ForbiddenException("You do not have access to promotions.");
     }
@@ -121,7 +121,7 @@ public sealed class PromotionService : IPromotionService
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
         if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && (promotion.BranchId is null || promotion.BranchId == user.BranchId)) return;
-        if (user.IsInRole(RoleNames.Customer) && IsVisibleForCustomerEntity(user.BranchId, promotion)) return;
+        if (user.IsInRole(RoleNames.Customer) && IsVisibleForCustomerEntity(promotion)) return;
         throw new ForbiddenException("You cannot view this promotion.");
     }
 
@@ -151,20 +151,18 @@ public sealed class PromotionService : IPromotionService
             throw new NotFoundException("Branch not found.");
     }
 
-    private static System.Linq.Expressions.Expression<Func<Promotion, bool>> IsVisibleForCustomers(Guid? branchId)
+    private static System.Linq.Expressions.Expression<Func<Promotion, bool>> IsVisibleForCustomers()
     {
         return promotion => promotion.Status == PromotionStatus.Active
             && promotion.StartsAt <= DateTimeOffset.UtcNow
-            && promotion.EndsAt >= DateTimeOffset.UtcNow
-            && (promotion.BranchId == null || (branchId.HasValue && promotion.BranchId == branchId.Value));
+            && promotion.EndsAt >= DateTimeOffset.UtcNow;
     }
 
-    private static bool IsVisibleForCustomerEntity(Guid? branchId, Promotion promotion)
+    private static bool IsVisibleForCustomerEntity(Promotion promotion)
     {
         return promotion.Status == PromotionStatus.Active
             && promotion.StartsAt <= DateTimeOffset.UtcNow
-            && promotion.EndsAt >= DateTimeOffset.UtcNow
-            && (promotion.BranchId == null || (branchId.HasValue && promotion.BranchId == branchId.Value));
+            && promotion.EndsAt >= DateTimeOffset.UtcNow;
     }
 
     private static readonly System.Linq.Expressions.Expression<Func<Promotion, PromotionResponse>> MapExpression = promotion => new PromotionResponse(promotion.Id, promotion.BranchId, promotion.Title, promotion.Description, promotion.ImageUrl, promotion.DiscountType, promotion.DiscountValue, promotion.StartsAt, promotion.EndsAt, promotion.Status, promotion.CreatedAtUtc, promotion.UpdatedAtUtc);

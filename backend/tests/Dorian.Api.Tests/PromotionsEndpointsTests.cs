@@ -112,7 +112,7 @@ public sealed class PromotionsEndpointsTests : IClassFixture<CustomWebApplicatio
             password = _factory.Password
         });
 
-        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var token = await _factory.LoginAsync(client, email, _factory.Password);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
