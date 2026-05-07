@@ -2582,11 +2582,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<Map<String, dynamic>> load() async {
     final session = context.read<SessionController>();
-    final branchApi = context.read<BranchApi>();
     final classApi = context.read<ClassApi>();
     final promotionApi = context.read<PromotionApi>();
     final profile = session.profile ?? await session.ensureProfile();
-    final branches = await branchApi.listBranches();
     List<GymClass> classes = const [];
     List<PromotionItem> promotions = const [];
     try {
@@ -2595,11 +2593,7 @@ class _HomePageState extends State<HomePage> {
     try {
       promotions = await promotionApi.listPromotions();
     } catch (_) {}
-    GymBranch? branch;
-    for (final item in branches) {
-      if (item.id == profile.branchId) branch = item;
-    }
-    return {'profile': profile, 'branch': branch, 'classes': classes.take(3).toList(), 'promotions': promotions.take(2).toList()};
+    return {'profile': profile, 'classes': classes.take(3).toList(), 'promotions': promotions.take(2).toList()};
   }
 
   @override
@@ -2610,7 +2604,6 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
         if (snapshot.hasError) return Center(child: Text(presentUiError(snapshot.error, 'No pudimos cargar las sucursales ahora.')));
         final profile = snapshot.data!['profile'] as CustomerProfile;
-        final branch = snapshot.data!['branch'] as GymBranch?;
         final classes = snapshot.data!['classes'] as List<GymClass>;
         final promotions = snapshot.data!['promotions'] as List<PromotionItem>;
         return Align(
@@ -2626,7 +2619,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 8),
             Text('Tu entrenamiento premium empieza aqui.', style: const TextStyle(color: dorianTextSoft)),
             const SizedBox(height: 16),
-            GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [Chip(label: Text(branch?.name ?? 'Dorian multi-sucursal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresía activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
+            GlowCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Wrap(spacing: 8, children: [const Chip(label: Text('Dorian multi-sucursal')), Chip(label: Text(profile.membershipStatusLabel))]), const SizedBox(height: 16), Text(profile.activeMembershipName ?? 'Sin membresía activa', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700))])),
             const SizedBox(height: 12),
             Row(children: [Expanded(child: QuickActionCard(icon: Icons.qr_code_2, title: 'Mi QR', subtitle: 'Acceso al club', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccessPassPage())))), const SizedBox(width: 12), Expanded(child: QuickActionCard(icon: Icons.card_membership, title: 'Membresía', subtitle: 'Mi membresía', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MembershipPage()))))]),
             const SizedBox(height: 12),

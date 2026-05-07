@@ -13,7 +13,7 @@ public sealed class Customer : AuditableEntity<Guid>
     public Customer(
         Guid id,
         Guid userId,
-        Guid branchId,
+        Guid? branchId,
         string firstName,
         string lastName,
         string identificationNumber,
@@ -45,7 +45,7 @@ public sealed class Customer : AuditableEntity<Guid>
     public Customer(
         Guid id,
         Guid userId,
-        Guid branchId,
+        Guid? branchId,
         string firstName,
         string lastName,
         string identificationNumber,
@@ -64,7 +64,7 @@ public sealed class Customer : AuditableEntity<Guid>
     }
 
     public Guid UserId { get; private set; }
-    public Guid BranchId { get; private set; }
+    public Guid? BranchId { get; private set; }
     public Guid? ActiveMembershipId { get; private set; }
     public DateTimeOffset? ActiveMembershipStartsAtUtc { get; private set; }
     public DateTimeOffset? ActiveMembershipEndsAtUtc { get; private set; }
@@ -84,7 +84,7 @@ public sealed class Customer : AuditableEntity<Guid>
     public ICollection<BodyProgressPhoto> BodyProgressPhotos { get; private set; } = [];
 
     public void Update(
-        Guid branchId,
+        Guid? branchId,
         string firstName,
         string lastName,
         string identificationNumber,

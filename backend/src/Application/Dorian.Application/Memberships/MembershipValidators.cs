@@ -6,7 +6,6 @@ public sealed class CreateMembershipRequestValidator : AbstractValidator<CreateM
 {
     public CreateMembershipRequestValidator()
     {
-        RuleFor(x => x.BranchId).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
         RuleFor(x => x.DurationInDays).GreaterThan(0).LessThanOrEqualTo(366);
         RuleFor(x => x.Price).GreaterThan(0);
@@ -18,7 +17,6 @@ public sealed class UpdateMembershipRequestValidator : AbstractValidator<UpdateM
 {
     public UpdateMembershipRequestValidator()
     {
-        RuleFor(x => x.BranchId).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
         RuleFor(x => x.DurationInDays).GreaterThan(0).LessThanOrEqualTo(366);
         RuleFor(x => x.Price).GreaterThan(0);

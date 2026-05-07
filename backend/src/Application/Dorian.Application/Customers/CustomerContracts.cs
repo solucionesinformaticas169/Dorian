@@ -6,7 +6,7 @@ public sealed record CustomerResponse(
     Guid Id,
     Guid UserId,
     string Email,
-    Guid BranchId,
+    Guid? BranchId,
     Guid? ActiveMembershipId,
     string? ActiveMembershipName,
     int? ActiveMembershipDurationInDays,
@@ -30,7 +30,7 @@ public sealed record CustomerResponse(
 public sealed record CreateCustomerRequest(
     string Email,
     string Password,
-    Guid BranchId,
+    Guid? BranchId,
     Guid? ActiveMembershipId,
     DateTimeOffset? ActiveMembershipStartsAtUtc,
     DateTimeOffset? ActiveMembershipEndsAtUtc,
@@ -45,7 +45,7 @@ public sealed record CreateCustomerRequest(
     CustomerStatus Status);
 
 public sealed record UpdateCustomerRequest(
-    Guid BranchId,
+    Guid? BranchId,
     Guid? ActiveMembershipId,
     DateTimeOffset? ActiveMembershipStartsAtUtc,
     DateTimeOffset? ActiveMembershipEndsAtUtc,

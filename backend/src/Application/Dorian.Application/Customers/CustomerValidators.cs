@@ -9,7 +9,6 @@ public sealed class CreateCustomerRequestValidator : AbstractValidator<CreateCus
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
         RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
-        RuleFor(x => x.BranchId).NotEmpty();
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.IdentificationNumber).NotEmpty().MaximumLength(30);
@@ -27,7 +26,6 @@ public sealed class UpdateCustomerRequestValidator : AbstractValidator<UpdateCus
 {
     public UpdateCustomerRequestValidator()
     {
-        RuleFor(x => x.BranchId).NotEmpty();
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.IdentificationNumber).NotEmpty().MaximumLength(30);

@@ -33,10 +33,6 @@ public sealed class AuthService : IAuthService
         if (branchId.HasValue && !await _dbContext.Branches.AnyAsync(x => x.Id == branchId.Value, cancellationToken))
             throw new NotFoundException("The selected branch does not exist.");
 
-        branchId ??= await _dbContext.Branches.OrderBy(x => x.Name).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(cancellationToken);
-        if (!branchId.HasValue)
-            throw new NotFoundException("No branches are available for registration.");
-
         var customerRoleId = await _dbContext.Roles.Where(x => x.Name == RoleNames.Customer).Select(x => x.Id).SingleAsync(cancellationToken);
         var user = new User(Guid.NewGuid(), normalizedEmail, request.FullName, _passwordHasher.Hash(request.Password));
         user.UpdateProfile(request.FullName, request.PhoneNumber);
@@ -48,7 +44,7 @@ public sealed class AuthService : IAuthService
         var customer = new Customer(
             Guid.NewGuid(),
             user.Id,
-            branchId.Value,
+            branchId,
             firstName,
             lastName,
             $"SELF-{user.Id.ToString("N")[..8].ToUpperInvariant()}",

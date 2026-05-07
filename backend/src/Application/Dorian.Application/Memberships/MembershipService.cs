@@ -72,17 +72,20 @@ public sealed class MembershipService : IMembershipService
         throw new ForbiddenException("You do not have access to memberships.");
     }
 
-    private void EnsureCanManageBranch(Guid branchId)
+    private void EnsureCanManageBranch(Guid? branchId)
     {
         var user = EnsureAdminUser();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if (user.BranchId == branchId) return;
+        if (branchId.HasValue && user.BranchId == branchId.Value) return;
         throw new ForbiddenException("You cannot manage memberships for this branch.");
     }
 
-    private async Task EnsureBranchExists(Guid branchId, CancellationToken cancellationToken)
+    private async Task EnsureBranchExists(Guid? branchId, CancellationToken cancellationToken)
     {
-        if (!await _dbContext.Branches.AnyAsync(x => x.Id == branchId, cancellationToken))
+        if (!branchId.HasValue)
+            return;
+
+        if (!await _dbContext.Branches.AnyAsync(x => x.Id == branchId.Value, cancellationToken))
             throw new NotFoundException("Branch not found.");
     }
 

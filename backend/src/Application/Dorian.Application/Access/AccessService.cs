@@ -117,13 +117,12 @@ public sealed class AccessService : IAccessService
 
     private async Task<string?> ValidateAccessAsync(Guid branchId, Customer customer, AccessPass? accessPass, CancellationToken cancellationToken)
     {
-        if (customer.BranchId != branchId) return "Customer does not belong to this branch.";
         if (customer.Status != CustomerStatus.Active) return "Customer is not active.";
         if (!customer.ActiveMembershipId.HasValue) return "Customer does not have an active membership assigned.";
         if (!customer.HasActiveMembership(DateTimeOffset.UtcNow)) return "Customer membership is expired or not yet active.";
 
-        var membershipIsActive = await _dbContext.Memberships.AnyAsync(x => x.Id == customer.ActiveMembershipId.Value && x.BranchId == branchId && x.IsActive, cancellationToken);
-        if (!membershipIsActive) return "Customer membership is not available for this branch.";
+        var membershipIsActive = await _dbContext.Memberships.AnyAsync(x => x.Id == customer.ActiveMembershipId.Value && x.IsActive, cancellationToken);
+        if (!membershipIsActive) return "Customer membership is not active.";
 
         if (accessPass is null) return "Access pass not found.";
         if (accessPass.Status == AccessPassStatus.Revoked) return "Access pass has been revoked.";

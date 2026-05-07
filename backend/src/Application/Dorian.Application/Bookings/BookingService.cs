@@ -86,8 +86,8 @@ public sealed class BookingService : IBookingService
     public async Task<BookingResponse> AttendAsync(Guid bookingId, CancellationToken cancellationToken)
     {
         var booking = await _dbContext.Bookings.SingleOrDefaultAsync(x => x.Id == bookingId, cancellationToken) ?? throw new NotFoundException("Booking not found.");
-        var customer = await _dbContext.Customers.AsNoTracking().SingleAsync(x => x.Id == booking.CustomerId, cancellationToken);
-        EnsureCanMarkAttendance(customer.BranchId);
+        var classBranchId = await _dbContext.ClassSessions.AsNoTracking().Where(x => x.Id == booking.ClassSessionId).Select(x => x.BranchId).SingleAsync(cancellationToken);
+        EnsureCanMarkAttendance(classBranchId);
 
         if (booking.Status != BookingStatus.Reserved)
             throw new BookingValidationException("Only reserved bookings can be marked as attended.");
@@ -104,11 +104,11 @@ public sealed class BookingService : IBookingService
         return user;
     }
 
-    private void EnsureCanViewCustomer(Guid customerUserId, Guid branchId)
+    private void EnsureCanViewCustomer(Guid customerUserId, Guid? branchId)
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && user.BranchId == branchId) return;
+        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && branchId.HasValue && user.BranchId == branchId.Value) return;
         if (user.IsInRole(RoleNames.Customer) && user.UserId == customerUserId) return;
         throw new ForbiddenException("You cannot view this customer's bookings.");
     }
@@ -121,11 +121,11 @@ public sealed class BookingService : IBookingService
         throw new ForbiddenException("You cannot create this booking.");
     }
 
-    private void EnsureCanCancelBooking(Guid customerUserId, Guid branchId)
+    private void EnsureCanCancelBooking(Guid customerUserId, Guid? branchId)
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId == branchId) return;
+        if (user.IsInRole(RoleNames.BranchAdmin) && branchId.HasValue && user.BranchId == branchId.Value) return;
         if (user.IsInRole(RoleNames.Customer) && user.UserId == customerUserId) return;
         throw new ForbiddenException("You cannot cancel this booking.");
     }

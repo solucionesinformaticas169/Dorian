@@ -81,7 +81,7 @@ public sealed class CustomerService : ICustomerService
 
         EnsureCanCreateForBranch(request.BranchId);
         await EnsureBranchExists(request.BranchId, cancellationToken);
-        await EnsureMembershipValid(request.BranchId, request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
+        await EnsureMembershipValid(request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
         await EnsureUniqueIdentity(request.IdentificationNumber, null, cancellationToken);
 
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -113,7 +113,7 @@ public sealed class CustomerService : ICustomerService
         EnsureCanManageCustomer(customer);
         EnsureCanCreateForBranch(request.BranchId);
         await EnsureBranchExists(request.BranchId, cancellationToken);
-        await EnsureMembershipValid(request.BranchId, request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
+        await EnsureMembershipValid(request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
         await EnsureUniqueIdentity(request.IdentificationNumber, customer.Id, cancellationToken);
 
         customer.Update(request.BranchId, request.FirstName, request.LastName, request.IdentificationNumber, request.Phone, request.BirthDate, request.Gender, request.EmergencyContactName, request.EmergencyContactPhone, request.ActiveMembershipId, request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc, request.Status);
@@ -156,11 +156,11 @@ public sealed class CustomerService : ICustomerService
         throw new ForbiddenException("You cannot view customers for this branch.");
     }
 
-    private void EnsureCanCreateForBranch(Guid branchId)
+    private void EnsureCanCreateForBranch(Guid? branchId)
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if (CanManageBranchCustomers(user) && user.BranchId == branchId) return;
+        if (CanManageBranchCustomers(user) && branchId.HasValue && user.BranchId == branchId.Value) return;
         throw new ForbiddenException("You cannot manage customers for this branch.");
     }
 
@@ -181,13 +181,16 @@ public sealed class CustomerService : ICustomerService
         throw new ForbiddenException("You cannot view this customer.");
     }
 
-    private async Task EnsureBranchExists(Guid branchId, CancellationToken cancellationToken)
+    private async Task EnsureBranchExists(Guid? branchId, CancellationToken cancellationToken)
     {
-        if (!await _dbContext.Branches.AnyAsync(x => x.Id == branchId, cancellationToken))
+        if (!branchId.HasValue)
+            return;
+
+        if (!await _dbContext.Branches.AnyAsync(x => x.Id == branchId.Value, cancellationToken))
             throw new NotFoundException("Branch not found.");
     }
 
-    private async Task EnsureMembershipValid(Guid branchId, Guid? membershipId, CreateOrUpdateMembershipWindow request, CancellationToken cancellationToken)
+    private async Task EnsureMembershipValid(Guid? membershipId, CreateOrUpdateMembershipWindow request, CancellationToken cancellationToken)
     {
         if (!membershipId.HasValue)
         {
@@ -198,8 +201,8 @@ public sealed class CustomerService : ICustomerService
         if (!request.ActiveMembershipStartsAtUtc.HasValue || !request.ActiveMembershipEndsAtUtc.HasValue)
             throw new CustomerValidationException("Membership dates are required when an active membership is assigned.");
 
-        var exists = await _dbContext.Memberships.AnyAsync(x => x.Id == membershipId.Value && x.BranchId == branchId && x.IsActive, cancellationToken);
-        if (!exists) throw new NotFoundException("Membership not found for the selected branch.");
+        var exists = await _dbContext.Memberships.AnyAsync(x => x.Id == membershipId.Value && x.IsActive, cancellationToken);
+        if (!exists) throw new NotFoundException("Membership not found or inactive.");
     }
 
     private async Task EnsureUniqueIdentity(string identificationNumber, Guid? customerId, CancellationToken cancellationToken)

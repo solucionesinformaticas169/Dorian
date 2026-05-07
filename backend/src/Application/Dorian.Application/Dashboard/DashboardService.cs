@@ -52,9 +52,16 @@ public sealed class DashboardService : IDashboardService
                 "Suma del precio de membresias activas asignadas a clientes activos.");
         }
 
-        var activeCustomers = await _dbContext.Customers
+        var activeCustomersQuery = _dbContext.Customers
             .AsNoTracking()
-            .Where(x => branchIds.Contains(x.BranchId) && x.Status == CustomerStatus.Active)
+            .Where(x => x.Status == CustomerStatus.Active);
+
+        if (scopeBranchId.HasValue)
+        {
+            activeCustomersQuery = activeCustomersQuery.Where(x => x.BranchId == scopeBranchId.Value);
+        }
+
+        var activeCustomers = await activeCustomersQuery
             .Select(x => new
             {
                 x.Id,
@@ -132,7 +139,7 @@ public sealed class DashboardService : IDashboardService
         var branchActivity = branches
             .Select(branch =>
             {
-                var branchCustomers = activeCustomers.Count(customer => customer.BranchId == branch.Id);
+                var branchCustomers = activeCustomers.Count(customer => customer.BranchId.HasValue && customer.BranchId.Value == branch.Id);
                 var branchClasses = todayClasses.Count(classSession => classSession.BranchId == branch.Id);
                 var branchCheckIns = todayCheckIns.GetValueOrDefault(branch.Id);
                 return new BranchActivityPoint(
