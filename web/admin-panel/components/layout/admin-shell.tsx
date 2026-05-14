@@ -1,28 +1,62 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Activity, Building2, CalendarClock, CreditCard, LayoutDashboard, LogOut, Megaphone, QrCode, Users, WalletCards } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Activity, Building2, CalendarClock, LayoutDashboard, LogOut, Megaphone, ShieldCheck, Users, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Session } from "@/lib/types";
-import { authApi } from "@/lib/api/admin";
+import { authApi, branchesApi } from "@/lib/api/admin";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/branches", label: "Sucursales", icon: Building2 },
+  { href: "/staff", label: "Personal", icon: ShieldCheck },
   { href: "/customers", label: "Clientes", icon: Users },
-  { href: "/memberships", label: "Membresías", icon: WalletCards },
+  { href: "/memberships", label: "Planes", icon: WalletCards },
   { href: "/classes", label: "Clases", icon: Activity },
   { href: "/bookings", label: "Reservas", icon: CalendarClock },
   { href: "/promotions", label: "Promociones", icon: Megaphone },
-  { href: "/access", label: "Check-ins QR", icon: QrCode },
 ];
+
+const roleLabels: Record<string, string> = {
+  SuperAdmin: "SuperAdmin",
+  BranchAdmin: "Administrador de sucursal",
+  Reception: "Recepción",
+  Trainer: "Trainer",
+  Customer: "Cliente",
+};
+
+function getRoleLabel(role: string) {
+  return roleLabels[role] ?? role;
+}
 
 export function AdminShell({ session, children }: { session: Session; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const canManageStaff = session.user.roles.includes("SuperAdmin") || session.user.roles.includes("BranchAdmin");
+  const isReception = session.user.roles.includes("Reception");
+  const isTrainer = session.user.roles.includes("Trainer");
+  const visibleNavigation = navigation.filter((item) => {
+    if (item.href === "/staff" && !canManageStaff) return false;
+    if ((isReception || isTrainer) && (item.href === "/dashboard" || item.href === "/branches")) return false;
+    return true;
+  });
+  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
+  const resolvedBranchName = session.user.branchId
+    ? branchesQuery.data?.find((branch) => branch.id === session.user.branchId)?.name ?? session.user.branchId
+    : "Global / multi-sucursal";
+
+  useEffect(() => {
+    if ((isReception || isTrainer) && (pathname === "/dashboard" || pathname === "/branches")) {
+      router.replace("/customers");
+      return;
+    }
+
+  }, [isReception, isTrainer, pathname, router]);
 
   async function handleLogout() {
     await authApi.logout();
@@ -44,11 +78,11 @@ export function AdminShell({ session, children }: { session: Session; children: 
                 <h1 className="mt-2 font-heading text-2xl font-semibold">Panel administrativo</h1>
               </div>
             </div>
-            <p className="mt-4 text-sm text-slate-400">Operaciones de sucursales, clientes, promociones y control de acceso con identidad Dorian.</p>
+            <p className="mt-4 text-sm text-slate-400">Jerarquía operativa Dorian: SuperAdmin global, BranchAdmin por sede, recepción y trainers ligados a su sucursal.</p>
           </div>
 
           <nav className="flex-1 space-y-2">
-            {navigation.map((item) => {
+            {visibleNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
@@ -74,7 +108,7 @@ export function AdminShell({ session, children }: { session: Session; children: 
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
               {session.user.roles.map((role) => (
                 <span key={role} className="rounded-full bg-white/8 px-3 py-1">
-                  {role}
+                  {getRoleLabel(role)}
                 </span>
               ))}
             </div>
@@ -94,11 +128,11 @@ export function AdminShell({ session, children }: { session: Session; children: 
             <div className="grid grid-cols-2 gap-3 md:flex">
               <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Rol principal</p>
-                <p className="mt-1 text-sm text-white">{session.user.roles[0] ?? "Sin rol"}</p>
+                <p className="mt-1 text-sm text-white">{getRoleLabel(session.user.roles[0] ?? "Sin rol")}</p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Sucursal</p>
-                <p className="mt-1 text-sm text-white">{session.user.branchId ?? "Global / multi-sucursal"}</p>
+                <p className="mt-1 text-sm text-white">{resolvedBranchName}</p>
               </div>
             </div>
           </header>

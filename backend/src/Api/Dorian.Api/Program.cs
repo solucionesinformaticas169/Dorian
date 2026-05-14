@@ -4,10 +4,34 @@ using Dorian.Application.Abstractions.Auth;
 using Dorian.Application;
 using Dorian.Infrastructure;
 using Dorian.Infrastructure.Persistence;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
+var railwayPort = Environment.GetEnvironmentVariable("PORT");
+var aspNetCoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+
+if (!string.IsNullOrWhiteSpace(railwayPort) && string.IsNullOrWhiteSpace(aspNetCoreUrls))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+}
+
+var dataProtectionPath = Path.Combine(builder.Environment.ContentRootPath, ".app-data-protection");
+Directory.CreateDirectory(dataProtectionPath);
+var configuredCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var environmentCorsOrigins = (builder.Configuration["ALLOWED_ORIGINS"] ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+var allowedCorsOrigins = configuredCorsOrigins
+    .Concat(environmentCorsOrigins)
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
+
 builder.Services.AddHealthChecks();
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionPath))
+    .SetApplicationName("Dorian");
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddDorianSwagger();
@@ -19,7 +43,8 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .SetIsOriginAllowed(origin =>
                 origin.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase)
-                || origin.StartsWith("http://127.0.0.1:", StringComparison.OrdinalIgnoreCase));
+                || origin.StartsWith("http://127.0.0.1:", StringComparison.OrdinalIgnoreCase)
+                || allowedCorsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase));
     });
 });
 
@@ -77,6 +102,7 @@ app.MapTrainingPlanEndpoints();
 app.MapWorkoutActivityEndpoints();
 app.MapBookingEndpoints();
 app.MapPromotionEndpoints();
+app.MapStaffEndpoints();
 app.Run();
 
 public partial class Program;

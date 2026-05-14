@@ -27,6 +27,11 @@ public sealed record CustomerResponse(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? UpdatedAtUtc);
 
+public sealed record CustomerSummaryResponse(
+    int TotalCustomers,
+    int ActiveCustomers,
+    int InactiveCustomers);
+
 public sealed record CreateCustomerRequest(
     string Email,
     string Password,

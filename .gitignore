@@ -4,6 +4,7 @@ build/
 coverage/
 .next/
 .nuxt/
+.turbo/
 .env
 .env.*
 !.env.example
@@ -14,3 +15,8 @@ Thumbs.db
 **/bin/
 **/obj/
 logs/
+*.log
+*.binlog
+*.tsbuildinfo
+.app-data-protection/
+**/.app-data-protection/

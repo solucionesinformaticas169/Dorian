@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { branchesApi } from "@/lib/api/admin";
+import { authApi, branchesApi } from "@/lib/api/admin";
 import type { Branch } from "@/lib/types";
 import { formatDateTime, getErrorMessage } from "@/lib/utils";
 
@@ -47,6 +47,7 @@ export default function BranchesPage() {
   const [form, setForm] = useState<BranchForm>(initialForm);
   const [error, setError] = useState<string | null>(null);
 
+  const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
   const query = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
 
   const createMutation = useMutation({
@@ -120,13 +121,22 @@ export default function BranchesPage() {
     });
   }
 
-  if (query.isLoading) return <LoadingState label="Cargando sucursales..." />;
+  if (sessionQuery.isLoading || query.isLoading) return <LoadingState label="Cargando sucursales..." />;
+  if (sessionQuery.error) return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
   if (query.error) return <Alert>{getErrorMessage(query.error)}</Alert>;
+
+  const session = sessionQuery.data;
+  const isSuperAdmin = session?.user.roles.includes("SuperAdmin") ?? false;
+  const canEdit = isSuperAdmin || session?.user.roles.includes("BranchAdmin");
+  const formTitle = editing ? "Editar sucursal" : isSuperAdmin ? "Nueva sucursal" : "Tu sucursal";
+  const formDescription = isSuperAdmin
+    ? "SuperAdmin crea nuevas sedes y mantiene la red completa de Dorian."
+    : "BranchAdmin solo administra la información operativa de su propia sucursal.";
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
       <Card>
-        <SectionHeading eyebrow="Red Dorian" title={editing ? "Editar sucursal" : "Nueva sucursal"} description="Gestiona ubicaciones reales, horarios y enlaces de Google Maps desde un solo formulario." />
+        <SectionHeading eyebrow="Red Dorian" title={formTitle} description={formDescription} />
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div><Label>Codigo</Label><Input value={form.code} onChange={(event) => setForm((state) => ({ ...state, code: event.target.value }))} /></div>
@@ -150,7 +160,7 @@ export default function BranchesPage() {
           ) : null}
           {error ? <Alert>{error}</Alert> : null}
           <div className="flex gap-3">
-            <Button type="submit" disabled={isSubmitting}>{editing ? "Guardar cambios" : "Crear sucursal"}</Button>
+            <Button type="submit" disabled={isSubmitting || !canEdit}>{editing ? "Guardar cambios" : isSuperAdmin ? "Crear sucursal" : "Actualizar sucursal"}</Button>
             {editing ? <Button variant="ghost" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</Button> : null}
           </div>
         </form>
@@ -180,8 +190,8 @@ export default function BranchesPage() {
                 <DataCell><Badge tone={branch.isActive ? "success" : "warning"}>{branch.isActive ? "Activa" : "Inactiva"}</Badge></DataCell>
                 <DataCell>{formatDateTime(branch.updatedAtUtc ?? branch.createdAtUtc)}</DataCell>
                 <DataCell className="flex gap-2">
-                  <Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(branch)}>Editar</Button>
-                  <Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(branch.id)} disabled={deleteMutation.isPending}>Eliminar</Button>
+                  <Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(branch)} disabled={!canEdit}>Editar</Button>
+                  <Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(branch.id)} disabled={deleteMutation.isPending || !isSuperAdmin}>Eliminar</Button>
                 </DataCell>
               </DataRow>
             ))}

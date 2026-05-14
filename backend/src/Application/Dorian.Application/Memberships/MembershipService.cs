@@ -20,10 +20,10 @@ public sealed class MembershipService : IMembershipService
 
     public async Task<IReadOnlyCollection<MembershipResponse>> GetAllAsync(CancellationToken cancellationToken)
     {
-        var user = EnsureAdminUser();
+        var user = EnsurePlanReader();
         IQueryable<Membership> query = _dbContext.Memberships.AsNoTracking();
-        if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId.HasValue)
-            query = query.Where(x => x.BranchId == user.BranchId.Value);
+        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Trainer)) && user.BranchId.HasValue)
+            query = query.Where(x => x.BranchId == null || x.BranchId == user.BranchId.Value);
 
         return await query.OrderBy(x => x.Name).Select(MapExpression).ToListAsync(cancellationToken);
     }
@@ -31,7 +31,7 @@ public sealed class MembershipService : IMembershipService
     public async Task<MembershipResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var membership = await _dbContext.Memberships.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken) ?? throw new NotFoundException("Membership not found.");
-        EnsureCanManageBranch(membership.BranchId);
+        EnsureCanReadBranch(membership.BranchId);
         return Map(membership);
     }
 
@@ -64,20 +64,28 @@ public sealed class MembershipService : IMembershipService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private CurrentUser EnsureAdminUser()
+    private CurrentUser EnsurePlanReader()
     {
         var user = _currentUserService.User;
         if (!user.IsAuthenticated) throw new UnauthorizedException("Authentication is required.");
-        if (user.IsInRole(RoleNames.SuperAdmin) || user.IsInRole(RoleNames.BranchAdmin)) return user;
-        throw new ForbiddenException("You do not have access to memberships.");
+        if (user.IsInRole(RoleNames.SuperAdmin) || user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Trainer)) return user;
+        throw new ForbiddenException("You do not have access to plans.");
     }
 
     private void EnsureCanManageBranch(Guid? branchId)
     {
-        var user = EnsureAdminUser();
+        var user = EnsurePlanReader();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if (branchId.HasValue && user.BranchId == branchId.Value) return;
-        throw new ForbiddenException("You cannot manage memberships for this branch.");
+        if (user.IsInRole(RoleNames.BranchAdmin) && branchId.HasValue && user.BranchId == branchId.Value) return;
+        throw new ForbiddenException("You cannot manage plans for this branch.");
+    }
+
+    private void EnsureCanReadBranch(Guid? branchId)
+    {
+        var user = EnsurePlanReader();
+        if (user.IsInRole(RoleNames.SuperAdmin)) return;
+        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Trainer)) && (!branchId.HasValue || user.BranchId == branchId.Value)) return;
+        throw new ForbiddenException("You cannot view plans for this branch.");
     }
 
     private async Task EnsureBranchExists(Guid? branchId, CancellationToken cancellationToken)

@@ -13,8 +13,7 @@ public sealed record DashboardSummaryResponse(
 public sealed record BranchActivityPoint(
     Guid BranchId,
     string BranchName,
-    int ActivityCount,
-    int ActiveCustomersCount,
+    int CreatedClassesCount,
     int TodayClassesCount,
     int TodayCheckInsCount);
 

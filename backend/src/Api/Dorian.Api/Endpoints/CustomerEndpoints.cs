@@ -9,6 +9,7 @@ public static class CustomerEndpoints
     {
         var group = app.MapGroup("/customers").RequireAuthorization().WithTags("Customers");
         group.MapGet("/", async (ICustomerService service, CancellationToken cancellationToken) => Results.Ok(await service.GetAllAsync(cancellationToken)));
+        group.MapGet("/summary", async (ICustomerService service, CancellationToken cancellationToken) => Results.Ok(await service.GetSummaryAsync(cancellationToken)));
         group.MapGet("/me", async (ICustomerService service, CancellationToken cancellationToken) => Results.Ok(await service.GetMeAsync(cancellationToken)));
         group.MapGet("/{id:guid}", async (Guid id, ICustomerService service, CancellationToken cancellationToken) => Results.Ok(await service.GetByIdAsync(id, cancellationToken)));
         group.MapPost("/", async (CreateCustomerRequest request, IValidator<CreateCustomerRequest> validator, ICustomerService service, CancellationToken cancellationToken) =>

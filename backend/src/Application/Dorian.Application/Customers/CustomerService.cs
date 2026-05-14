@@ -31,12 +31,28 @@ public sealed class CustomerService : ICustomerService
             return await query.OrderBy(x => x.FirstName).ThenBy(x => x.LastName).Select(MapExpression).ToListAsync(cancellationToken);
         }
 
-        if (CanManageBranchCustomers(user) && user.BranchId.HasValue)
+        if (CanManageBranchCustomers(user))
         {
-            return await query.Where(x => x.BranchId == user.BranchId.Value).OrderBy(x => x.FirstName).ThenBy(x => x.LastName).Select(MapExpression).ToListAsync(cancellationToken);
+            return await query.OrderBy(x => x.FirstName).ThenBy(x => x.LastName).Select(MapExpression).ToListAsync(cancellationToken);
         }
 
         throw new ForbiddenException("You do not have access to customers.");
+    }
+
+    public async Task<CustomerSummaryResponse> GetSummaryAsync(CancellationToken cancellationToken)
+    {
+        var user = EnsureAuthenticated();
+        if (!user.IsInRole(RoleNames.SuperAdmin) && !user.IsInRole(RoleNames.BranchAdmin))
+        {
+            throw new ForbiddenException("You do not have access to customer summary.");
+        }
+
+        var customers = await QueryCustomers().ToListAsync(cancellationToken);
+        var totalCustomers = customers.Count;
+        var activeCustomers = customers.Count(customer => customer.Status == CustomerStatus.Active);
+        var inactiveCustomers = totalCustomers - activeCustomers;
+
+        return new CustomerSummaryResponse(totalCustomers, activeCustomers, inactiveCustomers);
     }
 
     public async Task<IReadOnlyCollection<CustomerResponse>> GetByBranchAsync(Guid branchId, CancellationToken cancellationToken)
@@ -115,7 +131,6 @@ public sealed class CustomerService : ICustomerService
         await EnsureBranchExists(request.BranchId, cancellationToken);
         await EnsureMembershipValid(request.ActiveMembershipId, new CreateOrUpdateMembershipWindow(request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc), cancellationToken);
         await EnsureUniqueIdentity(request.IdentificationNumber, customer.Id, cancellationToken);
-
         customer.Update(request.BranchId, request.FirstName, request.LastName, request.IdentificationNumber, request.Phone, request.BirthDate, request.Gender, request.EmergencyContactName, request.EmergencyContactPhone, request.ActiveMembershipId, request.ActiveMembershipStartsAtUtc, request.ActiveMembershipEndsAtUtc, request.Status);
         customer.User.UpdateProfile($"{request.FirstName} {request.LastName}", request.Phone);
         customer.User.AssignToBranch(request.BranchId);
@@ -146,7 +161,7 @@ public sealed class CustomerService : ICustomerService
         return user;
     }
 
-    private static bool CanManageBranchCustomers(CurrentUser user) => user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception);
+    private static bool CanManageBranchCustomers(CurrentUser user) => user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Trainer);
 
     private void EnsureCanViewBranch(Guid branchId)
     {
@@ -160,7 +175,7 @@ public sealed class CustomerService : ICustomerService
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if (CanManageBranchCustomers(user) && branchId.HasValue && user.BranchId == branchId.Value) return;
+        if (CanManageBranchCustomers(user) && (!branchId.HasValue || user.BranchId == branchId.Value)) return;
         throw new ForbiddenException("You cannot manage customers for this branch.");
     }
 
@@ -168,7 +183,7 @@ public sealed class CustomerService : ICustomerService
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId == customer.BranchId) return;
+        if (user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) return;
         throw new ForbiddenException("You cannot manage this customer.");
     }
 
@@ -176,7 +191,7 @@ public sealed class CustomerService : ICustomerService
     {
         var user = EnsureAuthenticated();
         if (user.IsInRole(RoleNames.SuperAdmin)) return;
-        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && user.BranchId == customer.BranchId) return;
+        if (user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception) || user.IsInRole(RoleNames.Trainer)) return;
         if (user.IsInRole(RoleNames.Customer) && user.UserId == customer.UserId) return;
         throw new ForbiddenException("You cannot view this customer.");
     }
@@ -195,14 +210,14 @@ public sealed class CustomerService : ICustomerService
         if (!membershipId.HasValue)
         {
             if (request.ActiveMembershipStartsAtUtc.HasValue || request.ActiveMembershipEndsAtUtc.HasValue)
-                throw new CustomerValidationException("Membership dates require an active membership.");
+                throw new CustomerValidationException("Plan dates require an active plan.");
             return;
         }
         if (!request.ActiveMembershipStartsAtUtc.HasValue || !request.ActiveMembershipEndsAtUtc.HasValue)
-            throw new CustomerValidationException("Membership dates are required when an active membership is assigned.");
+            throw new CustomerValidationException("Plan dates are required when an active plan is assigned.");
 
         var exists = await _dbContext.Memberships.AnyAsync(x => x.Id == membershipId.Value && x.IsActive, cancellationToken);
-        if (!exists) throw new NotFoundException("Membership not found or inactive.");
+        if (!exists) throw new NotFoundException("Plan not found or inactive.");
     }
 
     private async Task EnsureUniqueIdentity(string identificationNumber, Guid? customerId, CancellationToken cancellationToken)

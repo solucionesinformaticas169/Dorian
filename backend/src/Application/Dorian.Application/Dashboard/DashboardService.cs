@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 public sealed class DashboardService : IDashboardService
 {
+    private static readonly TimeSpan EcuadorOffset = TimeSpan.FromHours(-5);
     private readonly IDorianDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
 
@@ -25,8 +26,7 @@ public sealed class DashboardService : IDashboardService
         var user = EnsureAuthenticated();
         var scopeBranchId = ResolveBranchScope(user);
         var now = DateTimeOffset.UtcNow;
-        var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
-        var tomorrow = today.AddDays(1);
+        var (todayStartUtc, tomorrowStartUtc) = ResolveTodayWindowUtc(now);
 
         var branchesQuery = _dbContext.Branches.AsNoTracking().Where(x => x.IsActive);
         if (scopeBranchId.HasValue)
@@ -49,23 +49,15 @@ public sealed class DashboardService : IDashboardService
                 "Sin actividad",
                 [],
                 [],
-                "Suma del precio de membresias activas asignadas a clientes activos.");
+                "Suma del precio de planes activos asignados a clientes activos.");
         }
 
-        var activeCustomersQuery = _dbContext.Customers
+        var activeCustomers = await _dbContext.Customers
             .AsNoTracking()
-            .Where(x => x.Status == CustomerStatus.Active);
-
-        if (scopeBranchId.HasValue)
-        {
-            activeCustomersQuery = activeCustomersQuery.Where(x => x.BranchId == scopeBranchId.Value);
-        }
-
-        var activeCustomers = await activeCustomersQuery
+            .Where(x => x.Status == CustomerStatus.Active)
             .Select(x => new
             {
                 x.Id,
-                x.BranchId,
                 x.ActiveMembershipId,
                 x.ActiveMembershipStartsAtUtc,
                 x.ActiveMembershipEndsAtUtc
@@ -77,8 +69,8 @@ public sealed class DashboardService : IDashboardService
             .Where(x =>
                 branchIds.Contains(x.BranchId)
                 && x.Status == ClassSessionStatus.Scheduled
-                && x.StartTime >= today
-                && x.StartTime < tomorrow)
+                && x.StartTime >= todayStartUtc
+                && x.StartTime < tomorrowStartUtc)
             .Select(x => new
             {
                 x.Id,
@@ -104,8 +96,15 @@ public sealed class DashboardService : IDashboardService
             .Where(x =>
                 branchIds.Contains(x.BranchId)
                 && x.Status == CheckInStatus.Accepted
-                && x.CheckedInAt >= today
-                && x.CheckedInAt < tomorrow)
+                && x.CheckedInAt >= todayStartUtc
+                && x.CheckedInAt < tomorrowStartUtc)
+            .GroupBy(x => x.BranchId)
+            .Select(group => new { BranchId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.BranchId, x => x.Count, cancellationToken);
+
+        var createdClassesByBranch = await _dbContext.ClassSessions
+            .AsNoTracking()
+            .Where(x => branchIds.Contains(x.BranchId))
             .GroupBy(x => x.BranchId)
             .Select(group => new { BranchId = group.Key, Count = group.Count() })
             .ToDictionaryAsync(x => x.BranchId, x => x.Count, cancellationToken);
@@ -139,18 +138,18 @@ public sealed class DashboardService : IDashboardService
         var branchActivity = branches
             .Select(branch =>
             {
-                var branchCustomers = activeCustomers.Count(customer => customer.BranchId.HasValue && customer.BranchId.Value == branch.Id);
+                var branchCreatedClasses = createdClassesByBranch.GetValueOrDefault(branch.Id);
                 var branchClasses = todayClasses.Count(classSession => classSession.BranchId == branch.Id);
                 var branchCheckIns = todayCheckIns.GetValueOrDefault(branch.Id);
                 return new BranchActivityPoint(
                     branch.Id,
                     branch.Name,
-                    branchCustomers + branchClasses + branchCheckIns,
-                    branchCustomers,
+                    branchCreatedClasses,
                     branchClasses,
                     branchCheckIns);
             })
-            .OrderByDescending(x => x.ActivityCount)
+            .OrderByDescending(x => x.CreatedClassesCount)
+            .ThenByDescending(x => x.TodayCheckInsCount)
             .ThenBy(x => x.BranchName)
             .ToArray();
 
@@ -184,7 +183,14 @@ public sealed class DashboardService : IDashboardService
             branchActivity.FirstOrDefault()?.BranchName ?? "Sin actividad",
             branchActivity,
             classOccupancy,
-            "Suma del precio de membresias activas asignadas a clientes activos.");
+            "Suma del precio de planes activos asignados a clientes activos.");
+    }
+
+    private static (DateTimeOffset TodayStartUtc, DateTimeOffset TomorrowStartUtc) ResolveTodayWindowUtc(DateTimeOffset nowUtc)
+    {
+        var localNow = nowUtc.ToOffset(EcuadorOffset);
+        var localToday = new DateTimeOffset(localNow.Year, localNow.Month, localNow.Day, 0, 0, 0, EcuadorOffset);
+        return (localToday.ToUniversalTime(), localToday.AddDays(1).ToUniversalTime());
     }
 
     private CurrentUser EnsureAuthenticated()

@@ -81,7 +81,7 @@ public sealed class AccessEndpointsTests : IClassFixture<CustomWebApplicationFac
         var missingPayload = await missingResponse.Content.ReadFromJsonAsync<CheckInDto>();
         missingPayload.Should().NotBeNull();
         missingPayload!.Status.Should().Be(2);
-        missingPayload.RejectionReason.Should().Contain("active membership assigned");
+        missingPayload.RejectionReason.Should().Contain("active plan assigned");
     }
 
     [Fact]

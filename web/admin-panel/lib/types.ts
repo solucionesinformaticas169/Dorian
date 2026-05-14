@@ -36,12 +36,28 @@ export type Branch = {
   updatedAtUtc?: string | null;
 };
 
+export type StaffMember = {
+  id: string;
+  email: string;
+  fullName: string;
+  phoneNumber?: string | null;
+  branchId?: string | null;
+  branchName?: string | null;
+  roles: string[];
+  primaryRole: string;
+  isActive: boolean;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+};
+
 export type Customer = {
   id: string;
   userId: string;
   email: string;
   branchId: string;
+  dorianCode?: string | null;
   activeMembershipId?: string | null;
+  activeMembershipName?: string | null;
   activeMembershipStartsAtUtc?: string | null;
   activeMembershipEndsAtUtc?: string | null;
   firstName: string;
@@ -56,6 +72,18 @@ export type Customer = {
   onboardingCompleted: boolean;
   createdAtUtc: string;
   updatedAtUtc?: string | null;
+};
+
+export type CustomerSummary = {
+  totalCustomers: number;
+  activeCustomers: number;
+  inactiveCustomers: number;
+};
+
+export type CustomerPlanSnapshot = {
+  activePlanId?: string | null;
+  activePlanStartsAtUtc?: string | null;
+  activePlanEndsAtUtc?: string | null;
 };
 
 export type CustomerFitnessProfile = {
@@ -244,9 +272,9 @@ export type MealPlan = {
   createdAtUtc: string;
 };
 
-export type Membership = {
+export type Plan = {
   id: string;
-  branchId: string;
+  branchId?: string | null;
   name: string;
   durationInDays: number;
   price: number;
@@ -255,6 +283,8 @@ export type Membership = {
   createdAtUtc: string;
   updatedAtUtc?: string | null;
 };
+
+export type Membership = Plan;
 
 export type ClassSession = {
   id: string;
@@ -322,8 +352,7 @@ export type CheckIn = {
 export type DashboardBranchActivity = {
   branchId: string;
   branchName: string;
-  activityCount: number;
-  activeCustomersCount: number;
+  createdClassesCount: number;
   todayClassesCount: number;
   todayCheckInsCount: number;
 };

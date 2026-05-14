@@ -2,6 +2,9 @@
 **/obj/
 .git/
 .gitignore
+.app-data-protection/
+**/.app-data-protection/
+logs/
 README.md
 assets/
 docs/

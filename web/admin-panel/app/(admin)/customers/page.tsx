@@ -1,510 +1,396 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DataCell, DataRow, DataTable } from "@/components/admin/data-table";
-import { EmptyState, LoadingState } from "@/components/admin/page-state";
-import { SectionHeading } from "@/components/admin/section-heading";
-import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { authApi, customersApi, plansApi } from "@/lib/api/admin";
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { branchesApi, customersApi, membershipsApi } from "@/lib/api/admin";
-import type { Customer } from "@/lib/types";
-import { customerStatusMap, fitnessExperienceLevelMap, fitnessGoalMap, focusMuscleGroupMap, genderMap, mealTypeMap, trainingDayMap, trainingDayIntensityMap, trainingPhaseNameMap, trainingPlanStatusMap } from "@/lib/types";
-import { dateTimeLocalToIso, formatDate, formatDateTime, getErrorMessage, toDateTimeLocalInput } from "@/lib/utils";
-
-type CustomerForm = {
-  email: string;
-  password: string;
-  branchId: string;
-  activeMembershipId: string;
-  activeMembershipStartsAtUtc: string;
-  activeMembershipEndsAtUtc: string;
-  firstName: string;
-  lastName: string;
-  identificationNumber: string;
-  phone: string;
-  birthDate: string;
-  gender: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  status: string;
-};
-
-const initialForm: CustomerForm = {
-  email: "",
-  password: "Pass1234!",
-  branchId: "",
-  activeMembershipId: "",
-  activeMembershipStartsAtUtc: "",
-  activeMembershipEndsAtUtc: "",
-  firstName: "",
-  lastName: "",
-  identificationNumber: "",
-  phone: "",
-  birthDate: "",
-  gender: "1",
-  emergencyContactName: "",
-  emergencyContactPhone: "",
-  status: "1",
-};
+import { EmptyState, LoadingState } from "@/components/admin/page-state";
+import { SectionHeading } from "@/components/admin/section-heading";
+import type { Customer, Plan } from "@/lib/types";
+import { dateInputToIso, formatDate, getErrorMessage, toDateInput } from "@/lib/utils";
 
 export default function CustomersPage() {
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState<Customer | null>(null);
-  const [selectedFitnessCustomer, setSelectedFitnessCustomer] = useState<Customer | null>(null);
-  const [form, setForm] = useState<CustomerForm>(initialForm);
+  const [search, setSearch] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
-  const membershipsQuery = useQuery({ queryKey: ["memberships"], queryFn: membershipsApi.list });
-  const customersQuery = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const fitnessProfileQuery = useQuery({
-    queryKey: ["customer-fitness-profile", selectedFitnessCustomer?.id],
-    queryFn: () => customersApi.fitnessProfile(selectedFitnessCustomer!.id),
-    enabled: Boolean(selectedFitnessCustomer),
+  const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
+  const summaryQuery = useQuery({
+    queryKey: ["customers-summary"],
+    queryFn: customersApi.summary,
+    enabled: sessionQuery.data?.user.roles.includes("Reception") === false && sessionQuery.data?.user.roles.includes("Trainer") === false,
   });
-  const bodySummaryQuery = useQuery({
-    queryKey: ["customer-body-summary", selectedFitnessCustomer?.id],
-    queryFn: () => customersApi.bodySummary(selectedFitnessCustomer!.id),
-    enabled: Boolean(selectedFitnessCustomer),
+  const customersQuery = useQuery({
+    queryKey: ["customers"],
+    queryFn: customersApi.list,
+    enabled: sessionQuery.data?.user.roles.some((role) => role === "Reception" || role === "Trainer") === true,
   });
-  const trainingPlanQuery = useQuery({
-    queryKey: ["customer-training-plan", selectedFitnessCustomer?.id],
-    queryFn: () => customersApi.trainingPlan(selectedFitnessCustomer!.id),
-    enabled: Boolean(selectedFitnessCustomer),
+  const plansQuery = useQuery({ queryKey: ["plans"], queryFn: plansApi.list, enabled: sessionQuery.data?.user.roles.includes("Reception") === true });
+  const metrics = summaryQuery.data;
+  const session = sessionQuery.data;
+  const isReception = session?.user.roles.includes("Reception") ?? false;
+  const isTrainer = session?.user.roles.includes("Trainer") ?? false;
+
+  const receptionCustomers = customersQuery.data ?? [];
+  const receptionPlans = useMemo(() => {
+    if (!isReception) return [];
+    return (plansQuery.data ?? []).filter((plan) => plan.isActive);
+  }, [isReception, plansQuery.data]);
+
+  const filteredCustomers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return [];
+    return receptionCustomers.filter((customer) => {
+      const fullName = `${customer.firstName} ${customer.lastName}`.toLowerCase();
+      return fullName.includes(query) || customer.identificationNumber.toLowerCase().includes(query);
+    });
+  }, [receptionCustomers, search]);
+
+  const selectedCustomer = useMemo(
+    () => receptionCustomers.find((customer) => customer.id === selectedCustomerId) ?? null,
+    [receptionCustomers, selectedCustomerId],
+  );
+
+  const selectedPlan = useMemo(
+    () => receptionPlans.find((plan) => plan.id === selectedPlanId) ?? null,
+    [receptionPlans, selectedPlanId],
+  );
+  const trainerPlanQuery = useQuery({
+    queryKey: ["customer-training-plan", selectedCustomerId],
+    queryFn: () => customersApi.trainingPlan(selectedCustomerId!),
+    enabled: isTrainer && !!selectedCustomerId,
   });
-  const nutritionProfileQuery = useQuery({
-    queryKey: ["customer-nutrition-profile", selectedFitnessCustomer?.id],
-    queryFn: () => customersApi.nutritionProfile(selectedFitnessCustomer!.id),
-    enabled: Boolean(selectedFitnessCustomer),
-  });
-  const mealPlanQuery = useQuery({
-    queryKey: ["customer-meal-plan", selectedFitnessCustomer?.id],
-    queryFn: () => customersApi.mealPlan(selectedFitnessCustomer!.id),
-    enabled: Boolean(selectedFitnessCustomer),
-  });
-  const activitySummaryQuery = useQuery({
-    queryKey: ["customer-activity-summary", selectedFitnessCustomer?.id],
-    queryFn: () => customersApi.activitySummary(selectedFitnessCustomer!.id, 7),
-    enabled: Boolean(selectedFitnessCustomer),
-  });
-  const generateTrainingPlanMutation = useMutation({
-    mutationFn: async (customerId: string) => customersApi.generateTrainingPlan(customerId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["customer-training-plan", selectedFitnessCustomer?.id] });
+
+  const activationMutation = useMutation({
+    mutationFn: ({ customer, plan, startDate, endDate }: { customer: Customer; plan: Plan; startDate: string; endDate: string }) =>
+      customersApi.update(customer.id, {
+        branchId: customer.branchId || null,
+        activeMembershipId: plan.id,
+        activeMembershipStartsAtUtc: dateInputToIso(startDate),
+        activeMembershipEndsAtUtc: dateInputToIso(endDate, true),
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        identificationNumber: customer.identificationNumber,
+        phone: customer.phone ?? null,
+        birthDate: customer.birthDate ?? null,
+        gender: customer.gender,
+        emergencyContactName: customer.emergencyContactName ?? null,
+        emergencyContactPhone: customer.emergencyContactPhone ?? null,
+        status: 1,
+      }),
+    onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setSelectedCustomerId(variables.customer.id);
+      setError(null);
     },
     onError: (mutationError) => setError(getErrorMessage(mutationError)),
   });
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        ...(editing ? {} : { email: form.email, password: form.password }),
-        branchId: form.branchId,
-        activeMembershipId: form.activeMembershipId || null,
-        activeMembershipStartsAtUtc: form.activeMembershipId ? dateTimeLocalToIso(form.activeMembershipStartsAtUtc) ?? null : null,
-        activeMembershipEndsAtUtc: form.activeMembershipId ? dateTimeLocalToIso(form.activeMembershipEndsAtUtc) ?? null : null,
-        firstName: form.firstName,
-        lastName: form.lastName,
-        identificationNumber: form.identificationNumber,
-        phone: form.phone || null,
-        birthDate: form.birthDate || null,
-        gender: Number(form.gender),
-        emergencyContactName: form.emergencyContactName || null,
-        emergencyContactPhone: form.emergencyContactPhone || null,
-        status: Number(form.status),
-      };
-
-      return editing ? customersApi.update(editing.id, payload) : customersApi.create(payload);
-    },
+  const assignTrainingMutation = useMutation({
+    mutationFn: (customerId: string) => customersApi.generateTrainingPlan(customerId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["customers"] });
-      setEditing(null);
-      setForm(initialForm);
+      await queryClient.invalidateQueries({ queryKey: ["customer-training-plan", selectedCustomerId] });
       setError(null);
     },
     onError: (mutationError) => setError(getErrorMessage(mutationError)),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: customersApi.remove,
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
-    onError: (mutationError) => setError(getErrorMessage(mutationError)),
-  });
-
-  const branchMap = useMemo(
-    () => Object.fromEntries((branchesQuery.data ?? []).map((branch) => [branch.id, branch.name])),
-    [branchesQuery.data],
-  );
-  const availableMemberships = useMemo(
-    () => (membershipsQuery.data ?? []).filter((membership) => !form.branchId || membership.branchId === form.branchId),
-    [form.branchId, membershipsQuery.data],
-  );
-  const customers = customersQuery.data ?? [];
-
-  function handleEdit(customer: Customer) {
-    setEditing(customer);
-    setForm({
-      email: customer.email,
-      password: "",
-      branchId: customer.branchId,
-      activeMembershipId: customer.activeMembershipId ?? "",
-      activeMembershipStartsAtUtc: toDateTimeLocalInput(customer.activeMembershipStartsAtUtc),
-      activeMembershipEndsAtUtc: toDateTimeLocalInput(customer.activeMembershipEndsAtUtc),
-      firstName: customer.firstName,
-      lastName: customer.lastName,
-      identificationNumber: customer.identificationNumber,
-      phone: customer.phone ?? "",
-      birthDate: customer.birthDate ?? "",
-      gender: String(customer.gender),
-      emergencyContactName: customer.emergencyContactName ?? "",
-      emergencyContactPhone: customer.emergencyContactPhone ?? "",
-      status: String(customer.status),
-    });
+  if (sessionQuery.isLoading || summaryQuery.isLoading || ((isReception || isTrainer) && customersQuery.isLoading) || (isReception && plansQuery.isLoading) || (isTrainer && trainerPlanQuery.isLoading && !!selectedCustomerId)) {
+    return <LoadingState label="Cargando panel de clientes Dorian..." />;
   }
 
-  if (branchesQuery.isLoading || membershipsQuery.isLoading || customersQuery.isLoading) {
-    return <LoadingState label="Cargando clientes..." />;
+  if (sessionQuery.error) {
+    return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
   }
 
-  if (branchesQuery.error || membershipsQuery.error || customersQuery.error) {
-    return <Alert>{getErrorMessage(branchesQuery.error ?? membershipsQuery.error ?? customersQuery.error)}</Alert>;
+  if (summaryQuery.error) {
+    return <Alert>{getErrorMessage(summaryQuery.error)}</Alert>;
   }
 
-  const selectedFitness = fitnessProfileQuery.data;
-  const selectedBodySummary = bodySummaryQuery.data;
-  const selectedTrainingPlan = trainingPlanQuery.data;
-  const selectedNutritionProfile = nutritionProfileQuery.data;
-  const selectedMealPlan = mealPlanQuery.data ?? [];
-  const selectedActivitySummary = activitySummaryQuery.data;
+  if (isReception && customersQuery.error) {
+    return <Alert>{getErrorMessage(customersQuery.error)}</Alert>;
+  }
+
+  if (isReception && plansQuery.error) {
+    return <Alert>{getErrorMessage(plansQuery.error)}</Alert>;
+  }
+  if (isTrainer && trainerPlanQuery.error) {
+    return <Alert>{getErrorMessage(trainerPlanQuery.error)}</Alert>;
+  }
+
+  function handleSelectCustomer(customer: Customer) {
+    setSelectedCustomerId(customer.id);
+    setSelectedPlanId(customer.activeMembershipId ?? "");
+    setStartsAt(toDateInput(customer.activeMembershipStartsAtUtc));
+    setEndsAt(toDateInput(customer.activeMembershipEndsAtUtc));
+    setError(null);
+  }
+
+  function handlePlanChange(planId: string) {
+    setSelectedPlanId(planId);
+    if (!startsAt) return;
+    const plan = receptionPlans.find((item) => item.id === planId);
+    if (!plan) return;
+    const start = new Date(`${startsAt}T00:00:00`);
+    start.setDate(start.getDate() + Math.max(plan.durationInDays - 1, 0));
+    setEndsAt(start.toISOString().slice(0, 10));
+  }
+
+  function handleActivatePlan() {
+    if (!selectedCustomer || !selectedPlan || !startsAt || !endsAt) {
+      setError("Selecciona cliente, plan y fechas para activar el plan.");
+      return;
+    }
+
+    if (new Date(`${endsAt}T00:00:00`) < new Date(`${startsAt}T00:00:00`)) {
+      setError("La fecha final no puede ser menor que la fecha inicial.");
+      return;
+    }
+
+    setError(null);
+    activationMutation.mutate({ customer: selectedCustomer, plan: selectedPlan, startDate: startsAt, endDate: endsAt });
+  }
+
+  function handleAssignTraining() {
+    if (!selectedCustomer) {
+      setError("Selecciona un cliente para asignar el entrenamiento.");
+      return;
+    }
+
+    setError(null);
+    assignTrainingMutation.mutate(selectedCustomer.id);
+  }
+
+  if (isReception) {
+    return (
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card>
+          <SectionHeading
+            eyebrow="Recepción"
+            title="Buscar y activar cliente"
+            description="Busca por nombre o cédula, selecciona el cliente y activa su plan con fecha inicial y final."
+          />
+          <div className="mt-6 space-y-4">
+            <div>
+              <Label>Buscar cliente</Label>
+              <Input
+                placeholder="Nombre o cédula"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+
+            <div className="space-y-3">
+              {filteredCustomers.slice(0, 8).map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => handleSelectCustomer(customer)}
+                  className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
+                    selectedCustomerId === customer.id ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
+                  }`}
+                >
+                  <div className="font-semibold text-white">{customer.firstName} {customer.lastName}</div>
+                  <div className="mt-1 text-sm text-slate-400">{customer.identificationNumber} · {customer.email}</div>
+                  <div className="mt-2 text-xs text-slate-500">
+                    {customer.activeMembershipName ? `${customer.activeMembershipName} · vence ${formatDate(customer.activeMembershipEndsAtUtc)}` : "Sin plan activo"}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {!search.trim() ? (
+              <EmptyState title="Empieza la búsqueda" description="Escribe el nombre o la cédula del cliente para ver resultados." />
+            ) : null}
+            {search.trim() && !filteredCustomers.length ? <EmptyState title="Sin resultados" description="No encontramos clientes con ese nombre o cédula." /> : null}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeading
+            eyebrow="Activación"
+            title={selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : "Selecciona un cliente"}
+            description={selectedCustomer ? `Cédula: ${selectedCustomer.identificationNumber}` : "Primero elige un cliente desde la lista de búsqueda."}
+          />
+
+          {selectedCustomer ? (
+            <div className="mt-6 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Plan</Label>
+                  <select
+                    className="h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-white"
+                    value={selectedPlanId}
+                    onChange={(event) => handlePlanChange(event.target.value)}
+                  >
+                    <option value="">Selecciona plan</option>
+                    {receptionPlans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} · {plan.durationInDays} días
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Estado actual</Label>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+                    {selectedCustomer.activeMembershipName ? `${selectedCustomer.activeMembershipName} · hasta ${formatDate(selectedCustomer.activeMembershipEndsAtUtc)}` : "Sin plan activo"}
+                  </div>
+                </div>
+                <div>
+                  <Label>Fecha inicial</Label>
+                  <Input type="date" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} />
+                </div>
+                <div>
+                  <Label>Fecha final</Label>
+                  <Input type="date" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} />
+                </div>
+              </div>
+
+              {selectedPlan ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-300">
+                  Activarás <span className="font-semibold text-white">{selectedPlan.name}</span> por {selectedPlan.durationInDays} días.
+                </div>
+              ) : null}
+
+              {error ? <Alert>{error}</Alert> : null}
+
+              <Button onClick={handleActivatePlan} disabled={activationMutation.isPending}>
+                {activationMutation.isPending ? "Activando..." : "Activar plan"}
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-6">
+              <EmptyState title="Sin cliente seleccionado" description="Busca por nombre o cédula y selecciona al cliente que vas a activar." />
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
+
+  if (isTrainer) {
+    return (
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <Card>
+          <SectionHeading
+            eyebrow="Trainer"
+            title="Buscar cliente"
+            description="Busca por nombre o cédula para localizar al cliente de tu sucursal y asignarle un entrenamiento."
+          />
+          <div className="mt-6 space-y-4">
+            <div>
+              <Label>Buscar cliente</Label>
+              <Input placeholder="Nombre o cédula" value={search} onChange={(event) => setSearch(event.target.value)} />
+            </div>
+
+            <div className="space-y-3">
+              {filteredCustomers.slice(0, 8).map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => handleSelectCustomer(customer)}
+                  className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
+                    selectedCustomerId === customer.id ? "border-[var(--accent)] bg-[var(--accent)]/10" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
+                  }`}
+                >
+                  <div className="font-semibold text-white">{customer.firstName} {customer.lastName}</div>
+                  <div className="mt-1 text-sm text-slate-400">{customer.identificationNumber}</div>
+                </button>
+              ))}
+            </div>
+
+            {!filteredCustomers.length ? <EmptyState title="Sin resultados" description="No encontramos clientes con ese nombre o cédula." /> : null}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionHeading
+            eyebrow="Entrenamiento"
+            title={selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : "Selecciona un cliente"}
+            description={selectedCustomer ? `Cédula: ${selectedCustomer.identificationNumber}` : "Primero elige un cliente desde la lista de búsqueda."}
+          />
+
+          {selectedCustomer ? (
+            <div className="mt-6 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Estado fitness</p>
+                  <p className="mt-2 text-sm text-white">{selectedCustomer.onboardingCompleted ? "Listo para asignar entrenamiento" : "Debe completar onboarding fitness"}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Plan actual</p>
+                  <p className="mt-2 text-sm text-white">{trainerPlanQuery.data ? trainerPlanQuery.data.currentPhaseName : "Sin entrenamiento asignado"}</p>
+                </div>
+              </div>
+
+              {trainerPlanQuery.data ? (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-300">
+                  El cliente ya tiene un entrenamiento con avance de <span className="font-semibold text-white">{trainerPlanQuery.data.progressPercent}%</span> y fase actual <span className="font-semibold text-white">{trainerPlanQuery.data.currentPhaseName}</span>.
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-300">
+                  Todavía no tiene un entrenamiento asignado. Puedes generarlo desde aquí.
+                </div>
+              )}
+
+              {error ? <Alert>{error}</Alert> : null}
+
+              <Button onClick={handleAssignTraining} disabled={assignTrainingMutation.isPending}>
+                {assignTrainingMutation.isPending ? "Asignando..." : trainerPlanQuery.data ? "Regenerar entrenamiento" : "Asignar entrenamiento"}
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-6">
+              <EmptyState title="Sin cliente seleccionado" description="Busca por nombre o cédula y selecciona al cliente al que vas a asignar entrenamiento." />
+            </div>
+          )}
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-      <Card>
-        <SectionHeading
-          eyebrow="CRM"
-          title={editing ? "Editar cliente" : "Nuevo cliente"}
-          description="Administra altas de clientes y la vigencia de su membresía activa."
-        />
-        <form
-          className="mt-6 space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            saveMutation.mutate();
-          }}
-        >
-          {!editing ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Correo</Label>
-                <Input type="email" value={form.email} onChange={(event) => setForm((state) => ({ ...state, email: event.target.value }))} />
-              </div>
-              <div>
-                <Label>Contrasena</Label>
-                <Input type="password" value={form.password} onChange={(event) => setForm((state) => ({ ...state, password: event.target.value }))} />
-              </div>
-            </div>
-          ) : null}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <Label>Nombres</Label>
-              <Input value={form.firstName} onChange={(event) => setForm((state) => ({ ...state, firstName: event.target.value }))} />
-            </div>
-            <div>
-              <Label>Apellidos</Label>
-              <Input value={form.lastName} onChange={(event) => setForm((state) => ({ ...state, lastName: event.target.value }))} />
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <Label>Identificacion</Label>
-              <Input value={form.identificationNumber} onChange={(event) => setForm((state) => ({ ...state, identificationNumber: event.target.value }))} />
-            </div>
-            <div>
-              <Label>Telefono</Label>
-              <Input value={form.phone} onChange={(event) => setForm((state) => ({ ...state, phone: event.target.value }))} />
-            </div>
-          </div>
+    <div className="space-y-6">
+      <Card className="overflow-hidden border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(45,212,191,0.16),_transparent_35%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(10,15,31,0.94))]">
+        <div className="space-y-6">
+          <SectionHeading
+            eyebrow="Clientes Dorian"
+            title="Base global de clientes"
+            description="Resumen global del gimnasio Dorian. SuperAdmin y BranchAdmin ven el total del ecosistema, sin depender de una sucursal fija."
+          />
           <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <Label>Sucursal</Label>
-              <Select value={form.branchId} onChange={(event) => setForm((state) => ({ ...state, branchId: event.target.value, activeMembershipId: "" }))}>
-                <option value="">Selecciona una sucursal</option>
-                {branchesQuery.data?.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </Select>
+            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <p className="text-xs uppercase tracking-[0.28em] text-emerald-300/80">Total Dorian</p>
+              <p className="mt-3 text-4xl font-semibold text-white">{metrics?.totalCustomers ?? 0}</p>
+              <p className="mt-3 text-sm text-slate-300">Clientes registrados en toda la plataforma, sin depender de una sede fija.</p>
             </div>
-            <div>
-              <Label>Género</Label>
-              <Select value={form.gender} onChange={(event) => setForm((state) => ({ ...state, gender: event.target.value }))}>
-                <option value="1">Masculino</option>
-                <option value="2">Femenino</option>
-                <option value="3">Otro</option>
-              </Select>
+            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/80">Activos</p>
+              <p className="mt-3 text-4xl font-semibold text-white">{metrics?.activeCustomers ?? 0}</p>
+              <p className="mt-3 text-sm text-slate-300">Miembros con estado activo dentro del ecosistema Dorian.</p>
             </div>
-            <div>
-              <Label>Estado</Label>
-              <Select value={form.status} onChange={(event) => setForm((state) => ({ ...state, status: event.target.value }))}>
-                <option value="1">Activo</option>
-                <option value="2">Inactivo</option>
-                <option value="3">Suspendido</option>
-              </Select>
+            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <p className="text-xs uppercase tracking-[0.28em] text-amber-300/80">Inactivos</p>
+              <p className="mt-3 text-4xl font-semibold text-white">{metrics?.inactiveCustomers ?? 0}</p>
+              <p className="mt-3 text-sm text-slate-300">Clientes que hoy no están activos dentro del ecosistema Dorian.</p>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <Label>Fecha nacimiento</Label>
-              <Input type="date" value={form.birthDate} onChange={(event) => setForm((state) => ({ ...state, birthDate: event.target.value }))} />
-            </div>
-            <div>
-              <Label>Contacto emergencia</Label>
-              <Input value={form.emergencyContactName} onChange={(event) => setForm((state) => ({ ...state, emergencyContactName: event.target.value }))} />
-            </div>
-            <div>
-              <Label>Telefono emergencia</Label>
-              <Input value={form.emergencyContactPhone} onChange={(event) => setForm((state) => ({ ...state, emergencyContactPhone: event.target.value }))} />
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <Label>Membresía activa</Label>
-              <Select value={form.activeMembershipId} onChange={(event) => setForm((state) => ({ ...state, activeMembershipId: event.target.value }))}>
-                <option value="">Sin membresía</option>
-                {availableMemberships.map((membership) => (
-                  <option key={membership.id} value={membership.id}>
-                    {membership.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label>Inicio vigencia</Label>
-              <Input type="datetime-local" value={form.activeMembershipStartsAtUtc} onChange={(event) => setForm((state) => ({ ...state, activeMembershipStartsAtUtc: event.target.value }))} />
-            </div>
-            <div>
-              <Label>Fin vigencia</Label>
-              <Input type="datetime-local" value={form.activeMembershipEndsAtUtc} onChange={(event) => setForm((state) => ({ ...state, activeMembershipEndsAtUtc: event.target.value }))} />
-            </div>
-          </div>
-          {error ? <Alert>{error}</Alert> : null}
-          <div className="flex gap-3">
-            <Button type="submit" disabled={saveMutation.isPending}>
-              {editing ? "Guardar cambios" : "Crear cliente"}
-            </Button>
-            {editing ? (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setEditing(null);
-                  setForm(initialForm);
-                }}
-              >
-                Cancelar
-              </Button>
-            ) : null}
-          </div>
-        </form>
+        </div>
       </Card>
 
-      <div className="space-y-4">
-        <SectionHeading eyebrow="Client base" title="Clientes registrados" description="Tabla alimentada por los endpoints reales de customers y memberships." />
-        {!customers.length ? <EmptyState title="Sin clientes" description="Aún no se han registrado clientes en la plataforma." /> : null}
-        {customers.length ? (
-          <DataTable headers={["Cliente", "Sucursal", "Membresía", "Estado", "Onboarding", "Acciones"]}>
-            {customers.map((customer) => (
-              <DataRow key={customer.id}>
-                <DataCell>
-                  <div className="font-semibold text-white">
-                    {customer.firstName} {customer.lastName}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                        {customer.email} · {genderMap[customer.gender]}
-                  </div>
-                </DataCell>
-                <DataCell>{branchMap[customer.branchId] ?? customer.branchId}</DataCell>
-                <DataCell>
-                  {customer.activeMembershipId
-                    ? `${formatDateTime(customer.activeMembershipStartsAtUtc)} a ${formatDateTime(customer.activeMembershipEndsAtUtc)}`
-                    : "Sin membresía"}
-                </DataCell>
-                <DataCell>
-                  <Badge tone={customer.status === 1 ? "success" : customer.status === 2 ? "warning" : "danger"}>{customerStatusMap[customer.status]}</Badge>
-                </DataCell>
-                <DataCell>
-                  <Badge tone={customer.onboardingCompleted ? "success" : "warning"}>
-                    {customer.onboardingCompleted ? "Completo" : "Pendiente"}
-                  </Badge>
-                </DataCell>
-                <DataCell className="flex gap-2">
-                  <Button variant="ghost" className="px-3 py-2" onClick={() => setSelectedFitnessCustomer(customer)}>
-                    Ver fitness
-                  </Button>
-                  <Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(customer)}>
-                    Editar
-                  </Button>
-                  <Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(customer.id)}>
-                    Eliminar
-                  </Button>
-                </DataCell>
-              </DataRow>
-            ))}
-          </DataTable>
-        ) : null}
-
-        {selectedFitnessCustomer ? (
-          <Card>
-            <SectionHeading
-              eyebrow="Fitness profile"
-              title={`Resumen de ${selectedFitnessCustomer.firstName} ${selectedFitnessCustomer.lastName}`}
-              description="Vista solo lectura del onboarding fitness para soporte del panel."
-            />
-            {fitnessProfileQuery.isLoading || bodySummaryQuery.isLoading || trainingPlanQuery.isLoading || activitySummaryQuery.isLoading || nutritionProfileQuery.isLoading || mealPlanQuery.isLoading ? <p className="mt-5 text-sm text-slate-400">Cargando resumen fitness...</p> : null}
-            {fitnessProfileQuery.error || bodySummaryQuery.error || trainingPlanQuery.error || activitySummaryQuery.error || nutritionProfileQuery.error || mealPlanQuery.error ? <Alert className="mt-5">{getErrorMessage(fitnessProfileQuery.error ?? bodySummaryQuery.error ?? trainingPlanQuery.error ?? activitySummaryQuery.error ?? nutritionProfileQuery.error ?? mealPlanQuery.error)}</Alert> : null}
-            {selectedFitness ? (
-              <div className="mt-5 grid gap-4 md:grid-cols-4">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Objetivo y nivel</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{selectedFitness.onboardingCompleted ? "Perfil completo" : "Onboarding pendiente"}</p>
-                  <p className="mt-3 text-sm text-slate-300">Objetivo: {selectedFitness.goal ? fitnessGoalMap[selectedFitness.goal] : "No definido"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Nivel: {selectedFitness.experienceLevel ? fitnessExperienceLevelMap[selectedFitness.experienceLevel] : "No definido"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Grupo prioritario: {selectedFitness.focusMuscleGroup ? focusMuscleGroupMap[selectedFitness.focusMuscleGroup] : "No definido"}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Habitos y medidas</p>
-                  <p className="mt-2 text-sm text-slate-300">Peso actual: {selectedFitness.weightKg ? `${selectedFitness.weightKg} kg` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Peso objetivo: {selectedFitness.targetWeightKg ? `${selectedFitness.targetWeightKg} kg` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Altura: {selectedFitness.heightCm ? `${selectedFitness.heightCm} cm` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Horario preferido: {selectedFitness.preferredTrainingTime ?? "Horarios variables"}</p>
-                  <p className="mt-2 text-sm text-slate-300">
-                    Días disponibles: {selectedFitness.trainingDays.length ? selectedFitness.trainingDays.map((day) => trainingDayMap[day] ?? String(day)).join(", ") : "Sin configurar"}
-                  </p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Resumen corporal</p>
-                  <p className="mt-2 text-sm text-slate-300">Peso actual: {selectedBodySummary?.currentWeightKg ? `${selectedBodySummary.currentWeightKg} kg` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Peso objetivo: {selectedBodySummary?.targetWeightKg ? `${selectedBodySummary.targetWeightKg} kg` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">IMC: {selectedBodySummary?.bmi ? `${selectedBodySummary.bmi} (${selectedBodySummary.bmiLabel})` : "Sin mediciones"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Última medición: {selectedBodySummary?.latestMeasurementDate ? formatDateTime(selectedBodySummary.latestMeasurementDate) : "Sin registros"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Historial: {selectedBodySummary?.weightHistory.length ?? 0} mediciones</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Plan de entrenamiento</p>
-                  <p className="mt-2 text-sm text-slate-300">Plan activo: {selectedTrainingPlan ? "Si" : "No"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Objetivo: {selectedTrainingPlan ? fitnessGoalMap[selectedTrainingPlan.goal] : "Sin plan"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Fase actual: {selectedTrainingPlan?.currentPhaseName ?? "Sin plan"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Progreso: {selectedTrainingPlan ? `${selectedTrainingPlan.progressPercent}%` : "0%"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Estado: {selectedTrainingPlan ? trainingPlanStatusMap[selectedTrainingPlan.status] : "Sin plan"}</p>
-                  <div className="mt-4">
-                    <Button
-                      variant="secondary"
-                      className="px-3 py-2"
-                      onClick={() => generateTrainingPlanMutation.mutate(selectedFitnessCustomer.id)}
-                      disabled={generateTrainingPlanMutation.isPending}
-                    >
-                      {generateTrainingPlanMutation.isPending ? "Generando..." : "Generar plan"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-            {selectedActivitySummary ? (
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Actividad semanal</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.daysTrained} días entrenados</p>
-                  <p className="mt-2 text-sm text-slate-300">Duración acumulada: {Math.round(selectedActivitySummary.totalDurationSeconds / 60)} min</p>
-                  <p className="mt-2 text-sm text-slate-300">Calorías estimadas: {selectedActivitySummary.caloriesEstimated}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Última actividad</p>
-                  <p className="mt-2 text-lg font-semibold text-white">{selectedActivitySummary.recentActivities[0]?.title ?? "Sin actividades"}</p>
-                  <p className="mt-2 text-sm text-slate-300">
-                    {selectedActivitySummary.recentActivities[0]?.completedAt ? formatDateTime(selectedActivitySummary.recentActivities[0].completedAt) : "Sin registros"}
-                  </p>
-                  <p className="mt-2 text-sm text-slate-300">Ejercicios completados: {selectedActivitySummary.recentActivities[0]?.exercisesCompleted ?? 0}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Progreso semanal</p>
-                  <p className="mt-2 text-sm text-slate-300">Series: {selectedActivitySummary.seriesCompleted}</p>
-                  <p className="mt-2 text-sm text-slate-300">Reps: {selectedActivitySummary.repsCompleted}</p>
-                  <p className="mt-2 text-sm text-slate-300">Carga: {selectedActivitySummary.totalLoadKg ? `${selectedActivitySummary.totalLoadKg} kg` : "Sin carga registrada"}</p>
-                </div>
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Nutrición</p>
-                  <p className="mt-2 text-sm text-slate-300">Objetivo: {selectedNutritionProfile ? fitnessGoalMap[selectedNutritionProfile.goal] : "Sin perfil"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Calorías diarias: {selectedNutritionProfile?.dailyCaloriesTarget ?? "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Macros: {selectedNutritionProfile ? `${selectedNutritionProfile.proteinGrams}P / ${selectedNutritionProfile.carbsGrams}C / ${selectedNutritionProfile.fatGrams}G` : "Sin macros"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Agua: {selectedNutritionProfile ? `${selectedNutritionProfile.waterLitersTarget} L` : "-"}</p>
-                  <p className="mt-2 text-sm text-slate-300">Plan diario: {selectedMealPlan.length ? `${selectedMealPlan.length} días generados` : "Sin plan"}</p>
-                </div>
-              </div>
-            ) : null}
-            {selectedNutritionProfile ? (
-              <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Resumen nutricional</p>
-                <p className="mt-3 text-sm text-slate-300">{selectedNutritionProfile.disclaimer}</p>
-                <p className="mt-3 text-sm text-slate-300">Restricciones: {selectedNutritionProfile.dietaryRestrictions ?? "Sin restricciones registradas"}</p>
-                {selectedMealPlan.length ? (
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    {selectedMealPlan.slice(0, 2).map((plan) => (
-                      <div key={plan.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                        <p className="text-sm font-semibold text-white">{plan.title}</p>
-                        <p className="mt-2 text-xs text-slate-400">{plan.description}</p>
-                        <div className="mt-3 space-y-2">
-                          {plan.items.map((item) => (
-                            <p key={item.id} className="text-xs text-slate-300">
-                        {mealTypeMap[item.mealType]} · {item.name} · {item.calories} kcal
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-            {selectedTrainingPlan ? (
-              <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Estructura del plan</p>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  {selectedTrainingPlan.phases.map((phase) => (
-                    <div key={phase.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                      <p className="text-sm font-semibold text-white">{trainingPhaseNameMap[phase.name]}</p>
-                      <p className="mt-2 text-sm text-slate-300">{phase.description}</p>
-                      <p className="mt-2 text-xs text-slate-500">{phase.durationWeeks} semanas</p>
-                      <div className="mt-3 space-y-2">
-                        {phase.weeks.map((week) => (
-                          <div key={week.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
-                            <p className="text-sm font-medium text-white">{week.title}</p>
-                            <p className="mt-1 text-xs text-slate-400">{week.description}</p>
-                            <div className="mt-2 space-y-1">
-                              {week.days.map((day) => (
-                                <p key={day.id} className="text-xs text-slate-300">
-                        {trainingDayMap[day.dayOfWeek]} · {day.title} · {trainingDayIntensityMap[day.intensity]} · {day.exercises.length} ejercicios
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </Card>
-        ) : null}
-      </div>
+      {!metrics?.totalCustomers ? (
+        <Card>
+          <EmptyState title="Sin clientes registrados" description="Cuando existan clientes en Dorian, esta pantalla mostrará aquí su total consolidado." />
+        </Card>
+      ) : null}
     </div>
   );
 }
-

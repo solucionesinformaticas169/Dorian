@@ -3,6 +3,7 @@ namespace Dorian.Application.Customers;
 public interface ICustomerService
 {
     Task<IReadOnlyCollection<CustomerResponse>> GetAllAsync(CancellationToken cancellationToken);
+    Task<CustomerSummaryResponse> GetSummaryAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<CustomerResponse>> GetByBranchAsync(Guid branchId, CancellationToken cancellationToken);
     Task<CustomerResponse> GetByIdAsync(Guid id, CancellationToken cancellationToken);
     Task<CustomerResponse> GetMeAsync(CancellationToken cancellationToken);

@@ -26,3 +26,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/dorian-logo.png
+    - assets/exercises/front-body.png
+    - assets/exercises/back-body.png
+    - assets/exercises/front-m-body.png
+    - assets/exercises/back-m-body.png

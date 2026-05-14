@@ -1,5 +1,5 @@
 import { apiFetch, authFetch } from "@/lib/api/client";
-import type { AccessPass, ActivitySummary, BodySummary, Booking, Branch, CheckIn, ClassSession, Customer, CustomerFitnessProfile, DashboardSummary, MealPlan, Membership, NutritionProfile, Promotion, Session, TrainingPlan } from "@/lib/types";
+import type { AccessPass, ActivitySummary, BodySummary, Booking, Branch, CheckIn, ClassSession, Customer, CustomerFitnessProfile, CustomerSummary, DashboardSummary, MealPlan, NutritionProfile, Plan, Promotion, Session, StaffMember, TrainingPlan } from "@/lib/types";
 
 export const authApi = {
   login: (payload: { email: string; password: string }) => authFetch<Session>("/login", { method: "POST", body: JSON.stringify(payload) }),
@@ -16,6 +16,7 @@ export const branchesApi = {
 
 export const customersApi = {
   list: () => apiFetch<Customer[]>("/customers"),
+  summary: () => apiFetch<CustomerSummary>("/customers/summary"),
   listByBranch: (branchId: string) => apiFetch<Customer[]>(`/branches/${branchId}/customers`),
   fitnessProfile: (customerId: string) => apiFetch<CustomerFitnessProfile>(`/customers/${customerId}/fitness-profile`),
   bodySummary: (customerId: string) => apiFetch<BodySummary>(`/customers/${customerId}/body-summary`),
@@ -29,12 +30,22 @@ export const customersApi = {
   remove: (id: string) => apiFetch<void>(`/customers/${id}`, { method: "DELETE" }),
 };
 
-export const membershipsApi = {
-  list: () => apiFetch<Membership[]>("/memberships"),
-  create: (payload: unknown) => apiFetch<Membership>("/memberships", { method: "POST", body: JSON.stringify(payload) }),
-  update: (id: string, payload: unknown) => apiFetch<Membership>(`/memberships/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
-  remove: (id: string) => apiFetch<void>(`/memberships/${id}`, { method: "DELETE" }),
+export const staffApi = {
+  list: () => apiFetch<StaffMember[]>("/staff"),
+  get: (id: string) => apiFetch<StaffMember>(`/staff/${id}`),
+  create: (payload: unknown) => apiFetch<StaffMember>("/staff", { method: "POST", body: JSON.stringify(payload) }),
+  update: (id: string, payload: unknown) => apiFetch<StaffMember>(`/staff/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  remove: (id: string) => apiFetch<void>(`/staff/${id}`, { method: "DELETE" }),
 };
+
+export const plansApi = {
+  list: () => apiFetch<Plan[]>("/plans"),
+  create: (payload: unknown) => apiFetch<Plan>("/plans", { method: "POST", body: JSON.stringify(payload) }),
+  update: (id: string, payload: unknown) => apiFetch<Plan>(`/plans/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  remove: (id: string) => apiFetch<void>(`/plans/${id}`, { method: "DELETE" }),
+};
+
+export const membershipsApi = plansApi;
 
 export const classesApi = {
   list: () => apiFetch<ClassSession[]>("/classes"),

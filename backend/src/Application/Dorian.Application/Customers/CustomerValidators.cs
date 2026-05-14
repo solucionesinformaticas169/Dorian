@@ -45,14 +45,14 @@ file static class CustomerMembershipValidationRules
     {
         validator.RuleFor(x => x)
             .Must(HasValidMembershipWindow)
-            .WithMessage("Active membership dates are required when a membership is assigned, and end date must be greater than start date.");
+            .WithMessage("Active plan dates are required when a plan is assigned, and end date must be greater than start date.");
     }
 
     public static void ApplyMembershipWindowRules(AbstractValidator<UpdateCustomerRequest> validator)
     {
         validator.RuleFor(x => x)
             .Must(HasValidMembershipWindow)
-            .WithMessage("Active membership dates are required when a membership is assigned, and end date must be greater than start date.");
+            .WithMessage("Active plan dates are required when a plan is assigned, and end date must be greater than start date.");
     }
 
     private static bool HasValidMembershipWindow(CreateCustomerRequest request)
