@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -3386,6 +3386,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late Future<Map<String, dynamic>> future;
+
   @override
   void initState() {
     super.initState();
@@ -3403,121 +3404,244 @@ class _HomePageState extends State<HomePage> {
     return FutureBuilder<Map<String, dynamic>>(
       future: future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done)
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: Text(
               presentUiError(
                 snapshot.error,
-                'No pudimos cargar las sucursales ahora.',
+                'No pudimos cargar tu experiencia Dorian ahora.',
               ),
             ),
           );
+        }
+
         final profile = snapshot.data!['profile'] as CustomerProfile;
+        final planActive = profile.activeMembershipEndsAtUtc != null;
+
         return Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1180),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
               children: [
-                const BrandLogo(size: 64),
-                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const BrandLogo(size: 58),
+                    const Spacer(),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_none_rounded,
+                        color: dorianAccentSoft,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
                 Text(
                   'Hola, ${profile.firstName}',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 0.96,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tu entrenamiento premium empieza aqui.',
-                  style: const TextStyle(color: dorianTextSoft),
+                  planActive
+                      ? 'Es hora de superar tus límites hoy.'
+                      : 'Activa tu plan para desbloquear toda la experiencia Dorian.',
+                  style: const TextStyle(color: dorianTextSoft, height: 1.45),
                 ),
-                const SizedBox(height: 16),
-                GlowCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          const Chip(label: Text('Dorian multi-sucursal')),
-                          Chip(label: Text(profile.membershipStatusLabel)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        profile.activeMembershipName ?? 'Sin membresía activa',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ],
+                const SizedBox(height: 18),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF0A0A0A),
+                        const Color(0xFF151515),
+                        dorianAccent.withValues(alpha: 0.18),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _homeTopLabel(
+                          planActive ? 'PLAN ACTUAL' : 'MEMBRESÍA REQUERIDA',
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          profile.activeMembershipName ??
+                              'Activa tu plan Dorian',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.05,
+                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          planActive
+                              ? 'Próxima renovación: ${profile.activeMembershipEndsAtUtc == null ? '-' : formatDate(profile.activeMembershipEndsAtUtc!)}'
+                              : 'Elige un plan, paga de forma segura y empieza a reservar clases desde la app.',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _homeStatChip(
+                              icon: Icons.workspace_premium_outlined,
+                              label: profile.membershipStatusLabel,
+                            ),
+                            _homeStatChip(
+                              icon: Icons.shield_outlined,
+                              label: 'Pago seguro',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MembershipPage(),
+                              ),
+                            ),
+                            child: Text(
+                              planActive ? 'Ver detalles' : 'Elegir plan y pagar',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Acceso rápido',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.card_membership,
-                  title: 'Plan',
-                  subtitle: 'Mi plan actual',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MembershipPage()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.event_available,
+                _HomeFeatureHero(
                   title: 'Mis reservas',
-                  subtitle: 'Ver y cancelar clases',
+                  subtitle: 'Próxima parada: tus clases y reservas activas.',
+                  imageLabel: 'RESERVAS',
+                  backgroundAsset: _additionalPhotoAsset('reservas.png'),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const BookingsPage()),
                   ),
                 ),
                 const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.monitor_weight_outlined,
-                  title: 'Cuerpo',
-                  subtitle: 'Peso, medidas y progreso',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const BodyTrackingPage()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.assignment_outlined,
-                  title: 'Mi plan de entrenamiento',
-                  subtitle: 'Rutina personalizada',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TrainingPlanPage()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.restaurant_menu_outlined,
-                  title: 'Nutricion',
-                  subtitle: 'Macros y plan diario',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const NutritionPage()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.insights_outlined,
-                  title: 'Actividades',
-                  subtitle: 'Progreso y constancia',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ActivityPage()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                QuickActionCard(
-                  icon: Icons.accessibility_new_outlined,
-                  title: 'Ejercicios',
-                  subtitle: 'Explora movimientos por zona corporal',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ExercisesHubPage()),
-                  ),
+                GridView.count(
+                  crossAxisCount: MediaQuery.of(context).size.width >= 900
+                      ? 3
+                      : 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio:
+                      MediaQuery.of(context).size.width >= 900 ? 1.18 : 1.0,
+                  children: [
+                    _HomeFeatureTile(
+                      icon: Icons.accessibility_new_outlined,
+                      eyebrow: 'CUERPO',
+                      title: 'Cuerpo',
+                      subtitle: 'Peso, medidas y progreso',
+                                            backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
+onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const BodyTrackingPage(),
+                        ),
+                      ),
+                    ),
+                    _HomeFeatureTile(
+                      icon: Icons.assignment_outlined,
+                      eyebrow: 'ENTRENAMIENTO',
+                      title: 'Mi plan',
+                      subtitle: 'Rutina personalizada',
+                                            backgroundAsset: _additionalPhotoAsset('plan de entrenamiento.png'),
+onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const TrainingPlanPage(),
+                        ),
+                      ),
+                    ),
+                    _HomeFeatureTile(
+                      icon: Icons.restaurant_menu_outlined,
+                      eyebrow: 'NUTRICIÓN',
+                      title: 'Nutrición',
+                      subtitle: 'Macros y plan diario',
+                                            backgroundAsset: _additionalPhotoAsset('nutricion.png'),
+onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NutritionPage(),
+                        ),
+                      ),
+                    ),
+                    _HomeFeatureTile(
+                      icon: Icons.insights_outlined,
+                      eyebrow: 'ACTIVIDAD',
+                      title: 'Actividades',
+                      subtitle: 'Progreso y constancia',
+                                            backgroundAsset: _additionalPhotoAsset('actividades.png'),
+onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ActivityPage()),
+                      ),
+                    ),
+                    _HomeFeatureTile(
+                      icon: Icons.fitness_center_outlined,
+                      eyebrow: 'MOVIMIENTO',
+                      title: 'Ejercicios',
+                      subtitle: 'Explora por zona corporal',
+                                            backgroundAsset: _additionalPhotoAsset('ejercicios.png'),
+onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ExercisesHubPage(),
+                        ),
+                      ),
+                    ),
+                    _HomeFeatureTile(
+                      icon: Icons.card_membership,
+                      eyebrow: 'PLANES',
+                      title: 'Mi plan',
+                      subtitle: 'Estado y beneficios',
+                                            backgroundAsset: _additionalPhotoAsset('pesas - fuerza - disciplina.png'),
+onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MembershipPage(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -3528,6 +3652,295 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+Widget _homeTopLabel(String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: dorianAccent.withValues(alpha: 0.5)),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: dorianAccentSoft,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.8,
+      ),
+    ),
+  );
+}
+
+Widget _homeStatChip({
+  required IconData icon,
+  required String label,
+}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.05),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: dorianAccentSoft),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String _additionalPhotoAsset(String fileName) =>
+    'assets/fotos varias/$fileName';
+
+DecorationImage _premiumAssetImage(
+  String assetPath, {
+  Alignment alignment = Alignment.center,
+  double darken = 0.5,
+}) {
+  return DecorationImage(
+    image: AssetImage(assetPath),
+    fit: BoxFit.cover,
+    alignment: alignment,
+    colorFilter: ColorFilter.mode(
+      Colors.black.withValues(alpha: darken),
+      BlendMode.darken,
+    ),
+  );
+}
+
+String _classVisualAsset(String name) {
+  final normalized = name.toLowerCase();
+  if (normalized.contains('box')) {
+    return _additionalPhotoAsset('boxfit.png');
+  }
+  if (normalized.contains('cross')) {
+    return _additionalPhotoAsset('crossfit.png');
+  }
+  if (normalized.contains('baile')) {
+    return _additionalPhotoAsset('bailoterapia.png');
+  }
+  if (normalized.contains('yoga') || normalized.contains('movilidad')) {
+    return _additionalPhotoAsset('yoga-movilidad.png');
+  }
+  if (normalized.contains('spin') || normalized.contains('ciclo') || normalized.contains('bike')) {
+    return _additionalPhotoAsset('spinning.png');
+  }
+  if (normalized.contains('cardio')) {
+    return _additionalPhotoAsset('spinning.png');
+  }
+  if (normalized.contains('func')) {
+    return _additionalPhotoAsset('funcional.png');
+  }
+  return _additionalPhotoAsset('gente entrenando.png');
+}
+
+String _planVisualAsset(GymPlan plan) {
+  final normalized = plan.name.toLowerCase();
+  if (normalized.contains('premium')) {
+    return _additionalPhotoAsset('gente entrenando.png');
+  }
+  if (normalized.contains('trimestral')) {
+    return _additionalPhotoAsset('pesas - fuerza - disciplina.png');
+  }
+  if (normalized.contains('mensual')) {
+    return _additionalPhotoAsset('plan de entrenamiento.png');
+  }
+  return _additionalPhotoAsset('entrenamiento individual.png');
+}
+
+class _HomeFeatureHero extends StatelessWidget {
+  const _HomeFeatureHero({
+    required this.title,
+    required this.subtitle,
+    required this.imageLabel,
+    required this.onTap,
+    this.backgroundAsset,
+  });
+
+  final String title;
+  final String subtitle;
+  final String imageLabel;
+  final VoidCallback onTap;
+  final String? backgroundAsset;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(28),
+      onTap: onTap,
+      child: Container(
+        height: 210,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          gradient: backgroundAsset == null
+              ? LinearGradient(
+                  colors: [
+                    const Color(0xFF0A0A0A),
+                    const Color(0xFF111111),
+                    dorianAccent.withValues(alpha: 0.22),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          image: backgroundAsset == null
+              ? null
+              : _premiumAssetImage(backgroundAsset!, darken: 0.56),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.48),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: -10,
+              top: 18,
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                size: 96,
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              top: 18,
+              child: _homeTopLabel(imageLabel),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeFeatureTile extends StatelessWidget {
+  const _HomeFeatureTile({
+    required this.icon,
+    required this.eyebrow,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.backgroundAsset,
+  });
+
+  final IconData icon;
+  final String eyebrow;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final String? backgroundAsset;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(26),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          gradient: backgroundAsset == null
+              ? LinearGradient(
+                  colors: [
+                    const Color(0xFF0C0C0C),
+                    const Color(0xFF151515),
+                    dorianAccent.withValues(alpha: 0.15),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          image: backgroundAsset == null
+              ? null
+              : _premiumAssetImage(backgroundAsset!, darken: 0.6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: dorianAccent.withValues(alpha: 0.16),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: dorianAccentSoft),
+            ),
+            const Spacer(),
+            Text(
+              eyebrow,
+              style: const TextStyle(
+                color: dorianAccentSoft,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: const TextStyle(color: Colors.white70, height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 class BranchesPage extends StatelessWidget {
   const BranchesPage({super.key});
   @override
@@ -3654,6 +4067,7 @@ class BranchDetailPage extends StatelessWidget {
 
 class ClassesPage extends StatelessWidget {
   const ClassesPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
@@ -3666,150 +4080,147 @@ class ClassesPage extends StatelessWidget {
         return {'catalog': catalog, 'items': items};
       }(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done)
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: Text(
               presentUiError(
                 snapshot.error,
-                'No pudimos cargar el catalogo de clases.',
+                'No pudimos cargar el catálogo de clases.',
               ),
             ),
           );
+        }
+
         final catalog =
             snapshot.data!['catalog'] as List<GroupClassCatalogItem>;
         final items = snapshot.data!['items'] as List<GymClass>;
+
         return Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1180),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Clases disponibles',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const BookingsPage()),
-                      ),
-                      child: const Text('Mis reservas'),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF090909),
+                        const Color(0xFF141414),
+                        dorianAccent.withValues(alpha: 0.18),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _homeTopLabel('CLASES Y RESERVAS'),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Muévete con energía todos los días.',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.04,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Explora el catálogo Dorian, revisa horarios reales y reserva tu próximo entrenamiento desde la app.',
+                          style: TextStyle(color: Colors.white70, height: 1.45),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _homeStatChip(
+                                icon: Icons.grid_view_rounded,
+                                label: '${catalog.length} clases',
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _homeStatChip(
+                                icon: Icons.schedule_rounded,
+                                label: '${items.length} horarios',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const BookingsPage(),
+                              ),
+                            ),
+                            icon: const Icon(Icons.event_available_outlined),
+                            label: const Text('Mis reservas'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _sectionEyebrow('CATÁLOGO'),
+                const SizedBox(height: 8),
+                Text(
+                  'Descubre el estilo de cada clase.',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  'Catalogo Dorian',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
                 for (final item in catalog) ...[
-                  InkWell(
-                    borderRadius: BorderRadius.circular(24),
+                  _ClassCatalogCard(
+                    item: item,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => GroupClassDetailPage(item: item),
-                      ),
-                    ),
-                    child: GlowCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.emoji,
-                                style: const TextStyle(fontSize: 30),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item.subtitle,
-                                      style: const TextStyle(
-                                        color: dorianAccentSoft,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            item.summary,
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
                 ],
                 const SizedBox(height: 8),
+                _sectionEyebrow('HORARIOS Y RESERVAS'),
+                const SizedBox(height: 8),
                 Text(
-                  'Horarios y reservas',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  'Elige una sesión y aparta tu cupo.',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (items.isEmpty) ...[
                   const GlowCard(
-                    child: Text('Aún no hay horarios publicados por ahora.'),
+                    child: Text(
+                      'Aún no hay horarios publicados por ahora.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                   ),
-                  const SizedBox(height: 12),
                 ] else ...[
                   for (final item in items) ...[
-                    InkWell(
-                      borderRadius: BorderRadius.circular(24),
+                    _ClassScheduleCard(
+                      gymClass: item,
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => ClassBookingPage(gymClass: item),
-                        ),
-                      ),
-                      child: GlowCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.name,
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              formatDateTime(item.startTime),
-                              style: const TextStyle(color: Colors.white70),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              ' de  cupos disponibles',
-                              style: const TextStyle(color: dorianAccentSoft),
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -3837,37 +4248,60 @@ class GroupClassDetailPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          GlowCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.emoji, style: const TextStyle(fontSize: 42)),
-                const SizedBox(height: 12),
-                Text(
-                  item.type,
-                  style: const TextStyle(color: dorianAccentSoft),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.subtitle,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF0A0A0A),
+                  const Color(0xFF151515),
+                  dorianAccent.withValues(alpha: 0.18),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _homeTopLabel(item.type.toUpperCase()),
+                  const SizedBox(height: 16),
+                  Text(item.emoji, style: const TextStyle(fontSize: 44)),
+                  const SizedBox(height: 14),
+                  Text(
+                    item.name,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      height: 1.05,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item.description,
-                  style: const TextStyle(color: Colors.white70, height: 1.5),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item.tagline,
-                  style: const TextStyle(
-                    color: dorianAccent,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 8),
+                  Text(
+                    item.subtitle,
+                    style: const TextStyle(
+                      color: dorianAccentSoft,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Text(
+                    item.description,
+                    style: const TextStyle(color: Colors.white70, height: 1.5),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    item.tagline,
+                    style: const TextStyle(
+                      color: dorianAccentSoft,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -3877,11 +4311,11 @@ class GroupClassDetailPage extends StatelessWidget {
               children: [
                 Text(
                   'Beneficios',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 for (final benefit in item.benefits) ...[
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3889,8 +4323,8 @@ class GroupClassDetailPage extends StatelessWidget {
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
                         child: Icon(
-                          Icons.check_circle,
-                          color: dorianAccent,
+                          Icons.check_circle_rounded,
+                          color: dorianAccentSoft,
                           size: 18,
                         ),
                       ),
@@ -3898,7 +4332,10 @@ class GroupClassDetailPage extends StatelessWidget {
                       Expanded(
                         child: Text(
                           benefit,
-                          style: const TextStyle(color: Colors.white70),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            height: 1.45,
+                          ),
                         ),
                       ),
                     ],
@@ -3915,13 +4352,13 @@ class GroupClassDetailPage extends StatelessWidget {
               children: [
                 Text(
                   'Reserva tu cupo',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Esta vista muestra la informacion general de la clase. Para reservar, vuelve a "Clases disponibles" y entra en uno de los horarios publicados en la seccion "Horarios y reservas".',
+                  'Esta vista muestra la información general de la clase. Para reservar, vuelve a "Clases" y entra en uno de los horarios publicados en la sección de reservas.',
                   style: TextStyle(color: Colors.white70, height: 1.5),
                 ),
                 const SizedBox(height: 16),
@@ -3929,7 +4366,7 @@ class GroupClassDetailPage extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: FilledButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.schedule),
+                    icon: const Icon(Icons.schedule_rounded),
                     label: const Text('Ver horarios disponibles'),
                   ),
                 ),
@@ -3944,63 +4381,109 @@ class GroupClassDetailPage extends StatelessWidget {
 
 class ClassBookingPage extends StatelessWidget {
   const ClassBookingPage({super.key, required this.gymClass});
+
   final GymClass gymClass;
+
   @override
   Widget build(BuildContext context) {
     return PremiumScaffold(
       title: 'Reservar clase',
-      child: Padding(
+      child: ListView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            GlowCard(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF090909),
+                  const Color(0xFF151515),
+                  dorianAccent.withValues(alpha: 0.2),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _homeTopLabel('SESIÓN DISPONIBLE'),
+                  const SizedBox(height: 14),
                   Text(
                     gymClass.name,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     gymClass.description ??
                         'Clase guiada para seguir elevando tu rendimiento.',
-                    style: const TextStyle(color: Colors.white70),
+                    style: const TextStyle(color: Colors.white70, height: 1.45),
                   ),
-                  const SizedBox(height: 10),
-                  Text(formatDateTime(gymClass.startTime)),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _homeStatChip(
+                        icon: Icons.schedule_rounded,
+                        label: formatDateTime(gymClass.startTime),
+                      ),
+                      _homeStatChip(
+                        icon: Icons.people_alt_outlined,
+                        label: '${gymClass.availableSpots} cupos',
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: gymClass.availableSpots <= 0
-                  ? null
-                  : () async {
-                      final customerId = context
-                          .read<SessionController>()
-                          .profile!
-                          .id;
-                      final bookingApi = context.read<BookingApi>();
-                      await bookingApi.createBooking(gymClass.id, customerId);
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Reserva creada con exito. Ya puedes verla en Mis reservas.',
-                          ),
-                        ),
-                      );
-                      Navigator.of(context).pop();
-                    },
-              icon: const Icon(Icons.check_circle),
-              label: const Text('Confirmar reserva'),
+          ),
+          const SizedBox(height: 16),
+          GlowCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Antes de confirmar',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Tu reserva quedará registrada de inmediato y luego podrás verla o cancelarla desde "Mis reservas".',
+                  style: TextStyle(color: Colors.white70, height: 1.5),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: gymClass.availableSpots <= 0
+                ? null
+                : () async {
+                    final customerId = context.read<SessionController>().profile!.id;
+                    final bookingApi = context.read<BookingApi>();
+                    await bookingApi.createBooking(gymClass.id, customerId);
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Reserva creada con éxito. Ya puedes verla en Mis reservas.',
+                        ),
+                      ),
+                    );
+                    Navigator.of(context).pop();
+                  },
+            icon: const Icon(Icons.check_circle_rounded),
+            label: const Text('Confirmar reserva'),
+          ),
+        ],
       ),
     );
   }
@@ -4087,61 +4570,25 @@ class BookingsPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final booking = bookings[index];
               final gymClass = classes[booking.classSessionId];
-              return GlowCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      gymClass?.name ?? 'Clase reservada',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (gymClass != null)
-                      Text(
-                        formatDateTime(gymClass.startTime),
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Chip(
-                          label: Text(
-                            booking.status == 1
-                                ? 'Reservada'
-                                : booking.status == 2
-                                ? 'Cancelada'
-                                : booking.status == 3
-                                ? 'Asistio'
-                                : booking.status == 4
-                                ? 'No asistio'
-                                : 'Estado desconocido',
+              return _BookingSummaryCard(
+                booking: booking,
+                gymClass: gymClass,
+                onCancel: booking.status == 1
+                    ? () async {
+                        await bookingApi.cancelBooking(booking.id);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Reserva cancelada.'),
                           ),
-                        ),
-                        const Spacer(),
-                        if (booking.status == 1)
-                          TextButton(
-                            onPressed: () async {
-                              await bookingApi.cancelBooking(booking.id);
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Reserva cancelada.'),
-                                ),
-                              );
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) => const BookingsPage(),
-                                ),
-                              );
-                            },
-                            child: const Text('Cancelar'),
+                        );
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (_) => const BookingsPage(),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
+                        );
+                      }
+                    : null,
               );
             },
           ),
@@ -4151,6 +4598,284 @@ class BookingsPage extends StatelessWidget {
   }
 }
 
+Widget _sectionEyebrow(String label) {
+  return Text(
+    label,
+    style: const TextStyle(
+      color: dorianAccentSoft,
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 2,
+    ),
+  );
+}
+
+class _ClassCatalogCard extends StatelessWidget {
+  const _ClassCatalogCard({
+    required this.item,
+    required this.onTap,
+  });
+
+  final GroupClassCatalogItem item;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(28),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          image: _premiumAssetImage(
+            _classVisualAsset(item.name),
+            darken: 0.62,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+              child: Center(
+                child: Text(item.emoji, style: const TextStyle(fontSize: 30)),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    item.subtitle,
+                    style: const TextStyle(
+                      color: dorianAccentSoft,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    item.summary,
+                    style: const TextStyle(color: Colors.white70, height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClassScheduleCard extends StatelessWidget {
+  const _ClassScheduleCard({
+    required this.gymClass,
+    required this.onTap,
+  });
+
+  final GymClass gymClass;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(28),
+      onTap: onTap,
+      child: Container(
+        height: 220,
+                decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          image: _premiumAssetImage(
+            _classVisualAsset(gymClass.name),
+            darken: 0.64,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _homeTopLabel(
+                    gymClass.availableSpots > 0 ? 'HOY' : 'LLENO',
+                  ),
+                  _homeStatChip(
+                    icon: Icons.schedule_rounded,
+                    label: formatDateTime(gymClass.startTime),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Text(
+                gymClass.name,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                gymClass.description ??
+                    'Clase pensada para mantenerte en movimiento y progresar con energía.',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white70, height: 1.45),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${gymClass.availableSpots} cupos disponibles',
+                      style: const TextStyle(
+                        color: dorianAccentSoft,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  FilledButton(
+                    onPressed: onTap,
+                    child: const Text('Reservar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BookingSummaryCard extends StatelessWidget {
+  const _BookingSummaryCard({
+    required this.booking,
+    required this.gymClass,
+    this.onCancel,
+  });
+
+  final BookingItem booking;
+  final GymClass? gymClass;
+  final Future<void> Function()? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF0C0C0C),
+            const Color(0xFF151515),
+            dorianAccent.withValues(alpha: 0.16),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  gymClass?.name ?? 'Clase reservada',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _BookingStatusChip(status: booking.status),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (gymClass != null)
+            Text(
+              formatDateTime(gymClass!.startTime),
+              style: const TextStyle(color: Colors.white70),
+            ),
+          const SizedBox(height: 16),
+          if (onCancel != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  await onCancel!.call();
+                },
+                child: const Text('Cancelar'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingStatusChip extends StatelessWidget {
+  const _BookingStatusChip({required this.status});
+
+  final int status;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = status == 1
+        ? 'Reservada'
+        : status == 2
+        ? 'Cancelada'
+        : status == 3
+        ? 'Asistió'
+        : status == 4
+        ? 'No asistió'
+        : 'Estado';
+
+    final color = status == 1
+        ? dorianAccentSoft
+        : status == 2
+        ? Colors.white70
+        : status == 3
+        ? const Color(0xFF77E39D)
+        : const Color(0xFFFFB36A);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 
@@ -4255,132 +4980,235 @@ class ProfilePage extends StatelessWidget {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-      children: [
-        GlowCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                profile.fullName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1180),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+          children: [
+            Container(
+                            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                image: _premiumAssetImage(
+                  _additionalPhotoAsset('cuerpo.png'),
+                  darken: 0.74,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                profile.email,
-                style: const TextStyle(color: Colors.white70),
+              child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline_rounded,
+                            color: dorianAccentSoft,
+                            size: 34,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _homeTopLabel('PERFIL'),
+                              const SizedBox(height: 10),
+                              Text(
+                                profile.fullName,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                profile.email,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _homeStatChip(
+                          icon: Icons.badge_outlined,
+                          label: profile.statusLabel,
+                        ),
+                        _homeStatChip(
+                          icon: Icons.card_membership,
+                          label: fitnessProfile?.onboardingCompleted == true
+                              ? 'Perfil fitness activo'
+                              : 'Onboarding pendiente',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _membershipMetric(
+                            'Identificación',
+                            profile.identificationNumber,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _membershipMetric(
+                            'Teléfono',
+                            profile.phone ?? 'No registrado',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              Text('Identificacion: ${profile.identificationNumber}'),
-              const SizedBox(height: 8),
-              Text('Telefono: ${profile.phone ?? 'No registrado'}'),
-              const SizedBox(height: 8),
-              Text('Estado: ${profile.statusLabel}'),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        GlowCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Perfil fitness',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                fitnessProfile?.onboardingCompleted == true
-                    ? '${fitnessProfile!.goalLabel} · ${fitnessProfile.focusLabel} · ${fitnessProfile.experienceLabel}'
-                    : 'Aún no completas tu onboarding fitness.',
-                style: const TextStyle(color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.monitor_weight_outlined,
-          title: 'Mi cuerpo',
-          subtitle: 'Seguimiento corporal',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const BodyTrackingPage())),
-        ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.assignment_outlined,
-          title: 'Mi plan de entrenamiento',
-          subtitle: 'Ver fases y entrenamientos',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const TrainingPlanPage())),
-        ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.flag_circle_outlined,
-          title: 'Mi perfil fitness',
-          subtitle: fitnessProfile?.onboardingCompleted == true
-              ? 'Editar onboarding'
-              : 'Completar onboarding',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const FitnessOnboardingPage(editMode: true),
             ),
-          ),
+            const SizedBox(height: 16),
+            GlowCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Perfil fitness',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    fitnessProfile?.onboardingCompleted == true
+                        ? '${fitnessProfile!.goalLabel} · ${fitnessProfile.focusLabel} · ${fitnessProfile.experienceLabel}'
+                        : 'Aún no completas tu onboarding fitness.',
+                    style: const TextStyle(color: Colors.white70, height: 1.45),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Acceso rápido',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: MediaQuery.of(context).size.width >= 900 ? 3 : 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio:
+                  MediaQuery.of(context).size.width >= 900 ? 1.18 : 1.0,
+              children: [
+                _HomeFeatureTile(
+                  icon: Icons.monitor_weight_outlined,
+                  eyebrow: 'CUERPO',
+                  title: 'Mi cuerpo',
+                  subtitle: 'Seguimiento corporal',
+                                    backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
+onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const BodyTrackingPage(),
+                    ),
+                  ),
+                ),
+                _HomeFeatureTile(
+                  icon: Icons.assignment_outlined,
+                  eyebrow: 'ENTRENAMIENTO',
+                  title: 'Mi plan',
+                  subtitle: 'Ver fases y entrenamientos',
+                                    backgroundAsset: _additionalPhotoAsset('entrenamiento individual.png'),
+onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const TrainingPlanPage(),
+                    ),
+                  ),
+                ),
+                _HomeFeatureTile(
+                  icon: Icons.flag_circle_outlined,
+                  eyebrow: 'FITNESS',
+                  title: 'Perfil fitness',
+                  subtitle: fitnessProfile?.onboardingCompleted == true
+                      ? 'Editar onboarding'
+                      : 'Completar onboarding',
+                                    backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
+onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const FitnessOnboardingPage(editMode: true),
+                    ),
+                  ),
+                ),
+                _HomeFeatureTile(
+                  icon: Icons.insights_outlined,
+                  eyebrow: 'ACTIVIDAD',
+                  title: 'Actividades',
+                  subtitle: 'Resumen e historial',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ActivityPage()),
+                  ),
+                ),
+                _HomeFeatureTile(
+                  icon: Icons.restaurant_menu_outlined,
+                  eyebrow: 'NUTRICIÓN',
+                  title: 'Nutrición',
+                  subtitle: 'Plan diario y restricciones',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NutritionPage()),
+                  ),
+                ),
+                _HomeFeatureTile(
+                  icon: Icons.card_membership,
+                  eyebrow: 'PLAN',
+                  title: 'Mi plan',
+                  subtitle: 'Detalle del plan',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MembershipPage()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _HomeFeatureHero(
+              title: 'Mis reservas',
+              subtitle: 'Gestiona tus clases activas y revisa tus próximos entrenamientos.',
+              imageLabel: 'RESERVAS',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BookingsPage()),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => session.logout(),
+              icon: const Icon(Icons.logout),
+              label: const Text('Cerrar sesión'),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.insights_outlined,
-          title: 'Actividades',
-          subtitle: 'Resumen e historial',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const ActivityPage())),
-        ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.restaurant_menu_outlined,
-          title: 'Nutricion',
-          subtitle: 'Plan diario y restricciones',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const NutritionPage())),
-        ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.card_membership,
-          title: 'Mi plan',
-          subtitle: 'Detalle del plan',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const MembershipPage())),
-        ),
-        const SizedBox(height: 12),
-        QuickActionCard(
-          icon: Icons.event_available,
-          title: 'Mis reservas',
-          subtitle: 'Gestionar clases',
-          onTap: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const BookingsPage())),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton.icon(
-          onPressed: () => session.logout(),
-          icon: const Icon(Icons.logout),
-          label: const Text('Cerrar sesión'),
-        ),
-      ],
+      ),
     );
   }
 }
-
 class MembershipPage extends StatelessWidget {
   const MembershipPage({super.key});
 
@@ -4413,79 +5241,188 @@ class MembershipPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          GlowCard(
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF0E0E0E),
+                  const Color(0xFF111111),
+                  dorianAccent.withValues(alpha: 0.18),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    Chip(label: Text(profile.membershipStatusLabel)),
-                    const Chip(label: Text('Pago seguro sin guardar tarjeta')),
-                  ],
+                Container(
+                  height: 176,
+                  width: double.infinity,
+                                decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
                 ),
-                const SizedBox(height: 14),
-                Text(
-                  profile.activeMembershipName ?? 'Sin plan activo',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                image: _premiumAssetImage(
+                  _additionalPhotoAsset('gente entrenando.png'),
+                  darken: 0.7,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Duración: ${profile.activeMembershipDurationInDays?.toString() ?? '-'} días',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Precio: ${profile.activeMembershipCurrency ?? 'USD'} ${profile.activeMembershipPrice?.toStringAsFixed(2) ?? '-'}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Inicio: ${profile.activeMembershipStartsAtUtc == null ? '-' : formatDate(profile.activeMembershipStartsAtUtc!)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Fin: ${profile.activeMembershipEndsAtUtc == null ? '-' : formatDate(profile.activeMembershipEndsAtUtc!)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  profile.activeMembershipEndsAtUtc == null
-                      ? 'Todavía no tienes un plan activo. Puedes elegir uno y completar el pago de forma segura desde la app o acercarte al counter.'
-                      : 'Cuando tu plan venza, podrás renovarlo desde la app mediante una pasarela segura. Dorian no guardará número de tarjeta ni CVV.',
-                  style: const TextStyle(color: Colors.white70, height: 1.5),
-                ),
-                const SizedBox(height: 18),
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const PlanCatalogPage(),
-                    ),
-                  ),
-                  icon: const Icon(Icons.payments_outlined),
-                  label: Text(
-                    profile.activeMembershipEndsAtUtc == null
-                        ? 'Elegir plan y pagar'
-                        : 'Renovar o cambiar plan',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'También puedes pagar en counter y el personal activará tu plan.',
+              ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 22,
+                        top: 18,
+                        child: _membershipBadge(
+                          profile.activeMembershipEndsAtUtc == null
+                              ? 'MEMBRESÍA REQUERIDA'
+                              : 'PLAN ACTUAL',
                         ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.storefront_outlined),
-                  label: const Text('Pagar en counter'),
+                      Positioned(
+                        right: 18,
+                        top: 18,
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.stars_rounded,
+                            color: dorianAccentSoft,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 22,
+                        right: 22,
+                        bottom: 22,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile.activeMembershipName ?? 'Activa tu plan',
+                              style: Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.05,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              profile.activeMembershipEndsAtUtc == null
+                                  ? 'Tu transformación comienza aquí. Accede a reservas, entrenamientos y experiencias del club activando tu membresía.'
+                                  : 'Gestiona tu renovación y mantén activo tu acceso a reservas, entrenamientos y beneficios Dorian.',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                height: 1.45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _membershipTag(profile.membershipStatusLabel),
+                          _membershipTag('Pago seguro sin guardar tarjeta'),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _membershipMetric(
+                              'Precio',
+                              '${profile.activeMembershipCurrency ?? 'USD'} ${profile.activeMembershipPrice?.toStringAsFixed(2) ?? '-'}',
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _membershipMetric(
+                              'Duración',
+                              '${profile.activeMembershipDurationInDays?.toString() ?? '-'} días',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _membershipMetric(
+                              'Inicio',
+                              profile.activeMembershipStartsAtUtc == null
+                                  ? '-'
+                                  : formatDate(
+                                      profile.activeMembershipStartsAtUtc!,
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _membershipMetric(
+                              'Fin',
+                              profile.activeMembershipEndsAtUtc == null
+                                  ? '-'
+                                  : formatDate(profile.activeMembershipEndsAtUtc!),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        profile.activeMembershipEndsAtUtc == null
+                            ? 'Puedes elegir un plan y completar el pago de forma segura desde la app o acercarte al counter.'
+                            : 'Cuando tu plan venza, podrás renovarlo desde la app mediante una pasarela segura. Dorian no guardará número de tarjeta ni CVV.',
+                        style: const TextStyle(color: Colors.white70, height: 1.5),
+                      ),
+                      const SizedBox(height: 18),
+                      ElevatedButton.icon(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const PlanCatalogPage(),
+                          ),
+                        ),
+                        icon: const Icon(Icons.payments_outlined),
+                        label: Text(
+                          profile.activeMembershipEndsAtUtc == null
+                              ? 'Elegir plan y pagar'
+                              : 'Renovar o cambiar plan',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'También puedes pagar en counter y el personal activará tu plan.',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.storefront_outlined),
+                        label: const Text('Pagar en counter'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -4535,49 +5472,53 @@ class PlanCatalogPage extends StatelessWidget {
             );
           }
 
-          return ListView.separated(
+          return ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-            itemCount: plans.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 14),
-            itemBuilder: (context, index) {
-              final plan = plans[index];
-              return GlowCard(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(22),
+                                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  image: _premiumAssetImage(
+                    _additionalPhotoAsset('pesas - fuerza - disciplina.png'),
+                    darken: 0.72,
+                  ),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _membershipBadge('SELECCIONA TU PLAN'),
+                    const SizedBox(height: 14),
                     Text(
-                      plan.name,
+                      'Activa tu acceso y entrena con el estándar Dorian.',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '${plan.currency} ${plan.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: dorianAccentSoft,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
+                        height: 1.1,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '${plan.durationInDays} días de acceso al ecosistema Dorian.',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => SecureCheckoutPreviewPage(plan: plan),
-                        ),
-                      ),
-                      child: const Text('Continuar al pago seguro'),
+                    const Text(
+                      'Elige el plan que mejor encaje con tu ritmo y continúa al pago seguro sin guardar datos de tarjeta dentro de la app.',
+                      style: TextStyle(color: Colors.white70, height: 1.45),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 16),
+              for (var index = 0; index < plans.length; index++) ...[
+                _PlanShowcaseCard(
+                  plan: plans[index],
+                  highlighted: _isRecommendedPlan(index, plans[index]),
+                  onContinue: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SecureCheckoutPreviewPage(plan: plans[index]),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ],
           );
         },
       ),
@@ -4597,14 +5538,25 @@ class SecureCheckoutPreviewPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         children: [
-          GlowCard(
+          Container(
+            padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              image: _premiumAssetImage(
+                _additionalPhotoAsset('entrenamiento individual.png'),
+                darken: 0.72,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _membershipBadge('PAGO SEGURO'),
+                const SizedBox(height: 14),
                 Text(
                   plan.name,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -4612,14 +5564,14 @@ class SecureCheckoutPreviewPage extends StatelessWidget {
                   '${plan.currency} ${plan.price.toStringAsFixed(2)}',
                   style: const TextStyle(
                     color: dorianAccentSoft,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
-                  'Duración: ${plan.durationInDays} días',
-                  style: const TextStyle(color: Colors.white70),
+                  '${plan.durationInDays} días de acceso a clases, reservas y experiencia Dorian.',
+                  style: const TextStyle(color: Colors.white70, height: 1.45),
                 ),
               ],
             ),
@@ -4631,17 +5583,25 @@ class SecureCheckoutPreviewPage extends StatelessWidget {
               children: [
                 Text(
                   'Cómo funcionará el pago',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+                SizedBox(height: 14),
+                _CheckoutInfoRow(
+                  icon: Icons.credit_card_outlined,
+                  text:
+                      'Abrirás una pasarela externa y segura para ingresar tarjeta de crédito o débito.',
                 ),
                 SizedBox(height: 12),
-                Text(
-                  'Cuando integremos la pasarela, aquí abrirás un checkout seguro para ingresar tarjeta de crédito o débito. Dorian no guardará número completo, fecha ni CVV.',
-                  style: TextStyle(color: Colors.white70, height: 1.5),
+                _CheckoutInfoRow(
+                  icon: Icons.shield_outlined,
+                  text:
+                      'Dorian no guardará número completo, fecha de expiración ni CVV dentro de la app.',
                 ),
                 SizedBox(height: 12),
-                Text(
-                  'El sistema solo recibirá la confirmación del pago y activará el plan automáticamente.',
-                  style: TextStyle(color: Colors.white70, height: 1.5),
+                _CheckoutInfoRow(
+                  icon: Icons.verified_outlined,
+                  text:
+                      'El sistema solo recibirá la confirmación del pago para activar tu plan automáticamente.',
                 ),
               ],
             ),
@@ -4653,7 +5613,7 @@ class SecureCheckoutPreviewPage extends StatelessWidget {
               children: [
                 const Text(
                   'Salida recomendada',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 const Text(
@@ -4693,6 +5653,283 @@ class SecureCheckoutPreviewPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+bool _isRecommendedPlan(int index, GymPlan plan) {
+  final lowerName = plan.name.toLowerCase();
+  return index == 1 ||
+      lowerName.contains('elite') ||
+      lowerName.contains('premium');
+}
+
+String _priceFrequencyLabel(GymPlan plan) {
+  if (plan.durationInDays <= 31) return 'POR MES';
+  if (plan.durationInDays <= 100) return 'POR TRIMESTRE';
+  return 'PLAN';
+}
+
+List<String> _planHighlights(GymPlan plan) {
+  if (plan.durationInDays <= 31) {
+    return const [
+      'Acceso total al club',
+      'Reserva de clases desde la app',
+      'Seguimiento de tu progreso',
+    ];
+  }
+  if (plan.durationInDays <= 100) {
+    return const [
+      'Ahorro frente al pago mensual',
+      'Acceso continuo por 90 días',
+      'Reservas y beneficios del club',
+    ];
+  }
+  return const [
+    'Beneficios premium del ecosistema',
+    'Entrenamiento y reservas integradas',
+    'Mejor valor para entrenar constante',
+  ];
+}
+
+Widget _membershipBadge(String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: dorianAccent.withValues(alpha: 0.8)),
+      color: Colors.black.withValues(alpha: 0.16),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: dorianAccentSoft,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.2,
+      ),
+    ),
+  );
+}
+
+Widget _membershipTag(String label) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(999),
+      color: Colors.white.withValues(alpha: 0.06),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: Colors.white70,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
+
+Widget _membershipMetric(String label, String value) {
+  return Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      color: Colors.white.withValues(alpha: 0.04),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PlanShowcaseCard extends StatelessWidget {
+  const _PlanShowcaseCard({
+    required this.plan,
+    required this.highlighted,
+    required this.onContinue,
+  });
+
+  final GymPlan plan;
+  final bool highlighted;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    final highlights = _planHighlights(plan);
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        color: highlighted ? const Color(0xFF191512) : const Color(0xFF111111),
+        border: Border.all(
+          color: highlighted
+              ? dorianAccent.withValues(alpha: 0.85)
+              : Colors.white.withValues(alpha: 0.08),
+          width: highlighted ? 1.6 : 1,
+        ),
+        image: _premiumAssetImage(
+          _planVisualAsset(plan),
+          darken: highlighted ? 0.72 : 0.8,
+        ),
+        boxShadow: highlighted
+            ? [
+                BoxShadow(
+                  color: dorianAccent.withValues(alpha: 0.16),
+                  blurRadius: 28,
+                  offset: const Offset(0, 12),
+                ),
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  plan.name.toUpperCase(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '\$${plan.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      color: dorianAccentSoft,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    _priceFrequencyLabel(plan),
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (highlighted) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: dorianAccent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'RECOMENDADO',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          ...highlights.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: dorianAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(color: Colors.white70, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: onContinue,
+            child: const Text('Continuar al pago seguro'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckoutInfoRow extends StatelessWidget {
+  const _CheckoutInfoRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: dorianAccent.withValues(alpha: 0.12),
+          ),
+          child: Icon(icon, size: 18, color: dorianAccentSoft),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(color: Colors.white70, height: 1.45),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -5449,7 +6686,7 @@ class _ExercisesHubPageState extends State<ExercisesHubPage> {
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+          constraints: const BoxConstraints(maxWidth: 560),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
             children: [
@@ -5458,88 +6695,98 @@ class _ExercisesHubPageState extends State<ExercisesHubPage> {
                 onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search),
-                  hintText: 'Buscar zona o ejercicio',
+                  hintText: 'Buscar grupo muscular o ejercicio',
                 ),
               ),
               const SizedBox(height: 16),
-              GlowCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('Hombre'),
-                                selected: !showFemaleBody,
-                                selectedColor: dorianAccent.withValues(
-                                  alpha: 0.22,
-                                ),
-                                onSelected: (_) =>
-                                    setState(() => showFemaleBody = false),
-                              ),
-                              ChoiceChip(
-                                label: const Text('Mujer'),
-                                selected: showFemaleBody,
-                                selectedColor: dorianAccent.withValues(
-                                  alpha: 0.22,
-                                ),
-                                onSelected: (_) =>
-                                    setState(() => showFemaleBody = true),
-                              ),
-                            ],
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF090909),
+                      const Color(0xFF141414),
+                      dorianAccent.withValues(alpha: 0.18),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isFrontView ? 'Vista frontal' : 'Vista posterior',
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            isFrontView ? 'Vista frontal' : 'Vista posterior',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                          TextButton.icon(
+                            onPressed: () =>
+                                setState(() => isFrontView = !isFrontView),
+                            icon: const Icon(Icons.sync_alt_rounded),
+                            label: const Text('Girar'),
                           ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () =>
-                              setState(() => isFrontView = !isFrontView),
-                          icon: const Icon(Icons.sync_alt_rounded),
-                          label: const Text('Girar'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      isFrontView
-                          ? 'Elige una zona frontal para ver ejercicios sugeridos.'
-                          : 'Gira la figura y revisa la cadena posterior.',
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 18),
-                    Center(
-                      child: _ExerciseFigure(
-                        isFrontView: isFrontView,
-                        showFemaleBody: showFemaleBody,
-                        activeLabel: visibleRegions.isEmpty
-                            ? null
-                            : visibleRegions.first.name,
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        isFrontView
+                            ? 'Explora la parte frontal y abre ejercicios sugeridos por zona.'
+                            : 'Revisa la cadena posterior y entra a los ejercicios de cada region.',
+                        style: const TextStyle(color: Colors.white70, height: 1.45),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Hombre'),
+                            selected: !showFemaleBody,
+                            selectedColor: dorianAccent.withValues(alpha: 0.22),
+                            onSelected: (_) =>
+                                setState(() => showFemaleBody = false),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Mujer'),
+                            selected: showFemaleBody,
+                            selectedColor: dorianAccent.withValues(alpha: 0.22),
+                            onSelected: (_) =>
+                                setState(() => showFemaleBody = true),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Center(
+                        child: _ExerciseFigure(
+                          isFrontView: isFrontView,
+                          showFemaleBody: showFemaleBody,
+                          activeLabel: visibleRegions.isEmpty
+                              ? null
+                              : visibleRegions.first.name,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 18),
+              _sectionEyebrow(query.isEmpty ? 'REGIONES' : 'RESULTADOS'),
+              const SizedBox(height: 8),
               Text(
-                query.isEmpty ? 'Zonas del cuerpo' : 'Resultados',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                query.isEmpty
+                    ? 'Elige una zona para continuar.'
+                    : 'Coincidencias para tu busqueda.',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 12),
               if (visibleRegions.isEmpty)
@@ -5549,41 +6796,46 @@ class _ExercisesHubPageState extends State<ExercisesHubPage> {
                     style: TextStyle(color: Colors.white70),
                   ),
                 )
-              else
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: visibleRegions
-                      .map(
-                        (region) => ActionChip(
-                          backgroundColor: dorianAccentSoft,
-                          avatar: const Icon(
-                            Icons.fitness_center,
-                            size: 18,
-                            color: Colors.black,
-                          ),
-                          label: Text(
-                            region.name,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w700,
+              else ...[
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: visibleRegions
+                        .map(
+                          (region) => Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: ActionChip(
+                              backgroundColor: dorianAccentSoft,
+                              avatar: const Icon(
+                                Icons.fitness_center,
+                                size: 18,
+                                color: Colors.black,
+                              ),
+                              label: Text(
+                                region.name,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              onPressed: () => _openRegion(region),
                             ),
                           ),
-                          onPressed: () => _openRegion(region),
-                        ),
-                      )
-                      .toList(),
-                ),
-              const SizedBox(height: 18),
-              ...visibleRegions.map(
-                (region) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _ExerciseRegionCard(
-                    region: region,
-                    onTap: () => _openRegion(region),
+                        )
+                        .toList(),
                   ),
                 ),
-              ),
+                const SizedBox(height: 14),
+                ...visibleRegions.map(
+                  (region) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ExerciseRegionCard(
+                      region: region,
+                      onTap: () => _openRegion(region),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -5611,8 +6863,6 @@ class _ExerciseFigure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = isFrontView ? frontBodyLabelAnchors : backBodyLabelAnchors;
-
     return Container(
       width: 390,
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
@@ -5625,29 +6875,22 @@ class _ExerciseFigure extends StatelessWidget {
         children: [
           AspectRatio(
             aspectRatio: 0.77,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  children: [
-                    Positioned.fill(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.asset(
-                          showFemaleBody
-                              ? (isFrontView
-                                    ? 'assets/exercises/front-m-body.png'
-                                    : 'assets/exercises/back-m-body.png')
-                              : (isFrontView
-                                    ? 'assets/exercises/front-body.png'
-                                    : 'assets/exercises/back-body.png'),
-                          fit: BoxFit.contain,
-                          alignment: Alignment.center,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.16),
+                child: Image.asset(
+                  showFemaleBody
+                      ? (isFrontView
+                            ? 'assets/exercises/front-m-body.png'
+                            : 'assets/exercises/back-m-body.png')
+                      : (isFrontView
+                            ? 'assets/exercises/front-body.png'
+                            : 'assets/exercises/back-body.png'),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -5665,22 +6908,6 @@ class _ExerciseFigure extends StatelessWidget {
   }
 }
 
-class _ExerciseBodyLabelAnchor {
-  const _ExerciseBodyLabelAnchor({
-    required this.regionName,
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.height,
-  });
-
-  final String regionName;
-  final double left;
-  final double top;
-  final double width;
-  final double height;
-}
-
 class _ExerciseRegionCard extends StatelessWidget {
   const _ExerciseRegionCard({required this.region, required this.onTap});
 
@@ -5690,9 +6917,23 @@ class _ExerciseRegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(26),
       onTap: onTap,
-      child: GlowCard(
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF0C0C0C),
+              const Color(0xFF161616),
+              dorianAccent.withValues(alpha: 0.15),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Row(
           children: [
             Container(
@@ -5704,7 +6945,7 @@ class _ExerciseRegionCard extends StatelessWidget {
               ),
               child: const Icon(
                 Icons.accessibility_new_rounded,
-                color: dorianAccent,
+                color: dorianAccentSoft,
               ),
             ),
             const SizedBox(width: 14),
@@ -5715,7 +6956,7 @@ class _ExerciseRegionCard extends StatelessWidget {
                   Text(
                     region.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -5743,65 +6984,118 @@ class ExerciseRegionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return PremiumScaffold(
       title: region.name,
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-        itemCount: region.exercises.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final exercise = region.exercises[index];
-          return InkWell(
-            borderRadius: BorderRadius.circular(24),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ExerciseDetailPage(
-                    regionName: region.name,
-                    exercise: exercise,
-                  ),
-                ),
-              );
-            },
-            child: GlowCard(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ExerciseMediaThumb(exercise: exercise),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          exercise.name,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          exercise.description,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            height: 1.45,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _ExerciseInfoChip(text: exercise.focus),
-                            _ExerciseInfoChip(text: exercise.equipment),
-                            _ExerciseInfoChip(text: exercise.level),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF0A0A0A),
+                  const Color(0xFF141414),
+                  dorianAccent.withValues(alpha: 0.16),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-          );
-        },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _homeTopLabel('EXPLORAR'),
+                const SizedBox(height: 12),
+                Text(
+                  region.name,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Selecciona un ejercicio para ver la ejecucion guiada y el enfoque muscular.',
+                  style: const TextStyle(color: Colors.white70, height: 1.45),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...region.exercises.map(
+            (exercise) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(26),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ExerciseDetailPage(
+                        regionName: region.name,
+                        exercise: exercise,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF0C0C0C),
+                        const Color(0xFF151515),
+                        dorianAccent.withValues(alpha: 0.14),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ExerciseMediaThumb(exercise: exercise),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exercise.name,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              exercise.description,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                height: 1.45,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _ExerciseInfoChip(text: exercise.focus),
+                                _ExerciseInfoChip(text: exercise.equipment),
+                                _ExerciseInfoChip(text: exercise.level),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -5824,19 +7118,28 @@ class ExerciseDetailPage extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         children: [
-          GlowCard(
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF090909),
+                  const Color(0xFF151515),
+                  dorianAccent.withValues(alpha: 0.16),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _ExerciseHeroMedia(exercise: exercise),
                 const SizedBox(height: 16),
-                Text(
-                  'Zona: $regionName',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                _homeTopLabel('ZONA: ${regionName.toUpperCase()}'),
+                const SizedBox(height: 12),
                 Text(
                   exercise.description,
                   style: const TextStyle(color: Colors.white70, height: 1.5),
@@ -5861,9 +7164,9 @@ class ExerciseDetailPage extends StatelessWidget {
               children: [
                 Text(
                   'Como realizarlo',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 ...exercise.steps.asMap().entries.map(
@@ -5945,8 +7248,8 @@ class _ExerciseMediaThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 84,
-      height: 84,
+      width: 92,
+      height: 92,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         color: Colors.white,
@@ -5979,7 +7282,7 @@ class _ExerciseHeroMedia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 220,
+      height: 240,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         color: Colors.white,
@@ -6030,13 +7333,13 @@ class _ExerciseHeroMedia extends StatelessWidget {
 class DemoExerciseRegion {
   const DemoExerciseRegion({
     required this.name,
+    required this.remoteBodyPart,
     required this.exercises,
-    this.remoteBodyPart,
   });
 
   final String name;
+  final String remoteBodyPart;
   final List<DemoExercise> exercises;
-  final String? remoteBodyPart;
 }
 
 class DemoExercise {
@@ -6059,145 +7362,6 @@ class DemoExercise {
   final String? gifUrl;
 }
 
-const frontBodyLabelAnchors = <_ExerciseBodyLabelAnchor>[
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Hombros',
-    left: 0.03,
-    top: 0.19,
-    width: 0.14,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Biceps',
-    left: 0.05,
-    top: 0.33,
-    width: 0.11,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Antebrazo',
-    left: 0.03,
-    top: 0.47,
-    width: 0.16,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Abductores',
-    left: 0.02,
-    top: 0.63,
-    width: 0.17,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Cuadriceps',
-    left: 0.03,
-    top: 0.76,
-    width: 0.16,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Tibiales',
-    left: 0.02,
-    top: 0.90,
-    width: 0.13,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Pectorales',
-    left: 0.79,
-    top: 0.20,
-    width: 0.18,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Abdomen',
-    left: 0.76,
-    top: 0.43,
-    width: 0.15,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Oblicuos',
-    left: 0.80,
-    top: 0.53,
-    width: 0.14,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Aductores',
-    left: 0.82,
-    top: 0.67,
-    width: 0.15,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Pantorrillas',
-    left: 0.80,
-    top: 0.89,
-    width: 0.16,
-    height: 0.045,
-  ),
-];
-
-const backBodyLabelAnchors = <_ExerciseBodyLabelAnchor>[
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Triceps',
-    left: 0.05,
-    top: 0.29,
-    width: 0.13,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Lumbares',
-    left: 0.03,
-    top: 0.47,
-    width: 0.16,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Isquiotibiales',
-    left: 0.02,
-    top: 0.69,
-    width: 0.21,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Pantorrillas',
-    left: 0.03,
-    top: 0.90,
-    width: 0.17,
-    height: 0.045,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Trapecio',
-    left: 0.80,
-    top: 0.18,
-    width: 0.14,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Dorsales',
-    left: 0.80,
-    top: 0.38,
-    width: 0.15,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Gluteos',
-    left: 0.81,
-    top: 0.60,
-    width: 0.14,
-    height: 0.04,
-  ),
-  _ExerciseBodyLabelAnchor(
-    regionName: 'Cardio',
-    left: 0.83,
-    top: 0.90,
-    width: 0.12,
-    height: 0.04,
-  ),
-];
-
 const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Hombros',
@@ -6207,12 +7371,11 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
         name: 'Elevacion lateral',
         focus: 'Deltoides',
         equipment: 'Mancuernas',
-        level: 'Intermedio',
-        description:
-            'Ideal para dar amplitud al hombro y mejorar la linea superior.',
+        level: 'Principiante',
+        description: 'Ideal para desarrollar amplitud y control en los hombros.',
         steps: [
-          'Sujeta una mancuerna en cada mano a los costados.',
-          'Eleva los brazos hacia los lados hasta la altura del hombro.',
+          'Sujeta las mancuernas a cada lado del cuerpo.',
+          'Eleva los brazos hasta la altura de los hombros.',
           'Desciende con control sin balancear el torso.',
         ],
       ),
@@ -6221,43 +7384,11 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
         focus: 'Hombro frontal',
         equipment: 'Mancuernas',
         level: 'Intermedio',
-        description:
-            'Movimiento compuesto para fuerza y estabilidad del hombro.',
+        description: 'Movimiento base para empuje vertical y estabilidad.',
         steps: [
-          'Siéntate con la espalda estable y las mancuernas a la altura del hombro.',
-          'Empuja hacia arriba hasta extender los brazos.',
-          'Vuelve al punto inicial controlando el descenso.',
-        ],
-      ),
-    ],
-  ),
-  DemoExerciseRegion(
-    name: 'Pectorales',
-    remoteBodyPart: 'chest',
-    exercises: [
-      DemoExercise(
-        name: 'Press de pecho',
-        focus: 'Pecho medio',
-        equipment: 'Barra',
-        level: 'Intermedio',
-        description: 'Basico para fuerza y desarrollo del tren superior.',
-        steps: [
-          'Alinea ojos y barra sobre el banco.',
-          'Baja al pecho manteniendo control.',
-          'Empuja en linea recta hasta extender.',
-        ],
-      ),
-      DemoExercise(
-        name: 'Aperturas planas',
-        focus: 'Pecho',
-        equipment: 'Mancuernas',
-        level: 'Principiante',
-        description:
-            'Muy util para sentir estiramiento y contraccion del pectoral.',
-        steps: [
-          'Acostado en banco plano, abre los brazos con ligera flexion de codo.',
-          'Mantiene el pecho elevado durante el recorrido.',
-          'Cierra abrazando hacia el centro.',
+          'Siéntate con la espalda apoyada.',
+          'Empuja las mancuernas por encima de la cabeza.',
+          'Baja lento hasta la posición inicial.',
         ],
       ),
     ],
@@ -6268,14 +7399,14 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
     exercises: [
       DemoExercise(
         name: 'Curl alterno',
-        focus: 'Biceps',
+        focus: 'Braquial',
         equipment: 'Mancuernas',
         level: 'Principiante',
-        description: 'Ejercicio base para flexion de codo y control de brazo.',
+        description: 'Ejercicio básico para fortalecer la parte frontal del brazo.',
         steps: [
-          'Mantiene los codos cerca del torso.',
-          'Flexiona un brazo a la vez hasta el hombro.',
-          'Desciende lentamente sin impulso.',
+          'Mantén los codos pegados al torso.',
+          'Flexiona un brazo llevando la mancuerna al hombro.',
+          'Desciende controlado y alterna con el otro brazo.',
         ],
       ),
     ],
@@ -6287,33 +7418,31 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
       DemoExercise(
         name: 'Curl de muneca',
         focus: 'Flexores',
-        equipment: 'Barra',
+        equipment: 'Barra corta',
         level: 'Principiante',
-        description:
-            'Trabajo puntual para mejorar agarre y resistencia del antebrazo.',
+        description: 'Refuerza agarre y control en el antebrazo.',
         steps: [
-          'Apoya antebrazos sobre un banco con las munecas al borde.',
-          'Flexiona las munecas elevando la barra.',
-          'Desciende lentamente manteniendo el control.',
+          'Apoya los antebrazos sobre un banco.',
+          'Deja rodar la barra hacia los dedos.',
+          'Flexiona la muñeca y sube la barra de nuevo.',
         ],
       ),
     ],
   ),
   DemoExerciseRegion(
-    name: 'Abductores',
-    remoteBodyPart: 'upper legs',
+    name: 'Pectorales',
+    remoteBodyPart: 'chest',
     exercises: [
       DemoExercise(
-        name: 'Abduccion de cadera en maquina',
-        focus: 'Cadera',
-        equipment: 'Maquina',
+        name: 'Press de pecho',
+        focus: 'Pecho',
+        equipment: 'Mancuernas',
         level: 'Principiante',
-        description:
-            'Activa la parte externa de la cadera y ayuda a la estabilidad.',
+        description: 'Patrón esencial para fuerza y volumen en pectoral.',
         steps: [
-          'Siéntate con la espalda apoyada y las piernas dentro de las almohadillas.',
-          'Abre las piernas contra la resistencia sin inclinar el torso.',
-          'Regresa lento hasta la posición inicial.',
+          'Acuéstate en un banco con mancuernas arriba del pecho.',
+          'Baja controlando hasta abrir el pecho.',
+          'Empuja arriba sin bloquear los codos.',
         ],
       ),
     ],
@@ -6323,15 +7452,15 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
     remoteBodyPart: 'waist',
     exercises: [
       DemoExercise(
-        name: 'Crunch controlado',
-        focus: 'Core',
-        equipment: 'Peso corporal',
+        name: 'Crunch en maquina',
+        focus: 'Recto abdominal',
+        equipment: 'Máquina',
         level: 'Principiante',
-        description: 'Activa la zona media sin depender del impulso.',
+        description: 'Permite concentrar el trabajo en la zona media.',
         steps: [
-          'Acuestate con rodillas flexionadas.',
-          'Eleva hombros del suelo contrayendo el abdomen.',
-          'Regresa sin relajar por completo.',
+          'Apoya espalda y hombros en la máquina.',
+          'Contrae el abdomen llevando el torso hacia adelante.',
+          'Regresa lento manteniendo tensión.',
         ],
       ),
     ],
@@ -6341,16 +7470,33 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
     remoteBodyPart: 'waist',
     exercises: [
       DemoExercise(
-        name: 'Wood chop en polea',
-        focus: 'Abdomen lateral',
+        name: 'Rotaciones con polea',
+        focus: 'Abdominal lateral',
         equipment: 'Polea',
         level: 'Intermedio',
-        description:
-            'Movimiento rotacional para estabilidad y fuerza del core.',
+        description: 'Excelente para estabilidad rotacional y core.',
         steps: [
-          'Toma la polea en diagonal alta con ambas manos.',
-          'Rota el torso llevando el agarre hacia la cadera opuesta.',
-          'Vuelve controlando la rotacion.',
+          'Colócate de lado frente a la polea.',
+          'Tira del agarre cruzando el cuerpo.',
+          'Vuelve con control sin perder la postura.',
+        ],
+      ),
+    ],
+  ),
+  DemoExerciseRegion(
+    name: 'Abductores',
+    remoteBodyPart: 'upper legs',
+    exercises: [
+      DemoExercise(
+        name: 'Abduccion en maquina',
+        focus: 'Cadera',
+        equipment: 'Máquina',
+        level: 'Principiante',
+        description: 'Refuerza la parte externa de la cadera y glúteo medio.',
+        steps: [
+          'Siéntate con la espalda firme.',
+          'Empuja las piernas hacia afuera.',
+          'Regresa con control sin golpear el peso.',
         ],
       ),
     ],
@@ -6360,15 +7506,15 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
     remoteBodyPart: 'upper legs',
     exercises: [
       DemoExercise(
-        name: 'Aductor en maquina',
+        name: 'Aduccion en maquina',
         focus: 'Muslo interno',
-        equipment: 'Maquina',
+        equipment: 'Máquina',
         level: 'Principiante',
-        description: 'Aisla la cara interna del muslo con recorrido sencillo.',
+        description: 'Trabaja la cara interna del muslo con buena estabilidad.',
         steps: [
-          'Ajusta las almohadillas y el respaldo.',
-          'Cierra las piernas contra la resistencia.',
-          'Regresa lento sin perder control.',
+          'Ajusta la apertura inicial de la máquina.',
+          'Cierra las piernas apretando el muslo interno.',
+          'Abre de nuevo con control.',
         ],
       ),
     ],
@@ -6378,16 +7524,15 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
     remoteBodyPart: 'upper legs',
     exercises: [
       DemoExercise(
-        name: 'Extension de piernas',
-        focus: 'Muslo frontal',
-        equipment: 'Maquina',
+        name: 'Extension de pierna',
+        focus: 'Muslo anterior',
+        equipment: 'Máquina',
         level: 'Principiante',
-        description:
-            'Aisla el muslo frontal con un recorrido facil de controlar.',
+        description: 'Aislamiento directo para el frente del muslo.',
         steps: [
-          'Ajusta el respaldo y el rodillo sobre los tobillos.',
-          'Extiende hasta arriba sin bloquear fuerte la rodilla.',
-          'Baja lentamente hasta el inicio.',
+          'Ajusta el rodillo sobre tus tobillos.',
+          'Extiende las piernas hasta arriba.',
+          'Baja lentamente sin soltar el control.',
         ],
       ),
     ],
@@ -6397,12 +7542,11 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
     remoteBodyPart: 'lower legs',
     exercises: [
       DemoExercise(
-        name: 'Elevacion de punta',
-        focus: 'Pierna anterior',
+        name: 'Elevacion de puntas',
+        focus: 'Pierna',
         equipment: 'Peso corporal',
         level: 'Principiante',
-        description:
-            'Trabajo útil para fortalecer la parte frontal de la pierna.',
+        description: 'Útil para fortalecer la parte frontal de la pierna.',
         steps: [
           'Apoya los talones firmes en el suelo.',
           'Eleva la punta de los pies hacia arriba.',
@@ -6418,12 +7562,12 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
       DemoExercise(
         name: 'Elevacion de talones',
         focus: 'Gemelos',
-        equipment: 'Maquina',
+        equipment: 'Máquina',
         level: 'Principiante',
-        description: 'Basico para fortalecer la parte baja de la pierna.',
+        description: 'Básico para fortalecer la parte baja de la pierna.',
         steps: [
           'Apoya los pies sobre la plataforma.',
-          'Eleva los talones lo maximo posible.',
+          'Eleva los talones lo máximo posible.',
           'Desciende lento buscando estiramiento.',
         ],
       ),
@@ -6507,8 +7651,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
         focus: 'Zona lumbar',
         equipment: 'Banco romano',
         level: 'Intermedio',
-        description:
-            'Fortalece la parte baja de la espalda y la cadena posterior.',
+        description: 'Fortalece la parte baja de la espalda y la cadena posterior.',
         steps: [
           'Alinea la cadera con el soporte del banco.',
           'Desciende con control manteniendo la espalda neutra.',
@@ -6542,7 +7685,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
       DemoExercise(
         name: 'Curl femoral acostado',
         focus: 'Parte posterior del muslo',
-        equipment: 'Maquina',
+        equipment: 'Máquina',
         level: 'Principiante',
         description: 'Muy util para aislar flexores de rodilla.',
         steps: [
@@ -6560,7 +7703,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
       DemoExercise(
         name: 'Elevacion de talones',
         focus: 'Pantorrilla',
-        equipment: 'Maquina',
+        equipment: 'Máquina',
         level: 'Principiante',
         description: 'Basico para fortalecer la parte baja de la pierna.',
         steps: [
@@ -6580,8 +7723,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
         focus: 'Acondicionamiento',
         equipment: 'Caminadora',
         level: 'Principiante',
-        description:
-            'Buena opcion para mejorar resistencia sin impacto excesivo.',
+        description: 'Buena opcion para mejorar resistencia sin impacto excesivo.',
         steps: [
           'Ajusta una inclinacion moderada.',
           'Camina con postura erguida y braceo natural.',
@@ -6603,7 +7745,6 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
     ],
   ),
 ];
-
 class _ActivitySummaryTab extends StatelessWidget {
   const _ActivitySummaryTab({required this.bundle, required this.onAdd});
 
@@ -9362,3 +10503,11 @@ class QuickActionCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
