@@ -72,8 +72,14 @@ using (var scope = app.Services.CreateScope())
         await dbContext.Database.EnsureCreatedAsync();
     }
 
+    var forceSeedDemoData = string.Equals(
+        builder.Configuration["SEED_DEMO_DATA"],
+        "true",
+        StringComparison.OrdinalIgnoreCase);
+
     var shouldSeedDemoData = !app.Environment.IsEnvironment("Testing")
-        && (postgresConnectionString.Contains("Host=localhost", StringComparison.OrdinalIgnoreCase)
+        && (forceSeedDemoData
+            || postgresConnectionString.Contains("Host=localhost", StringComparison.OrdinalIgnoreCase)
             || postgresConnectionString.Contains("Host=127.0.0.1", StringComparison.OrdinalIgnoreCase)
             || postgresConnectionString.Contains("Server=localhost", StringComparison.OrdinalIgnoreCase));
 

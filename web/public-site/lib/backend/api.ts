@@ -1,7 +1,7 @@
 import "server-only";
 import type { AuthResponse, Branch, ClassSession, GroupClass, Membership, Promotion } from "@/lib/types";
 
-const apiUrl = process.env.BACKEND_API_URL ?? "http://localhost:5000";
+const apiUrl = (process.env.BACKEND_API_URL ?? "http://localhost:5000").trim();
 const serviceEmail = process.env.BACKEND_SERVICE_EMAIL ?? "superadmin@dorian.test";
 const servicePassword = process.env.BACKEND_SERVICE_PASSWORD ?? "Pass1234!";
 

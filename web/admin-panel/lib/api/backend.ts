@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, applyAuthCookies, clearAuthCookies } from "@/lib/auth/cookies";
 import type { ApiErrorPayload, AuthResponse } from "@/lib/types";
 
-const backendBaseUrl = process.env.BACKEND_API_URL ?? "http://localhost:5000";
+const backendBaseUrl = (process.env.BACKEND_API_URL ?? "http://localhost:5000").trim();
 
 export function getBackendUrl(path: string, search = "") {
   return `${backendBaseUrl}${path}${search}`;
