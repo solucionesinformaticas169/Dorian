@@ -226,7 +226,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                             Address = "Av. Abelardo J Andrade y Reinaldo Chico Penaherrera",
                             City = "Cuenca",
                             Code = "CEBOLLAR",
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 847, DateTimeKind.Unspecified).AddTicks(8219), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 330, DateTimeKind.Unspecified).AddTicks(5756), new TimeSpan(0, 0, 0, 0, 0)),
                             IsActive = true,
                             Latitude = -2.8852267m,
                             Longitude = -79.0142288m,
@@ -241,7 +241,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                             Address = "Av. Gonzales Suarez y Jijon de Caamano",
                             City = "Cuenca",
                             Code = "GONSUAREZ",
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 847, DateTimeKind.Unspecified).AddTicks(8235), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 330, DateTimeKind.Unspecified).AddTicks(5774), new TimeSpan(0, 0, 0, 0, 0)),
                             IsActive = true,
                             Latitude = -2.8996747m,
                             Longitude = -78.9895041m,
@@ -256,7 +256,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                             Address = "Octavio Chacon Moscoso y Cornelio Vintimilla",
                             City = "Cuenca",
                             Code = "PARQUEIND",
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 847, DateTimeKind.Unspecified).AddTicks(8240), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 330, DateTimeKind.Unspecified).AddTicks(5777), new TimeSpan(0, 0, 0, 0, 0)),
                             IsActive = true,
                             Latitude = -2.8777373m,
                             Longitude = -78.9793991m,
@@ -271,7 +271,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                             Address = "Av. Loja y Rodrigo de Triana",
                             City = "Cuenca",
                             Code = "ELTIEMPO",
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 847, DateTimeKind.Unspecified).AddTicks(8243), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 330, DateTimeKind.Unspecified).AddTicks(5779), new TimeSpan(0, 0, 0, 0, 0)),
                             IsActive = true,
                             MapUrl = "https://www.google.com/maps/search/?api=1&query=Av.%20Loja%20y%20Rodrigo%20de%20Triana%2C%20Cuenca%2C%20Ecuador",
                             Name = "El Tiempo",
@@ -284,7 +284,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                             Address = "Calle Simon Bolivar",
                             City = "Azogues",
                             Code = "AZOGUES",
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 847, DateTimeKind.Unspecified).AddTicks(8244), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 330, DateTimeKind.Unspecified).AddTicks(5781), new TimeSpan(0, 0, 0, 0, 0)),
                             IsActive = true,
                             Latitude = -2.7403717m,
                             Longitude = -78.8459882m,
@@ -669,6 +669,11 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<string>("PriorityMuscleGroupsSerialized")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
                     b.Property<decimal>("TargetWeightKg")
                         .HasPrecision(6, 2)
                         .HasColumnType("numeric(6,2)");
@@ -786,35 +791,35 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 851, DateTimeKind.Unspecified).AddTicks(7015), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 333, DateTimeKind.Unspecified).AddTicks(2518), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Gym customer",
                             Name = "Customer"
                         },
                         new
                         {
                             Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 851, DateTimeKind.Unspecified).AddTicks(7018), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 333, DateTimeKind.Unspecified).AddTicks(2524), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Gym trainer",
                             Name = "Trainer"
                         },
                         new
                         {
                             Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 851, DateTimeKind.Unspecified).AddTicks(7019), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 333, DateTimeKind.Unspecified).AddTicks(2525), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Front desk staff",
                             Name = "Reception"
                         },
                         new
                         {
                             Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 851, DateTimeKind.Unspecified).AddTicks(7019), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 333, DateTimeKind.Unspecified).AddTicks(2526), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Branch administrator",
                             Name = "BranchAdmin"
                         },
                         new
                         {
                             Id = new Guid("55555555-5555-5555-5555-555555555555"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 851, DateTimeKind.Unspecified).AddTicks(7020), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 333, DateTimeKind.Unspecified).AddTicks(2527), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Platform super administrator",
                             Name = "SuperAdmin"
                         });
@@ -1203,7 +1208,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000001"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3856), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3190), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Ejercicio base para desarrollar fuerza y masa en el pecho.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1214,7 +1219,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000002"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3875), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3200), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Activa la porcion superior del pecho con recorrido controlado.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1225,7 +1230,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000003"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3881), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3204), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aislamiento para estirar y contraer el pecho.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1236,7 +1241,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000004"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3889), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3206), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Movimiento multiarticular para pecho y triceps.",
                             Difficulty = 3,
                             Equipment = 1,
@@ -1247,7 +1252,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000005"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3895), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3209), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Mejora la amplitud dorsal y la tecnica de traccion.",
                             Difficulty = 1,
                             Equipment = 5,
@@ -1258,7 +1263,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000006"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3900), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3212), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Desarrolla espalda media y control postural.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1269,7 +1274,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000007"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3904), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3214), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Fortalece la espalda con tension constante.",
                             Difficulty = 1,
                             Equipment = 5,
@@ -1280,7 +1285,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000008"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3909), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3216), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Trabaja cadena posterior y control lumbar.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1291,7 +1296,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000009"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3912), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3218), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Patron rey para fuerza y potencia del tren inferior.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1302,7 +1307,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000010"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3918), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3220), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aumenta volumen de cuadriceps con buena estabilidad.",
                             Difficulty = 1,
                             Equipment = 4,
@@ -1313,7 +1318,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000011"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3925), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3222), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Ejercicio unilateral para piernas y estabilidad.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1324,7 +1329,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000012"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3926), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3223), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Enfocado en isquiotibiales y control de rodilla.",
                             Difficulty = 1,
                             Equipment = 4,
@@ -1335,7 +1340,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000013"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3934), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3224), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Fortalece hombros y estabilidad del core.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1346,7 +1351,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000014"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3936), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3225), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aisla el deltoide medio para amplitud visual.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1357,7 +1362,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000015"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3939), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3226), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Mejora la salud escapular y deltoides posterior.",
                             Difficulty = 1,
                             Equipment = 5,
@@ -1368,7 +1373,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000016"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3940), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3227), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Combina empuje y rotacion para hombro completo.",
                             Difficulty = 2,
                             Equipment = 2,
@@ -1379,7 +1384,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000017"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3943), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3228), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Movimiento base para fuerza de biceps.",
                             Difficulty = 1,
                             Equipment = 3,
@@ -1390,7 +1395,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000018"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3945), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3231), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Trabaja braquial y antebrazo.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1401,7 +1406,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000019"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3946), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3232), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Mayor estiramiento para hipertrofia de biceps.",
                             Difficulty = 2,
                             Equipment = 2,
@@ -1412,7 +1417,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000020"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3949), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3233), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Tension continua durante todo el recorrido.",
                             Difficulty = 1,
                             Equipment = 5,
@@ -1423,7 +1428,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000021"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3950), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3235), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aislamiento para la porcion larga del triceps.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1434,7 +1439,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000022"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3951), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3236), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Movimiento controlado para congestion del triceps.",
                             Difficulty = 1,
                             Equipment = 5,
@@ -1445,7 +1450,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000023"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3953), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3237), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Ejercicio accesible para iniciar trabajo de triceps.",
                             Difficulty = 1,
                             Equipment = 6,
@@ -1456,7 +1461,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000024"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3979), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3239), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aislamiento ligero con enfoque tecnico.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1467,7 +1472,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000025"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3980), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3240), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Movimiento basico para abdomen superior.",
                             Difficulty = 1,
                             Equipment = 11,
@@ -1478,7 +1483,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000026"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3983), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3241), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Mejora estabilidad del core.",
                             Difficulty = 1,
                             Equipment = 1,
@@ -1489,7 +1494,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000027"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3985), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3242), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Trabaja abdomen inferior y control lumbo-pelvico.",
                             Difficulty = 2,
                             Equipment = 11,
@@ -1500,7 +1505,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000028"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3987), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3244), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Activa oblicuos y resistencia del core.",
                             Difficulty = 1,
                             Equipment = 1,
@@ -1511,7 +1516,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000029"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3989), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3245), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Principal constructor de gluteo y potencia de cadera.",
                             Difficulty = 2,
                             Equipment = 3,
@@ -1522,7 +1527,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000030"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(3992), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3246), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Activacion inicial y tecnica de extension de cadera.",
                             Difficulty = 1,
                             Equipment = 1,
@@ -1533,7 +1538,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000031"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4001), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3247), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aisla gluteo mayor con control.",
                             Difficulty = 1,
                             Equipment = 5,
@@ -1544,7 +1549,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000032"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4007), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3248), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Enfasis en gluteo medio y estabilidad.",
                             Difficulty = 1,
                             Equipment = 4,
@@ -1555,7 +1560,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000033"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4019), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3250), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Cardio de baja intensidad para gasto calorico sostenido.",
                             Difficulty = 1,
                             Equipment = 9,
@@ -1566,7 +1571,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000034"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4022), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3252), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Trabajo cardiovascular de impacto bajo.",
                             Difficulty = 1,
                             Equipment = 8,
@@ -1577,7 +1582,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000035"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4025), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3253), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Cardio de cuerpo completo con enfoque tecnico.",
                             Difficulty = 2,
                             Equipment = 10,
@@ -1588,7 +1593,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000036"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4026), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3254), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Condicionamiento intenso de cuerpo completo.",
                             Difficulty = 3,
                             Equipment = 1,
@@ -1599,7 +1604,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000037"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4027), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3255), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Ejercicio global de empuje y estabilidad.",
                             Difficulty = 1,
                             Equipment = 1,
@@ -1610,7 +1615,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000038"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4028), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3278), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Movimiento funcional para tren inferior y core.",
                             Difficulty = 1,
                             Equipment = 2,
@@ -1621,7 +1626,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000039"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4034), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3279), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Potencia, cardio y cadena posterior.",
                             Difficulty = 2,
                             Equipment = 7,
@@ -1632,7 +1637,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000040"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4035), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3281), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Core dinamico con respuesta cardiovascular.",
                             Difficulty = 1,
                             Equipment = 1,
@@ -1643,7 +1648,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000041"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4037), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3282), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Trabajo unilateral y coordinacion.",
                             Difficulty = 1,
                             Equipment = 6,
@@ -1654,7 +1659,7 @@ namespace Dorian.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("30000000-0000-0000-0000-000000000042"),
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 7, 6, 26, 33, 850, DateTimeKind.Unspecified).AddTicks(4038), new TimeSpan(0, 0, 0, 0, 0)),
+                            CreatedAtUtc = new DateTimeOffset(new DateTime(2026, 5, 24, 5, 43, 37, 332, DateTimeKind.Unspecified).AddTicks(3283), new TimeSpan(0, 0, 0, 0, 0)),
                             Description = "Aislamiento dorsal y control escapular.",
                             Difficulty = 2,
                             Equipment = 5,

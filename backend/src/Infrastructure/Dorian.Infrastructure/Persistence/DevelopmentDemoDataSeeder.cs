@@ -287,20 +287,20 @@ public static class DevelopmentDemoDataSeeder
 
     private static async Task EnsureFitnessProfilesAsync(AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        await EnsureFitnessProfileAsync(dbContext, MainFitnessProfileId, MainCustomerId, FitnessGoal.Hypertrophy, FocusMuscleGroup.Chest, FitnessExperienceLevel.Intermediate, GymType.Advanced, true, [TrainingDay.Monday, TrainingDay.Wednesday, TrainingDay.Friday, TrainingDay.Saturday], "18:30", FitnessProfileGender.Female, new DateOnly(1995, 1, 1), 72.4m, 168m, 69m, true, NotificationIntensity.Moderate, true, cancellationToken);
-        await EnsureFitnessProfileAsync(dbContext, SecondaryFitnessProfileId, SecondaryCustomerId, FitnessGoal.Definition, FocusMuscleGroup.Glutes, FitnessExperienceLevel.Advanced, GymType.Advanced, true, [TrainingDay.Tuesday, TrainingDay.Thursday, TrainingDay.Saturday], "07:00", FitnessProfileGender.Female, new DateOnly(1993, 9, 14), 61.8m, 164m, 59m, true, NotificationIntensity.High, true, cancellationToken);
+        await EnsureFitnessProfileAsync(dbContext, MainFitnessProfileId, MainCustomerId, FitnessGoal.Hypertrophy, [PriorityMuscleGroup.Chest, PriorityMuscleGroup.Triceps], FitnessExperienceLevel.Intermediate, true, [TrainingDay.Monday, TrainingDay.Wednesday, TrainingDay.Friday, TrainingDay.Saturday], "18:30", FitnessProfileGender.Female, new DateOnly(1995, 1, 1), 72.4m, 168m, 69m, true, NotificationIntensity.Moderate, true, cancellationToken);
+        await EnsureFitnessProfileAsync(dbContext, SecondaryFitnessProfileId, SecondaryCustomerId, FitnessGoal.Definition, [PriorityMuscleGroup.Glutes, PriorityMuscleGroup.Quadriceps], FitnessExperienceLevel.Advanced, true, [TrainingDay.Tuesday, TrainingDay.Thursday, TrainingDay.Saturday], "07:00", FitnessProfileGender.Female, new DateOnly(1993, 9, 14), 61.8m, 164m, 59m, true, NotificationIntensity.High, true, cancellationToken);
     }
 
-    private static async Task EnsureFitnessProfileAsync(AppDbContext dbContext, Guid id, Guid customerId, FitnessGoal goal, FocusMuscleGroup focusMuscleGroup, FitnessExperienceLevel experienceLevel, GymType gymType, bool includeCardio, IReadOnlyCollection<TrainingDay> trainingDays, string preferredTrainingTime, FitnessProfileGender gender, DateOnly birthDate, decimal weightKg, decimal heightCm, decimal targetWeightKg, bool notificationsEnabled, NotificationIntensity notificationIntensity, bool onboardingCompleted, CancellationToken cancellationToken)
+    private static async Task EnsureFitnessProfileAsync(AppDbContext dbContext, Guid id, Guid customerId, FitnessGoal goal, IReadOnlyCollection<PriorityMuscleGroup> priorityMuscleGroups, FitnessExperienceLevel experienceLevel, bool includeCardio, IReadOnlyCollection<TrainingDay> trainingDays, string preferredTrainingTime, FitnessProfileGender gender, DateOnly birthDate, decimal weightKg, decimal heightCm, decimal targetWeightKg, bool notificationsEnabled, NotificationIntensity notificationIntensity, bool onboardingCompleted, CancellationToken cancellationToken)
     {
         var profile = await dbContext.CustomerFitnessProfiles.FirstOrDefaultAsync(x => x.CustomerId == customerId, cancellationToken);
         if (profile is null)
         {
-            dbContext.CustomerFitnessProfiles.Add(new CustomerFitnessProfile(id, customerId, goal, focusMuscleGroup, experienceLevel, gymType, includeCardio, trainingDays, preferredTrainingTime, gender, birthDate, weightKg, heightCm, targetWeightKg, notificationsEnabled, notificationIntensity, onboardingCompleted));
+            dbContext.CustomerFitnessProfiles.Add(new CustomerFitnessProfile(id, customerId, goal, priorityMuscleGroups, experienceLevel, includeCardio, trainingDays, preferredTrainingTime, gender, birthDate, weightKg, heightCm, targetWeightKg, notificationsEnabled, notificationIntensity, onboardingCompleted));
             return;
         }
 
-        profile.Update(goal, focusMuscleGroup, experienceLevel, gymType, includeCardio, trainingDays, preferredTrainingTime, gender, birthDate, weightKg, heightCm, targetWeightKg, notificationsEnabled, notificationIntensity, onboardingCompleted);
+        profile.Update(goal, priorityMuscleGroups, experienceLevel, includeCardio, trainingDays, preferredTrainingTime, gender, birthDate, weightKg, heightCm, targetWeightKg, notificationsEnabled, notificationIntensity, onboardingCompleted);
     }
 
     private static async Task EnsureBodyTrackingAsync(AppDbContext dbContext, DateTimeOffset now, CancellationToken cancellationToken)

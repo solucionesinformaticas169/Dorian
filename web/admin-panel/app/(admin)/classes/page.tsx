@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { branchesApi, classesApi } from "@/lib/api/admin";
+import { authApi, branchesApi, classesApi } from "@/lib/api/admin";
 import type { ClassSession } from "@/lib/types";
 import { classStatusMap } from "@/lib/types";
 import { dateTimeLocalToIso, formatDateTime, getErrorMessage, toDateTimeLocalInput } from "@/lib/utils";
@@ -66,6 +66,11 @@ export default function ClassesPage() {
   const [error, setError] = useState<string | null>(null);
   const [branchFilter, setBranchFilter] = useState("all");
 
+  const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
+  const sessionRoles = sessionQuery.data?.user.roles ?? [];
+  const isReception = sessionRoles.includes("Reception");
+  const isTrainer = sessionRoles.includes("Trainer");
+  const canManageClasses = sessionRoles.includes("SuperAdmin") || sessionRoles.includes("BranchAdmin");
   const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
   const classesQuery = useQuery({ queryKey: ["classes"], queryFn: classesApi.list });
 
@@ -179,7 +184,8 @@ export default function ClassesPage() {
     setError(null);
   }
 
-  if (branchesQuery.isLoading || classesQuery.isLoading) return <LoadingState label="Cargando clases..." />;
+  if (sessionQuery.isLoading || branchesQuery.isLoading || classesQuery.isLoading) return <LoadingState label="Cargando clases..." />;
+  if (sessionQuery.error) return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
   if (branchesQuery.error || classesQuery.error) return <Alert>{getErrorMessage(branchesQuery.error ?? classesQuery.error)}</Alert>;
 
   return (
@@ -188,9 +194,10 @@ export default function ClassesPage() {
         <Card>
           <SectionHeading
             eyebrow="Schedule"
-            title={editing ? "Editar clase" : "Crear clase"}
-            description="Superadmin puede programar por una sola sucursal o replicar la misma clase en todas las sucursales desde un solo formulario."
+            title={canManageClasses ? (editing ? "Editar clase" : "Crear clase") : "Agenda visible"}
+            description={canManageClasses ? "Superadmin puede programar por una sola sucursal o replicar la misma clase en todas las sucursales desde un solo formulario." : isTrainer ? "Consulta tus clases asignadas y su ocupación sin abrir acciones administrativas." : "Recepción consulta el calendario y la ocupación sin abrir acciones de creación o edición."}
           />
+          {canManageClasses ? (
           <form className="mt-6 space-y-5" onSubmit={(event) => { event.preventDefault(); saveMutation.mutate(); }}>
             {!editing ? (
               <div className="grid gap-3 md:grid-cols-2">
@@ -290,6 +297,11 @@ export default function ClassesPage() {
               {(editing || hasDirtyForm) ? <Button variant="ghost" onClick={resetForm}>Limpiar</Button> : null}
             </div>
           </form>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-300">
+              Esta vista es solo de consulta para tu perfil. Aquí puedes revisar clases, horario y ocupación, pero no crear, editar ni eliminar sesiones.
+            </div>
+          )}
         </Card>
       </div>
 
@@ -346,8 +358,14 @@ export default function ClassesPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(item)}>Editar</Button>
-                <Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(item.id)}>Eliminar</Button>
+                {canManageClasses ? (
+                  <>
+                    <Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(item)}>Editar</Button>
+                    <Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(item.id)}>Eliminar</Button>
+                  </>
+                ) : (
+                  <span className="rounded-full bg-white/8 px-3 py-2 text-xs font-semibold text-slate-300">Solo lectura</span>
+                )}
               </div>
             </div>
 

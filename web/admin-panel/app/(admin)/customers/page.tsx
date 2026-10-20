@@ -23,21 +23,25 @@ export default function CustomersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
+  const sessionRoles = sessionQuery.data?.user.roles ?? [];
+  const isReception = sessionRoles.includes("Reception");
+  const isTrainer = sessionRoles.includes("Trainer");
+  const canViewSummary = sessionQuery.isSuccess && !isReception && !isTrainer;
+  const canManageCustomerList = sessionQuery.isSuccess && (isReception || isTrainer);
+
   const summaryQuery = useQuery({
-    queryKey: ["customers-summary"],
+    queryKey: ["customers-summary", sessionRoles.join("|")],
     queryFn: customersApi.summary,
-    enabled: sessionQuery.data?.user.roles.includes("Reception") === false && sessionQuery.data?.user.roles.includes("Trainer") === false,
+    enabled: canViewSummary,
   });
   const customersQuery = useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", sessionRoles.join("|")],
     queryFn: customersApi.list,
-    enabled: sessionQuery.data?.user.roles.some((role) => role === "Reception" || role === "Trainer") === true,
+    enabled: canManageCustomerList,
   });
-  const plansQuery = useQuery({ queryKey: ["plans"], queryFn: plansApi.list, enabled: sessionQuery.data?.user.roles.includes("Reception") === true });
+  const plansQuery = useQuery({ queryKey: ["plans"], queryFn: plansApi.list, enabled: sessionQuery.isSuccess && isReception });
   const metrics = summaryQuery.data;
   const session = sessionQuery.data;
-  const isReception = session?.user.roles.includes("Reception") ?? false;
-  const isTrainer = session?.user.roles.includes("Trainer") ?? false;
 
   const receptionCustomers = customersQuery.data ?? [];
   const receptionPlans = useMemo(() => {
@@ -110,11 +114,11 @@ export default function CustomersPage() {
     return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
   }
 
-  if (summaryQuery.error) {
+  if (canViewSummary && summaryQuery.error) {
     return <Alert>{getErrorMessage(summaryQuery.error)}</Alert>;
   }
 
-  if (isReception && customersQuery.error) {
+  if (canManageCustomerList && customersQuery.error) {
     return <Alert>{getErrorMessage(customersQuery.error)}</Alert>;
   }
 

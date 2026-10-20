@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { branchesApi, promotionsApi } from "@/lib/api/admin";
+import { authApi, branchesApi, promotionsApi } from "@/lib/api/admin";
 import type { Promotion } from "@/lib/types";
 import { promotionDiscountTypeMap, promotionStatusMap } from "@/lib/types";
 import { dateTimeLocalToIso, formatDateTime, getErrorMessage, toDateTimeLocalInput } from "@/lib/utils";
@@ -26,8 +26,14 @@ export default function PromotionsPage() {
   const [editing, setEditing] = useState<Promotion | null>(null);
   const [form, setForm] = useState<PromotionForm>(initialForm);
   const [error, setError] = useState<string | null>(null);
-  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
-  const promotionsQuery = useQuery({ queryKey: ["promotions"], queryFn: promotionsApi.list });
+  const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
+  const sessionRoles = sessionQuery.data?.user.roles ?? [];
+  const isTrainer = sessionRoles.includes("Trainer");
+  const isReception = sessionRoles.includes("Reception");
+  const canManagePromotions = sessionRoles.includes("SuperAdmin") || sessionRoles.includes("BranchAdmin");
+  const canViewPromotions = sessionQuery.isSuccess && (canManagePromotions || isReception);
+  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list, enabled: canViewPromotions });
+  const promotionsQuery = useQuery({ queryKey: ["promotions"], queryFn: promotionsApi.list, enabled: canViewPromotions });
   const branchMap = useMemo(() => Object.fromEntries((branchesQuery.data ?? []).map((branch) => [branch.id, branch.name])), [branchesQuery.data]);
 
   const saveMutation = useMutation({ mutationFn: async () => { const payload = { branchId: form.branchId || null, title: form.title, description: form.description, imageUrl: form.imageUrl || null, discountType: Number(form.discountType), discountValue: form.discountValue ? Number(form.discountValue) : null, startsAt: dateTimeLocalToIso(form.startsAt), endsAt: dateTimeLocalToIso(form.endsAt), status: Number(form.status) }; return editing ? promotionsApi.update(editing.id, payload) : promotionsApi.create(payload); }, onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["promotions"] }); setEditing(null); setForm(initialForm); setError(null); }, onError: (mutationError) => setError(getErrorMessage(mutationError)) });
@@ -40,7 +46,16 @@ export default function PromotionsPage() {
     setForm({ branchId: promotion.branchId ?? "", title: promotion.title, description: promotion.description, imageUrl: promotion.imageUrl ?? "", discountType: String(promotion.discountType), discountValue: promotion.discountValue?.toString() ?? "", startsAt: toDateTimeLocalInput(promotion.startsAt), endsAt: toDateTimeLocalInput(promotion.endsAt), status: String(promotion.status) });
   }
 
-  if (branchesQuery.isLoading || promotionsQuery.isLoading) return <LoadingState label="Cargando promociones..." />;
+  if (sessionQuery.isLoading || (canViewPromotions && (branchesQuery.isLoading || promotionsQuery.isLoading))) return <LoadingState label="Cargando promociones..." />;
+  if (sessionQuery.error) return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
+  if (!canViewPromotions) {
+    return (
+      <Card>
+        <SectionHeading eyebrow="Campaigns" title="Promociones" description="Este módulo está disponible para SuperAdmin, BranchAdmin y Recepción." />
+        <Alert className="mt-6">{isTrainer ? "Tu perfil Trainer no tiene acceso al módulo administrativo de promociones." : "Tu rol actual no tiene acceso a promociones."}</Alert>
+      </Card>
+    );
+  }
   if (branchesQuery.error || promotionsQuery.error) return <Alert>{getErrorMessage(branchesQuery.error ?? promotionsQuery.error)}</Alert>;
 
   const promotions = promotionsQuery.data ?? [];
@@ -48,7 +63,8 @@ export default function PromotionsPage() {
   return (
     <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
       <Card>
-        <SectionHeading eyebrow="Growth" title={editing ? "Editar promoción" : "Nueva promoción"} description="Publica campañas globales o por sucursal para web, app y admin." />
+        <SectionHeading eyebrow="Growth" title={canManagePromotions ? (editing ? "Editar promoción" : "Nueva promoción") : "Promociones visibles"} description={canManagePromotions ? "Publica campañas globales o por sucursal para web, app y admin." : "Recepción puede consultar campañas activas y vigentes sin abrir acciones de publicación."} />
+        {canManagePromotions ? (
         <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); saveMutation.mutate(); }}>
           <div><Label>Sucursal</Label><Select value={form.branchId} onChange={(event) => setForm((state) => ({ ...state, branchId: event.target.value }))}><option value="">Global</option>{branchesQuery.data?.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</Select></div>
           <div><Label>Título</Label><Input value={form.title} onChange={(event) => setForm((state) => ({ ...state, title: event.target.value }))} /></div>
@@ -58,11 +74,16 @@ export default function PromotionsPage() {
           {error ? <Alert>{error}</Alert> : null}
           <div className="flex gap-3"><Button type="submit" disabled={saveMutation.isPending}>{editing ? "Guardar cambios" : "Crear promoción"}</Button>{editing ? <Button variant="ghost" onClick={() => { setEditing(null); setForm(initialForm); }}>Cancelar</Button> : null}</div>
         </form>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-300">
+            Esta vista es solo de lectura para tu perfil. Puedes revisar campañas y vigencia, pero no crear, editar ni deshabilitar promociones.
+          </div>
+        )}
       </Card>
       <div className="space-y-4">
         <SectionHeading eyebrow="Campaigns" title="Promociones publicadas" description="Activa o deshabilita promociones en caliente desde el panel." />
         {!promotions.length ? <EmptyState title="Sin promociones" description="Todavía no hay campañas creadas para mostrar." /> : null}
-        {promotions.length ? <DataTable headers={["Promoción", "Cobertura", "Vigencia", "Estado", "Acciones"]}>{promotions.map((promotion) => <DataRow key={promotion.id}><DataCell><div className="font-semibold text-white">{promotion.title}</div><div className="text-xs text-slate-500">{promotionDiscountTypeMap[promotion.discountType]} {promotion.discountValue ? `· ${promotion.discountValue}` : ""}</div></DataCell><DataCell>{promotion.branchId ? branchMap[promotion.branchId] ?? promotion.branchId : "Global"}</DataCell><DataCell>{formatDateTime(promotion.startsAt)} ? {formatDateTime(promotion.endsAt)}</DataCell><DataCell><Badge tone={promotion.status === 2 ? "success" : promotion.status === 4 ? "warning" : "neutral"}>{promotionStatusMap[promotion.status]}</Badge></DataCell><DataCell className="flex flex-wrap gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(promotion)}>Editar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => activateMutation.mutate(promotion.id)}>Activar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => disableMutation.mutate(promotion.id)}>Deshabilitar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(promotion.id)}>Eliminar</Button></DataCell></DataRow>)}</DataTable> : null}
+        {promotions.length ? <DataTable headers={canManagePromotions ? ["Promoción", "Cobertura", "Vigencia", "Estado", "Acciones"] : ["Promoción", "Cobertura", "Vigencia", "Estado"]}>{promotions.map((promotion) => <DataRow key={promotion.id}><DataCell><div className="font-semibold text-white">{promotion.title}</div><div className="text-xs text-slate-500">{promotionDiscountTypeMap[promotion.discountType]} {promotion.discountValue ? `· ${promotion.discountValue}` : ""}</div></DataCell><DataCell>{promotion.branchId ? branchMap[promotion.branchId] ?? promotion.branchId : "Global"}</DataCell><DataCell>{formatDateTime(promotion.startsAt)} ? {formatDateTime(promotion.endsAt)}</DataCell><DataCell><Badge tone={promotion.status === 2 ? "success" : promotion.status === 4 ? "warning" : "neutral"}>{promotionStatusMap[promotion.status]}</Badge></DataCell>{canManagePromotions ? <DataCell className="flex flex-wrap gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(promotion)}>Editar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => activateMutation.mutate(promotion.id)}>Activar</Button><Button variant="ghost" className="px-3 py-2" onClick={() => disableMutation.mutate(promotion.id)}>Deshabilitar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(promotion.id)}>Eliminar</Button></DataCell> : null}</DataRow>)}</DataTable> : null}
       </div>
     </div>
   );

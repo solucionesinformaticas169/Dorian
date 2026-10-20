@@ -17,9 +17,20 @@ public sealed class SaveCustomerFitnessProfileRequestValidator : AbstractValidat
             .Must(value => string.IsNullOrWhiteSpace(value) || TimeOnly.TryParse(value, out _))
             .WithMessage("Preferred training time must be a valid time.");
         RuleFor(x => x.Goal).IsInEnum();
-        RuleFor(x => x.FocusMuscleGroup).IsInEnum();
+        When(x => x.PriorityMuscleGroups is not null, () =>
+        {
+            RuleFor(x => x.PriorityMuscleGroups)
+                .NotEmpty()
+                .Must(groups => groups is not null && groups.Count <= 3)
+                .WithMessage("You can prioritize up to 3 muscle groups.");
+            RuleForEach(x => x.PriorityMuscleGroups).IsInEnum();
+        });
+        When(x => x.PriorityMuscleGroups is null, () =>
+        {
+            RuleFor(x => x.FocusMuscleGroup).NotNull().IsInEnum();
+            RuleFor(x => x.GymType).IsInEnum().When(x => x.GymType.HasValue);
+        });
         RuleFor(x => x.ExperienceLevel).IsInEnum();
-        RuleFor(x => x.GymType).IsInEnum();
         RuleFor(x => x.Gender).IsInEnum();
         RuleFor(x => x.NotificationIntensity).IsInEnum();
     }

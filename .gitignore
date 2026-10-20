@@ -20,3 +20,5 @@ logs/
 *.tsbuildinfo
 .app-data-protection/
 **/.app-data-protection/
+
+**/TestResults/

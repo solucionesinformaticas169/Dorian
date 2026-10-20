@@ -94,39 +94,49 @@ export function HeroMediaCarousel({ slides, stats = [] }: HeroMediaCarouselProps
         <SlideFallback title={slide.title} />
       )}
 
-      <div className="absolute inset-0 bg-black/48" />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.66)_34%,rgba(0,0,0,0.18)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.46)_0%,rgba(0,0,0,0.16)_30%,rgba(0,0,0,0.88)_100%)]" />
+      <div className="absolute inset-0 bg-black/52" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.95)_0%,rgba(0,0,0,0.74)_36%,rgba(0,0,0,0.18)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.56)_0%,rgba(0,0,0,0.16)_32%,rgba(0,0,0,0.92)_100%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,95,0,0.14),transparent_18%)]" />
+      <div className="pointer-events-none absolute left-[-10%] top-[18%] z-10 h-64 w-64 rounded-full bg-[var(--accent)]/20 blur-[90px]" />
 
       <div className="relative z-20 mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-8 pt-6 md:px-6 md:pb-12 md:pt-8 lg:pb-16">
         <div className="flex items-center justify-between gap-6">
-          <a href="/" className="text-sm font-semibold uppercase tracking-[0.28em] text-white/88">
-            Gimnasio Dorian
+          <a
+            href="/"
+            className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.24em] text-white/84 backdrop-blur-xl"
+          >
+            Dorian Public Club
           </a>
+          <div className="hidden rounded-full border border-white/10 bg-black/28 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.24em] text-white/54 backdrop-blur-xl md:flex">
+            {String(activeIndex + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+          </div>
         </div>
 
         <div className="flex flex-1 items-end pb-12 pt-20 md:pb-16 lg:pb-20">
           <div key={slide.title} className="max-w-4xl">
-            <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.42em] text-[var(--accent)]">
-              {slide.eyebrow}
-            </p>
+            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-[var(--accent)]/25 bg-black/35 px-4 py-2 backdrop-blur-xl">
+              <span className="h-2 w-2 rounded-full bg-[var(--accent)] shadow-[0_0_20px_rgba(255,95,0,0.65)]" />
+              <p className="font-mono text-[11px] font-medium uppercase tracking-[0.28em] text-[var(--accent)]">
+                {slide.eyebrow}
+              </p>
+            </div>
 
-            <h1 className="max-w-4xl font-heading text-3xl font-black leading-[0.94] tracking-[-0.04em] text-white md:text-5xl lg:text-[3rem]">
+            <h1 className="max-w-4xl font-heading text-[2.4rem] font-black uppercase leading-[0.92] tracking-[-0.03em] text-white md:text-[3.6rem] lg:text-[3.2rem]">
               {slide.title}
             </h1>
 
-            <p className="mt-6 max-w-xl text-base leading-8 text-white/72 md:text-lg">
+            <p className="mt-6 max-w-xl text-base leading-8 text-[var(--text-secondary)] md:text-lg">
               {slide.description}
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Button href={slide.primaryHref} className="gap-2">
+              <Button href={slide.primaryHref} className="gap-2 px-7 py-3.5 font-mono text-[11px] uppercase tracking-[0.22em] shadow-[0_0_32px_rgba(255,95,0,0.22)]">
                 {slide.primaryCta}
                 <ArrowRight className="h-4 w-4" />
               </Button>
 
-              <Button href={slide.secondaryHref} variant="secondary">
+              <Button href={slide.secondaryHref} variant="secondary" className="border border-white/10 px-7 py-3.5 font-mono text-[11px] uppercase tracking-[0.22em]">
                 {slide.secondaryCta}
               </Button>
             </div>
@@ -134,11 +144,14 @@ export function HeroMediaCarousel({ slides, stats = [] }: HeroMediaCarouselProps
         </div>
 
         <div className="mt-auto flex flex-col gap-8 border-t border-white/12 pt-6 md:flex-row md:items-end md:justify-between">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-3 gap-4 md:gap-6">
             {stats.map((stat) => (
-              <div key={stat.label}>
+              <div
+                key={stat.label}
+                className="rounded-[24px] border border-white/10 bg-white/[0.04] px-4 py-4 backdrop-blur-xl"
+              >
                 <p className="font-heading text-3xl font-black text-white md:text-4xl">{stat.value}</p>
-                <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/42">
+                <p className="mt-2 font-mono text-[10px] font-medium uppercase tracking-[0.24em] text-white/42">
                   {stat.label}
                 </p>
               </div>
@@ -178,7 +191,7 @@ export function HeroMediaCarousel({ slides, stats = [] }: HeroMediaCarouselProps
               ))}
             </div>
 
-            <p className="hidden text-[11px] font-semibold uppercase tracking-[0.24em] text-white/44 md:block">
+            <p className="hidden font-mono text-[11px] font-medium uppercase tracking-[0.24em] text-white/44 md:block">
               {String(activeIndex + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
             </p>
           </div>

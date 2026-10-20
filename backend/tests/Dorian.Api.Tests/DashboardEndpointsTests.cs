@@ -29,7 +29,8 @@ public sealed class DashboardEndpointsTests : IClassFixture<CustomWebApplication
         payload.TodayClassesCount.Should().Be(0);
         payload.TodayCheckInsCount.Should().Be(0);
         payload.EstimatedRevenue.Should().Be(137m);
-        payload.MostActiveBranchName.Should().Be("El Cebollar");
+        // No classes or check-ins: ties are ordered by branch name.
+        payload.MostActiveBranchName.Should().Be("Azogues");
         payload.BranchActivity.Should().HaveCount(5);
         payload.ClassOccupancy.Should().BeEmpty();
     }

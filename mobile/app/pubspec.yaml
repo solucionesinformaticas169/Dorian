@@ -1,5 +1,5 @@
-﻿name: dorian_mobile
-version: 0.1.0+1
+name: dorian_mobile
+version: 0.1.1+2
 description: Demo mobile client for the Dorian multi-branch gym platform.
 publish_to: 'none'
 

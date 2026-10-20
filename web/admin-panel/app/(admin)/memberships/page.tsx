@@ -27,8 +27,12 @@ export default function PlansPage() {
   const [error, setError] = useState<string | null>(null);
 
   const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
-  const isTrainer = sessionQuery.data?.user.roles.includes("Trainer") ?? false;
-  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list, enabled: !isTrainer });
+  const sessionRoles = sessionQuery.data?.user.roles ?? [];
+  const isTrainer = sessionRoles.includes("Trainer");
+  const isReception = sessionRoles.includes("Reception");
+  const canManagePlans = sessionRoles.includes("SuperAdmin") || sessionRoles.includes("BranchAdmin");
+  const canViewPlans = sessionQuery.isSuccess && (canManagePlans || isReception || isTrainer);
+  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list, enabled: canViewPlans });
   const plansQuery = useQuery({ queryKey: ["plans"], queryFn: plansApi.list });
 
   const saveMutation = useMutation({
@@ -68,12 +72,21 @@ export default function PlansPage() {
     });
   }
 
-if (sessionQuery.isLoading || branchesQuery.isLoading || plansQuery.isLoading) return <LoadingState label="Cargando planes..." />;
+  if (sessionQuery.isLoading || (canViewPlans && branchesQuery.isLoading) || plansQuery.isLoading) return <LoadingState label="Cargando planes..." />;
+  if (sessionQuery.error) return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
+  if (!canViewPlans) {
+    return (
+      <Card>
+        <SectionHeading eyebrow="Catalog" title="Planes" description="Este módulo está disponible para SuperAdmin, BranchAdmin, Recepción y Trainer." />
+        <Alert className="mt-6">Tu rol actual no tiene acceso al catálogo de planes.</Alert>
+      </Card>
+    );
+  }
   if (branchesQuery.error || plansQuery.error) return <Alert>{getErrorMessage(branchesQuery.error ?? plansQuery.error)}</Alert>;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      {!isTrainer ? (
+      {canManagePlans ? (
         <Card>
           <SectionHeading eyebrow="Revenue engine" title={editing ? "Editar plan" : "Nuevo plan"} description="Define el catálogo de planes de pago que luego el cliente podrá contratar desde la app." />
           <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); saveMutation.mutate(); }}>
@@ -91,7 +104,7 @@ if (sessionQuery.isLoading || branchesQuery.isLoading || plansQuery.isLoading) r
         </Card>
       ) : (
         <Card>
-          <SectionHeading eyebrow="Trainer" title="Planes visibles para tu sucursal" description="Consulta los planes globales y los planes de tu sucursal para orientar mejor al cliente durante el entrenamiento." />
+          <SectionHeading eyebrow={isReception ? "Recepción" : "Trainer"} title="Planes visibles para tu sucursal" description="Consulta los planes globales y los planes de tu sucursal sin abrir acciones administrativas que tu perfil no puede ejecutar." />
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm text-slate-300">
             Esta vista es informativa. Desde aquí no editas planes; solo consultas el catálogo disponible para tus clientes.
           </div>
@@ -100,7 +113,7 @@ if (sessionQuery.isLoading || branchesQuery.isLoading || plansQuery.isLoading) r
       <div className="space-y-4">
         <SectionHeading eyebrow="Catalog" title="Planes vigentes" description="Catálogo administrativo de planes para cobro, activación desde la app y organización comercial." />
         {!plans.length ? <EmptyState title="Sin planes" description="Todavía no hay planes creados para las sucursales." /> : null}
-        {plans.length ? <DataTable headers={!isTrainer ? ["Plan", "Sucursal", "Precio", "Estado", "Actualizado", "Acciones"] : ["Plan", "Sucursal", "Precio", "Estado", "Actualizado"]}>{plans.map((plan) => <DataRow key={plan.id}><DataCell><div className="font-semibold text-white">{plan.name}</div><div className="text-xs text-slate-500">{plan.durationInDays} días</div></DataCell><DataCell>{plan.branchId ? branchMap[plan.branchId] ?? "Tu sucursal" : "Global"}</DataCell><DataCell>{formatCurrency(plan.price, plan.currency)}</DataCell><DataCell><Badge tone={plan.isActive ? "success" : "warning"}>{plan.isActive ? "Activa" : "Inactiva"}</Badge></DataCell><DataCell>{formatDateTime(plan.updatedAtUtc ?? plan.createdAtUtc)}</DataCell>{!isTrainer ? <DataCell className="flex gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(plan)}>Editar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(plan.id)}>Eliminar</Button></DataCell> : null}</DataRow>)}</DataTable> : null}
+        {plans.length ? <DataTable headers={canManagePlans ? ["Plan", "Sucursal", "Precio", "Estado", "Actualizado", "Acciones"] : ["Plan", "Sucursal", "Precio", "Estado", "Actualizado"]}>{plans.map((plan) => <DataRow key={plan.id}><DataCell><div className="font-semibold text-white">{plan.name}</div><div className="text-xs text-slate-500">{plan.durationInDays} días</div></DataCell><DataCell>{plan.branchId ? branchMap[plan.branchId] ?? "Tu sucursal" : "Global"}</DataCell><DataCell>{formatCurrency(plan.price, plan.currency)}</DataCell><DataCell><Badge tone={plan.isActive ? "success" : "warning"}>{plan.isActive ? "Activa" : "Inactiva"}</Badge></DataCell><DataCell>{formatDateTime(plan.updatedAtUtc ?? plan.createdAtUtc)}</DataCell>{canManagePlans ? <DataCell className="flex gap-2"><Button variant="secondary" className="px-3 py-2" onClick={() => handleEdit(plan)}>Editar</Button><Button variant="danger" className="px-3 py-2" onClick={() => deleteMutation.mutate(plan.id)}>Eliminar</Button></DataCell> : null}</DataRow>)}</DataTable> : null}
       </div>
     </div>
   );

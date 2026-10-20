@@ -12,6 +12,24 @@ const baseCookieOptions = {
   path: "/",
 };
 
+function encodeBase64Url(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4));
+  const binary = atob(`${normalized}${padding}`);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 export function applyAuthCookies(cookies: ResponseCookies, auth: AuthResponse) {
   cookies.set(ACCESS_TOKEN_COOKIE, auth.accessToken, {
     ...baseCookieOptions,
@@ -29,7 +47,7 @@ export function applyAuthCookies(cookies: ResponseCookies, auth: AuthResponse) {
     refreshTokenExpiresAtUtc: auth.refreshTokenExpiresAtUtc,
   };
 
-  cookies.set(SESSION_COOKIE, Buffer.from(JSON.stringify(session)).toString("base64url"), {
+  cookies.set(SESSION_COOKIE, encodeBase64Url(JSON.stringify(session)), {
     ...baseCookieOptions,
     expires: new Date(auth.refreshTokenExpiresAtUtc),
   });
@@ -45,7 +63,7 @@ export function parseSessionCookie(value?: string) {
   if (!value) return null;
 
   try {
-    return JSON.parse(Buffer.from(value, "base64url").toString("utf-8")) as Session;
+    return JSON.parse(decodeBase64Url(value)) as Session;
   } catch {
     return null;
   }

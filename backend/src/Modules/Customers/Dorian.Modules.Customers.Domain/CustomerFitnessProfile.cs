@@ -12,9 +12,8 @@ public sealed class CustomerFitnessProfile : AuditableEntity<Guid>
         Guid id,
         Guid customerId,
         FitnessGoal goal,
-        FocusMuscleGroup focusMuscleGroup,
+        IReadOnlyCollection<PriorityMuscleGroup> priorityMuscleGroups,
         FitnessExperienceLevel experienceLevel,
-        GymType gymType,
         bool includeCardio,
         IReadOnlyCollection<TrainingDay> trainingDays,
         string? preferredTrainingTime,
@@ -30,9 +29,8 @@ public sealed class CustomerFitnessProfile : AuditableEntity<Guid>
         CustomerId = customerId;
         Update(
             goal,
-            focusMuscleGroup,
+            priorityMuscleGroups,
             experienceLevel,
-            gymType,
             includeCardio,
             trainingDays,
             preferredTrainingTime,
@@ -52,6 +50,7 @@ public sealed class CustomerFitnessProfile : AuditableEntity<Guid>
     public FitnessExperienceLevel ExperienceLevel { get; private set; }
     public GymType GymType { get; private set; }
     public bool IncludeCardio { get; private set; }
+    public string PriorityMuscleGroupsSerialized { get; private set; } = string.Empty;
     public string TrainingDaysSerialized { get; private set; } = string.Empty;
     public string? PreferredTrainingTime { get; private set; }
     public FitnessProfileGender Gender { get; private set; }
@@ -77,11 +76,39 @@ public sealed class CustomerFitnessProfile : AuditableEntity<Guid>
             .ToArray();
     }
 
+    public static IReadOnlyCollection<PriorityMuscleGroup> FromLegacyFocus(FocusMuscleGroup? focus) => focus switch
+    {
+        FocusMuscleGroup.Chest => [PriorityMuscleGroup.Chest],
+        FocusMuscleGroup.Back => [PriorityMuscleGroup.Back],
+        FocusMuscleGroup.Arms => [PriorityMuscleGroup.Biceps, PriorityMuscleGroup.Triceps],
+        FocusMuscleGroup.Legs => [PriorityMuscleGroup.Quadriceps],
+        FocusMuscleGroup.Glutes => [PriorityMuscleGroup.Glutes],
+        _ => []
+    };
+
+    public void ApplyLegacySettings(FocusMuscleGroup? focus, GymType? gymType)
+    {
+        if (focus.HasValue) FocusMuscleGroup = focus.Value;
+        if (gymType.HasValue) GymType = gymType.Value;
+    }
+
+    public IReadOnlyCollection<PriorityMuscleGroup> GetPriorityMuscleGroups()
+    {
+        if (string.IsNullOrWhiteSpace(PriorityMuscleGroupsSerialized))
+        {
+            return FromLegacyFocus(FocusMuscleGroup);
+        }
+
+        return PriorityMuscleGroupsSerialized
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(value => Enum.Parse<PriorityMuscleGroup>(value, ignoreCase: true))
+            .ToArray();
+    }
+
     public void Update(
         FitnessGoal goal,
-        FocusMuscleGroup focusMuscleGroup,
+        IReadOnlyCollection<PriorityMuscleGroup> priorityMuscleGroups,
         FitnessExperienceLevel experienceLevel,
-        GymType gymType,
         bool includeCardio,
         IReadOnlyCollection<TrainingDay> trainingDays,
         string? preferredTrainingTime,
@@ -94,10 +121,16 @@ public sealed class CustomerFitnessProfile : AuditableEntity<Guid>
         NotificationIntensity notificationIntensity,
         bool onboardingCompleted)
     {
+        var sanitizedPriorityMuscleGroups = priorityMuscleGroups
+            .Distinct()
+            .OrderBy(group => group)
+            .ToArray();
+
         Goal = goal;
-        FocusMuscleGroup = focusMuscleGroup;
+        PriorityMuscleGroupsSerialized = string.Join(',', sanitizedPriorityMuscleGroups);
+        FocusMuscleGroup = MapLegacyFocus(sanitizedPriorityMuscleGroups);
         ExperienceLevel = experienceLevel;
-        GymType = gymType;
+        GymType = GymType.Advanced;
         IncludeCardio = includeCardio;
         TrainingDaysSerialized = string.Join(',', trainingDays.Distinct().OrderBy(day => day));
         PreferredTrainingTime = string.IsNullOrWhiteSpace(preferredTrainingTime) ? null : preferredTrainingTime.Trim();
@@ -109,5 +142,40 @@ public sealed class CustomerFitnessProfile : AuditableEntity<Guid>
         NotificationsEnabled = notificationsEnabled;
         NotificationIntensity = notificationIntensity;
         OnboardingCompleted = onboardingCompleted;
+    }
+
+    private static FocusMuscleGroup MapLegacyFocus(IReadOnlyCollection<PriorityMuscleGroup> priorityMuscleGroups)
+    {
+        if (priorityMuscleGroups.Count == 0)
+        {
+            return FocusMuscleGroup.Balanced;
+        }
+
+        if (priorityMuscleGroups.Any(group => group is PriorityMuscleGroup.Chest))
+        {
+            return FocusMuscleGroup.Chest;
+        }
+
+        if (priorityMuscleGroups.Any(group => group is PriorityMuscleGroup.Back))
+        {
+            return FocusMuscleGroup.Back;
+        }
+
+        if (priorityMuscleGroups.Any(group => group is PriorityMuscleGroup.Biceps or PriorityMuscleGroup.Triceps or PriorityMuscleGroup.Forearm))
+        {
+            return FocusMuscleGroup.Arms;
+        }
+
+        if (priorityMuscleGroups.Any(group => group is PriorityMuscleGroup.Glutes))
+        {
+            return FocusMuscleGroup.Glutes;
+        }
+
+        if (priorityMuscleGroups.Any(group => group is PriorityMuscleGroup.Quadriceps or PriorityMuscleGroup.Adductors or PriorityMuscleGroup.Abduction or PriorityMuscleGroup.Calves or PriorityMuscleGroup.Tibials))
+        {
+            return FocusMuscleGroup.Legs;
+        }
+
+        return FocusMuscleGroup.Balanced;
     }
 }

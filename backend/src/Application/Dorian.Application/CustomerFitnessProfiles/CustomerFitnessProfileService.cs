@@ -47,9 +47,8 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
             Guid.NewGuid(),
             customer.Id,
             request.Goal,
-            request.FocusMuscleGroup,
+            request.PriorityMuscleGroups ?? CustomerFitnessProfile.FromLegacyFocus(request.FocusMuscleGroup),
             request.ExperienceLevel,
-            request.GymType,
             request.IncludeCardio,
             request.TrainingDays,
             request.PreferredTrainingTime,
@@ -61,6 +60,11 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
             request.NotificationsEnabled,
             request.NotificationIntensity,
             request.OnboardingCompleted);
+
+        if (request.PriorityMuscleGroups is null)
+        {
+            profile.ApplyLegacySettings(request.FocusMuscleGroup, request.GymType);
+        }
 
         _dbContext.CustomerFitnessProfiles.Add(profile);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -75,9 +79,8 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
 
         profile.Update(
             request.Goal,
-            request.FocusMuscleGroup,
+            request.PriorityMuscleGroups ?? CustomerFitnessProfile.FromLegacyFocus(request.FocusMuscleGroup),
             request.ExperienceLevel,
-            request.GymType,
             request.IncludeCardio,
             request.TrainingDays,
             request.PreferredTrainingTime,
@@ -89,6 +92,11 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
             request.NotificationsEnabled,
             request.NotificationIntensity,
             request.OnboardingCompleted);
+
+        if (request.PriorityMuscleGroups is null)
+        {
+            profile.ApplyLegacySettings(request.FocusMuscleGroup, request.GymType);
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Map(profile);
@@ -175,8 +183,7 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
         null,
         customerId,
         null,
-        null,
-        null,
+        [],
         null,
         false,
         [],
@@ -196,9 +203,8 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
         profile.Id,
         profile.CustomerId,
         profile.Goal,
-        profile.FocusMuscleGroup,
+        profile.GetPriorityMuscleGroups(),
         profile.ExperienceLevel,
-        profile.GymType,
         profile.IncludeCardio,
         profile.GetTrainingDays(),
         profile.PreferredTrainingTime,
@@ -211,7 +217,9 @@ public sealed class CustomerFitnessProfileService : ICustomerFitnessProfileServi
         profile.NotificationIntensity,
         profile.OnboardingCompleted,
         profile.CreatedAtUtc,
-        profile.UpdatedAtUtc);
+        profile.UpdatedAtUtc,
+        profile.FocusMuscleGroup,
+        profile.GymType);
 
     private sealed class FitnessProfileValidationException : AppException
     {

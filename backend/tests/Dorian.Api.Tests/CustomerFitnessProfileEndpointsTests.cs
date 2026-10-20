@@ -151,6 +151,50 @@ public sealed class CustomerFitnessProfileEndpointsTests : IClassFixture<CustomW
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Customer_Can_Save_Multiple_Priorities_And_Update_Them()
+    {
+        var client = _factory.CreateClient();
+        var email = $"priorities+{Guid.NewGuid():N}@dorian.test";
+        var registration = await client.PostAsJsonAsync("/auth/register", new
+        {
+            fullName = "Priority Test", email, password = _factory.Password, phoneNumber = "0991234567"
+        });
+        registration.StatusCode.Should().Be(HttpStatusCode.OK);
+        var token = await _factory.LoginAsync(client, email, _factory.Password);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var body = System.Text.Json.JsonSerializer.SerializeToNode(CreatePayload("18:30"))!.AsObject();
+        body.Remove("focusMuscleGroup");
+        body.Remove("gymType");
+        body["priorityMuscleGroups"] = System.Text.Json.JsonSerializer.SerializeToNode(new[] { 1, 2, 6 });
+        var created = await client.PostAsJsonAsync("/customers/me/fitness-profile", body);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var saved = await created.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>();
+        saved!["priorityMuscleGroups"]!.AsArray().Select(x => x!.GetValue<int>()).Should().Equal(1, 2, 6);
+        saved["focusMuscleGroup"]!.GetValue<int>().Should().Be(2);
+        body["priorityMuscleGroups"] = System.Text.Json.JsonSerializer.SerializeToNode(new[] { 2 });
+        var updated = await client.PutAsJsonAsync("/customers/me/fitness-profile", body);
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+        var retrieved = await client.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>("/customers/me/fitness-profile");
+        retrieved!["priorityMuscleGroups"]!.AsArray().Single()!.GetValue<int>().Should().Be(2);
+        retrieved["focusMuscleGroup"]!.GetValue<int>().Should().Be(3);
+    }
+
+    [Theory]
+    [InlineData(new int[] { })]
+    [InlineData(new int[] { 1, 2, 3, 4 })]
+    [InlineData(new int[] { 999 })]
+    public async Task Invalid_Priorities_Are_Rejected(int[] priorities)
+    {
+        var client = _factory.CreateClient();
+        var token = await _factory.LoginAsync(client, _factory.CustomerEmail, _factory.Password);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var body = System.Text.Json.JsonSerializer.SerializeToNode(CreatePayload("18:30"))!.AsObject();
+        body["priorityMuscleGroups"] = System.Text.Json.JsonSerializer.SerializeToNode(priorities);
+        var response = await client.PutAsJsonAsync("/customers/me/fitness-profile", body);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
     private static object CreatePayload(string? preferredTrainingTime, int goal = 3, int focusMuscleGroup = 1, decimal targetWeightKg = 68m, int[]? trainingDays = null) => new
     {
         goal,

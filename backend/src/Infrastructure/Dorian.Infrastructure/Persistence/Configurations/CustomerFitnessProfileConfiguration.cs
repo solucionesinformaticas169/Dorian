@@ -10,6 +10,7 @@ public sealed class CustomerFitnessProfileConfiguration : IEntityTypeConfigurati
     {
         builder.ToTable("customer_fitness_profiles");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.PriorityMuscleGroupsSerialized).HasMaxLength(240).IsRequired();
         builder.Property(x => x.TrainingDaysSerialized).HasMaxLength(120).IsRequired();
         builder.Property(x => x.PreferredTrainingTime).HasMaxLength(16);
         builder.Property(x => x.WeightKg).HasPrecision(6, 2);

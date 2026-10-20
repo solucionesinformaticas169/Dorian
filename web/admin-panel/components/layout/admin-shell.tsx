@@ -43,6 +43,7 @@ export function AdminShell({ session, children }: { session: Session; children: 
   const visibleNavigation = navigation.filter((item) => {
     if (item.href === "/staff" && !canManageStaff) return false;
     if ((isReception || isTrainer) && (item.href === "/dashboard" || item.href === "/branches")) return false;
+    if (isTrainer && item.href === "/promotions") return false;
     return true;
   });
   const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });

@@ -6,9 +6,8 @@ public sealed record CustomerFitnessProfileResponse(
     Guid? Id,
     Guid? CustomerId,
     FitnessGoal? Goal,
-    FocusMuscleGroup? FocusMuscleGroup,
+    IReadOnlyCollection<PriorityMuscleGroup> PriorityMuscleGroups,
     FitnessExperienceLevel? ExperienceLevel,
-    GymType? GymType,
     bool IncludeCardio,
     IReadOnlyCollection<TrainingDay> TrainingDays,
     string? PreferredTrainingTime,
@@ -21,13 +20,14 @@ public sealed record CustomerFitnessProfileResponse(
     NotificationIntensity? NotificationIntensity,
     bool OnboardingCompleted,
     DateTimeOffset? CreatedAtUtc,
-    DateTimeOffset? UpdatedAtUtc);
+    DateTimeOffset? UpdatedAtUtc,
+    FocusMuscleGroup? FocusMuscleGroup = null,
+    GymType? GymType = null);
 
 public sealed record SaveCustomerFitnessProfileRequest(
     FitnessGoal Goal,
-    FocusMuscleGroup FocusMuscleGroup,
+    IReadOnlyCollection<PriorityMuscleGroup>? PriorityMuscleGroups,
     FitnessExperienceLevel ExperienceLevel,
-    GymType GymType,
     bool IncludeCardio,
     IReadOnlyCollection<TrainingDay> TrainingDays,
     string? PreferredTrainingTime,
@@ -38,4 +38,6 @@ public sealed record SaveCustomerFitnessProfileRequest(
     decimal TargetWeightKg,
     bool NotificationsEnabled,
     NotificationIntensity NotificationIntensity,
-    bool OnboardingCompleted);
+    bool OnboardingCompleted,
+    FocusMuscleGroup? FocusMuscleGroup = null,
+    GymType? GymType = null);

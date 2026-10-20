@@ -54,7 +54,7 @@ public sealed class DashboardService : IDashboardService
 
         var activeCustomers = await _dbContext.Customers
             .AsNoTracking()
-            .Where(x => x.Status == CustomerStatus.Active)
+            .Where(x => x.Status == CustomerStatus.Active && (!scopeBranchId.HasValue || x.BranchId == scopeBranchId.Value))
             .Select(x => new
             {
                 x.Id,
@@ -203,7 +203,7 @@ public sealed class DashboardService : IDashboardService
     private static Guid? ResolveBranchScope(CurrentUser user)
     {
         if (user.IsInRole(RoleNames.SuperAdmin)) return null;
-        if ((user.IsInRole(RoleNames.BranchAdmin) || user.IsInRole(RoleNames.Reception)) && user.BranchId.HasValue) return user.BranchId.Value;
+        if (user.IsInRole(RoleNames.BranchAdmin) && user.BranchId.HasValue) return user.BranchId.Value;
         throw new ForbiddenException("You do not have access to dashboard metrics.");
     }
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,6 +12,8 @@ const dorianSurface = Color(0xFF151515);
 const dorianAccent = Color(0xFFFF6A1F);
 const dorianAccentSoft = Color(0xFFFFB27D);
 const dorianTextSoft = Color(0xFFD2D2D2);
+const _bootstrapTimeout = Duration(seconds: 12);
+const _requestTimeout = Duration(seconds: 15);
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -174,16 +176,21 @@ class SessionController extends ChangeNotifier {
   SessionTokens? get tokens => authSession?.tokens;
 
   Future<void> initialize() async {
-    authSession = await storage.read();
-    if (authSession != null) {
-      try {
-        await loadSessionContext();
-      } catch (_) {
-        await clearLocal();
+    try {
+      authSession = await storage.read().timeout(_bootstrapTimeout);
+      if (authSession != null) {
+        try {
+          await loadSessionContext().timeout(_bootstrapTimeout);
+        } catch (_) {
+          await clearLocal();
+        }
       }
+    } catch (_) {
+      await clearLocal();
+    } finally {
+      isBootstrapping = false;
+      notifyListeners();
     }
-    isBootstrapping = false;
-    notifyListeners();
   }
 
   Future<void> login(String email, String password) async {
@@ -338,13 +345,21 @@ class ApiClient {
     final payload = body == null ? null : jsonEncode(body);
     late final http.Response response;
     if (method == 'GET') {
-      response = await _client.get(uri, headers: headers);
+      response = await _client
+          .get(uri, headers: headers)
+          .timeout(_requestTimeout);
     } else if (method == 'POST') {
-      response = await _client.post(uri, headers: headers, body: payload);
+      response = await _client
+          .post(uri, headers: headers, body: payload)
+          .timeout(_requestTimeout);
     } else if (method == 'DELETE') {
-      response = await _client.delete(uri, headers: headers);
+      response = await _client
+          .delete(uri, headers: headers)
+          .timeout(_requestTimeout);
     } else {
-      response = await _client.put(uri, headers: headers, body: payload);
+      response = await _client
+          .put(uri, headers: headers, body: payload)
+          .timeout(_requestTimeout);
     }
     if (response.statusCode == 401 &&
         authenticated &&
@@ -421,6 +436,9 @@ String presentUiError(
   if (raw.isEmpty || raw == 'null') return fallback;
   if (raw.contains('Failed to fetch') || raw.contains('SocketException')) {
     return 'No pudimos conectar con Dorian en este momento. Verifica que la API este activa.';
+  }
+  if (raw.contains('TimeoutException')) {
+    return 'La conexion con Dorian tardó demasiado. Revisa internet e intenta nuevamente.';
   }
   final normalized = raw
       .replaceAll('Password', 'Contrasena')
@@ -988,12 +1006,10 @@ class GymBranch {
 
 const fitnessGoalLabels = <int, String>{
   1: 'Perder peso',
-  2: 'Definicion muscular',
-  3: 'Hipertrofia',
-  4: 'Mantener condicion',
+  3: 'Ganar masa muscular',
 };
 
-const focusMuscleGroupLabels = <int, String>{
+const legacyFocusMuscleGroupLabels = <int, String>{
   1: 'Balanceado',
   2: 'Pecho',
   3: 'Espalda',
@@ -1003,15 +1019,27 @@ const focusMuscleGroupLabels = <int, String>{
   7: 'Gluteos',
 };
 
+const priorityMuscleGroupLabels = <int, String>{
+  1: 'Pecho',
+  2: 'Espalda',
+  3: 'Bíceps',
+  4: 'Tríceps',
+  5: 'Antebrazo',
+  6: 'Glúteos',
+  7: 'Cuádriceps',
+  8: 'Aductores',
+  9: 'Abducción',
+  10: 'Pantorrillas',
+  11: 'Tibiales',
+};
+
+const upperPriorityMuscleGroups = <int>[1, 2, 3, 4, 5];
+const lowerPriorityMuscleGroups = <int>[6, 7, 8, 9, 10, 11];
+
 const experienceLevelLabels = <int, String>{
   1: 'Principiante',
   2: 'Intermedio',
   3: 'Avanzado',
-};
-
-const gymTypeLabels = <int, String>{
-  1: 'Gimnasio basico',
-  2: 'Gimnasio avanzado',
 };
 
 const promotionDiscountTypeLabels = <int, String>{
@@ -1038,9 +1066,9 @@ const fitnessGenderLabels = <int, String>{
 };
 
 const notificationIntensityLabels = <int, String>{
-  1: 'Bajo',
-  2: 'Moderada',
-  3: 'Intenso',
+  1: 'Suave',
+  2: 'Equilibrada',
+  3: 'Intensa',
 };
 
 const trainingPhaseLabels = <int, String>{
@@ -1090,9 +1118,8 @@ class CustomerFitnessProfile {
     required this.id,
     required this.customerId,
     required this.goal,
-    required this.focusMuscleGroup,
+    required this.priorityMuscleGroups,
     required this.experienceLevel,
-    required this.gymType,
     required this.includeCardio,
     required this.trainingDays,
     required this.preferredTrainingTime,
@@ -1109,9 +1136,8 @@ class CustomerFitnessProfile {
   final String? id;
   final String? customerId;
   final int? goal;
-  final int? focusMuscleGroup;
+  final List<int> priorityMuscleGroups;
   final int? experienceLevel;
-  final int? gymType;
   final bool includeCardio;
   final List<int> trainingDays;
   final String? preferredTrainingTime;
@@ -1128,40 +1154,47 @@ class CustomerFitnessProfile {
       preferredTrainingTime == null || preferredTrainingTime!.isEmpty;
   String get goalLabel =>
       goal == null ? 'No definido' : fitnessGoalLabels[goal] ?? 'No definido';
-  String get focusLabel => focusMuscleGroup == null
+  String get focusLabel => priorityMuscleGroups.isEmpty
       ? 'No definido'
-      : focusMuscleGroupLabels[focusMuscleGroup] ?? 'No definido';
+      : priorityMuscleGroups
+            .map((group) => priorityMuscleGroupLabels[group] ?? 'No definido')
+            .join(', ');
   String get experienceLabel => experienceLevel == null
       ? 'No definido'
       : experienceLevelLabels[experienceLevel] ?? 'No definido';
 
-  factory CustomerFitnessProfile.fromJson(Map<String, dynamic> json) =>
-      CustomerFitnessProfile(
-        id: json['id'] as String?,
-        customerId: json['customerId'] as String?,
-        goal: json['goal'] as int?,
-        focusMuscleGroup: json['focusMuscleGroup'] as int?,
-        experienceLevel: json['experienceLevel'] as int?,
-        gymType: json['gymType'] as int?,
-        includeCardio: json['includeCardio'] as bool? ?? false,
-        trainingDays: (json['trainingDays'] as List<dynamic>? ?? const [])
-            .map((item) => item as int)
-            .toList(),
-        preferredTrainingTime: json['preferredTrainingTime'] as String?,
-        gender: json['gender']?.toString(),
-        birthDate: json['birthDate'] as String?,
-        weightKg: (json['weightKg'] as num?)?.toDouble(),
-        heightCm: (json['heightCm'] as num?)?.toDouble(),
-        targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
-        notificationsEnabled: json['notificationsEnabled'] as bool? ?? false,
-        notificationIntensity: json['notificationIntensity'] as int?,
-        onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
-      );
+  factory CustomerFitnessProfile.fromJson(
+    Map<String, dynamic> json,
+  ) => CustomerFitnessProfile(
+    id: json['id'] as String?,
+    customerId: json['customerId'] as String?,
+    goal: json['goal'] as int?,
+    priorityMuscleGroups:
+        (json['priorityMuscleGroups'] as List<dynamic>?)
+            ?.map((item) => item as int)
+            .toList() ??
+        [if (json['focusMuscleGroup'] is int) json['focusMuscleGroup'] as int],
+    experienceLevel: json['experienceLevel'] as int?,
+    includeCardio: json['includeCardio'] as bool? ?? false,
+    trainingDays: (json['trainingDays'] as List<dynamic>? ?? const [])
+        .map((item) => item as int)
+        .toList(),
+    preferredTrainingTime: json['preferredTrainingTime'] as String?,
+    gender: json['gender']?.toString(),
+    birthDate: json['birthDate'] as String?,
+    weightKg: (json['weightKg'] as num?)?.toDouble(),
+    heightCm: (json['heightCm'] as num?)?.toDouble(),
+    targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
+    notificationsEnabled: json['notificationsEnabled'] as bool? ?? false,
+    notificationIntensity: json['notificationIntensity'] as int?,
+    onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
+  );
 }
 
 class CustomerFitnessProfileInput {
   CustomerFitnessProfileInput({
     required this.goal,
+    required this.priorityMuscleGroups,
     required this.focusMuscleGroup,
     required this.experienceLevel,
     required this.gymType,
@@ -1179,6 +1212,7 @@ class CustomerFitnessProfileInput {
   });
 
   final int goal;
+  final List<int> priorityMuscleGroups;
   final int focusMuscleGroup;
   final int experienceLevel;
   final int gymType;
@@ -1196,6 +1230,7 @@ class CustomerFitnessProfileInput {
 
   Map<String, dynamic> toJson() => {
     'goal': goal,
+    'priorityMuscleGroups': priorityMuscleGroups,
     'focusMuscleGroup': focusMuscleGroup,
     'experienceLevel': experienceLevel,
     'gymType': gymType,
@@ -1211,6 +1246,33 @@ class CustomerFitnessProfileInput {
     'notificationIntensity': notificationIntensity,
     'onboardingCompleted': onboardingCompleted,
   };
+}
+
+int mapLegacyFocusMuscleGroup(Set<int> priorityMuscleGroups) {
+  if (priorityMuscleGroups.isEmpty) {
+    return 1;
+  }
+
+  if (priorityMuscleGroups.contains(1)) return 2;
+  if (priorityMuscleGroups.contains(2)) return 3;
+
+  if (priorityMuscleGroups.contains(3) ||
+      priorityMuscleGroups.contains(4) ||
+      priorityMuscleGroups.contains(5)) {
+    return 4;
+  }
+
+  if (priorityMuscleGroups.contains(6)) return 7;
+
+  if (priorityMuscleGroups.contains(7) ||
+      priorityMuscleGroups.contains(8) ||
+      priorityMuscleGroups.contains(9) ||
+      priorityMuscleGroups.contains(10) ||
+      priorityMuscleGroups.contains(11)) {
+    return 5;
+  }
+
+  return 1;
 }
 
 class BodyMeasurement {
@@ -2533,10 +2595,12 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         obscureText: true,
                         validator: (value) {
-                          if (value == null || value.isEmpty)
+                          if (value == null || value.isEmpty) {
                             return 'Confirma tu contrasena';
-                          if (value != _password.text)
+                          }
+                          if (value != _password.text) {
                             return 'Las contrasenas no coinciden';
+                          }
                           return null;
                         },
                       ),
@@ -2572,9 +2636,8 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
   bool isSaving = false;
   String? errorMessage;
   late int goal;
-  late int focusMuscleGroup;
+  late Set<int> priorityMuscleGroups;
   late int experienceLevel;
-  late int gymType;
   late bool includeCardio;
   late Set<int> trainingDays;
   late bool flexibleSchedule;
@@ -2591,10 +2654,11 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
   void initState() {
     super.initState();
     final existing = context.read<SessionController>().fitnessProfile;
-    goal = existing?.goal ?? 3;
-    focusMuscleGroup = existing?.focusMuscleGroup ?? 1;
+    goal = existing?.goal == 1 ? 1 : 3;
+    priorityMuscleGroups = {
+      ...(existing?.priorityMuscleGroups ?? const <int>[]),
+    };
     experienceLevel = existing?.experienceLevel ?? 1;
-    gymType = existing?.gymType ?? 2;
     includeCardio = existing?.includeCardio ?? true;
     trainingDays = {
       ...(existing?.trainingDays ?? [1, 3, 5]),
@@ -2628,7 +2692,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final totalSteps = widget.editMode ? 9 : 10;
+    final totalSteps = widget.editMode ? 8 : 9;
     final progress = (currentStep + 1) / totalSteps;
 
     return DecoratedBox(
@@ -2780,31 +2844,18 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
           (value) => setState(() => goal = value),
         );
       case 2:
-        return _optionStep(
-          'Que grupo muscular quieres priorizar?',
-          focusMuscleGroupLabels,
-          focusMuscleGroup,
-          (value) => setState(() => focusMuscleGroup = value),
-          recommendedValue: 1,
-        );
+        return _priorityMuscleGroupsStep();
       case 3:
         return _experienceStep();
       case 4:
-        return _optionStep(
-          'Que tipo de gimnasio sueles usar?',
-          gymTypeLabels,
-          gymType,
-          (value) => setState(() => gymType = value),
-        );
-      case 5:
         return _cardioStep();
-      case 6:
+      case 5:
         return _trainingDaysStep();
-      case 7:
+      case 6:
         return _physicalDataStep();
-      case 8:
+      case 7:
         return _preferredTimeStep();
-      case 9:
+      case 8:
         return _notificationsStep();
       default:
         return const SizedBox.shrink();
@@ -2878,25 +2929,98 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
     );
   }
 
+  Widget _priorityMuscleGroupsStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '¿Qué grupo muscular quieres priorizar?',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Selecciona hasta 3 grupos musculares para personalizar mejor tu experiencia.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        const SizedBox(height: 18),
+        _priorityMuscleGroupSection('Tren superior', upperPriorityMuscleGroups),
+        const SizedBox(height: 18),
+        _priorityMuscleGroupSection('Tren inferior', lowerPriorityMuscleGroups),
+        const SizedBox(height: 14),
+        Text(
+          'Seleccionados: ${priorityMuscleGroups.length}/3',
+          style: const TextStyle(color: dorianAccentSoft),
+        ),
+      ],
+    );
+  }
+
+  Widget _priorityMuscleGroupSection(String title, List<int> groups) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: groups.map((group) {
+            final selected = priorityMuscleGroups.contains(group);
+            return FilterChip(
+              label: Text(priorityMuscleGroupLabels[group] ?? 'Grupo'),
+              selected: selected,
+              onSelected: (_) => _togglePriorityMuscleGroup(group),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  void _togglePriorityMuscleGroup(int group) {
+    setState(() {
+      if (priorityMuscleGroups.contains(group)) {
+        priorityMuscleGroups.remove(group);
+        errorMessage = null;
+        return;
+      }
+
+      if (priorityMuscleGroups.length >= 3) {
+        errorMessage = 'Puedes seleccionar maximo 3 grupos musculares.';
+        return;
+      }
+
+      priorityMuscleGroups.add(group);
+      errorMessage = null;
+    });
+  }
+
   Widget _cardioStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quieres incluir cardio?',
+          '¿Quieres incluir cardio?',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 16),
         _selectionTile(
-          title: 'Incluir cardio en entrenamientos',
+          title: 'Sí, incluir cardio',
           selected: includeCardio,
           onTap: () => setState(() => includeCardio = true),
         ),
         const SizedBox(height: 12),
         _selectionTile(
-          title: 'No quiero ejercicios de cardio',
+          title: 'No incluir cardio',
           selected: !includeCardio,
           onTap: () => setState(() => includeCardio = false),
         ),
@@ -3168,7 +3292,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
       return;
     }
 
-    final totalSteps = widget.editMode ? 9 : 10;
+    final totalSteps = widget.editMode ? 8 : 9;
     if (currentStep < totalSteps - 1) {
       setState(() => currentStep += 1);
       return;
@@ -3191,9 +3315,10 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
 
     final payload = CustomerFitnessProfileInput(
       goal: goal,
-      focusMuscleGroup: focusMuscleGroup,
+      priorityMuscleGroups: priorityMuscleGroups.toList()..sort(),
+      focusMuscleGroup: mapLegacyFocusMuscleGroup(priorityMuscleGroups),
       experienceLevel: experienceLevel,
-      gymType: gymType,
+      gymType: 2,
       includeCardio: includeCardio,
       trainingDays: trainingDays.toList()..sort(),
       preferredTrainingTime: flexibleSchedule
@@ -3248,7 +3373,16 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
   bool _validateCurrentStep() {
     final stepIndex = widget.editMode ? currentStep + 1 : currentStep;
     switch (stepIndex) {
-      case 6:
+      case 2:
+        if (priorityMuscleGroups.isEmpty) {
+          setState(
+            () => errorMessage =
+                'Selecciona al menos un grupo muscular prioritario.',
+          );
+          return false;
+        }
+        break;
+      case 5:
         if (trainingDays.isEmpty) {
           setState(
             () => errorMessage = 'Selecciona al menos un dia disponible.',
@@ -3256,7 +3390,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
           return false;
         }
         break;
-      case 7:
+      case 6:
         if (birthDate == null) {
           setState(() => errorMessage = 'Selecciona tu fecha de nacimiento.');
           return false;
@@ -3283,7 +3417,7 @@ class _FitnessOnboardingPageState extends State<FitnessOnboardingPage> {
           return false;
         }
         break;
-      case 8:
+      case 7:
         if (!flexibleSchedule && preferredTime == null) {
           setState(
             () => errorMessage =
@@ -3534,7 +3668,9 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             child: Text(
-                              planActive ? 'Ver detalles' : 'Elegir plan y pagar',
+                              planActive
+                                  ? 'Ver detalles'
+                                  : 'Elegir plan y pagar',
                             ),
                           ),
                         ),
@@ -3545,9 +3681,9 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 20),
                 Text(
                   'Acceso rápido',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 _HomeFeatureHero(
@@ -3568,16 +3704,17 @@ class _HomePageState extends State<HomePage> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio:
-                      MediaQuery.of(context).size.width >= 900 ? 1.18 : 1.0,
+                  childAspectRatio: MediaQuery.of(context).size.width >= 900
+                      ? 1.18
+                      : 1.0,
                   children: [
                     _HomeFeatureTile(
                       icon: Icons.accessibility_new_outlined,
                       eyebrow: 'CUERPO',
                       title: 'Cuerpo',
                       subtitle: 'Peso, medidas y progreso',
-                                            backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
-onTap: () => Navigator.of(context).push(
+                      backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
+                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const BodyTrackingPage(),
                         ),
@@ -3588,8 +3725,10 @@ onTap: () => Navigator.of(context).push(
                       eyebrow: 'ENTRENAMIENTO',
                       title: 'Mi plan',
                       subtitle: 'Rutina personalizada',
-                                            backgroundAsset: _additionalPhotoAsset('plan de entrenamiento.png'),
-onTap: () => Navigator.of(context).push(
+                      backgroundAsset: _additionalPhotoAsset(
+                        'plan de entrenamiento.png',
+                      ),
+                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const TrainingPlanPage(),
                         ),
@@ -3600,8 +3739,8 @@ onTap: () => Navigator.of(context).push(
                       eyebrow: 'NUTRICIÓN',
                       title: 'Nutrición',
                       subtitle: 'Macros y plan diario',
-                                            backgroundAsset: _additionalPhotoAsset('nutricion.png'),
-onTap: () => Navigator.of(context).push(
+                      backgroundAsset: _additionalPhotoAsset('nutricion.png'),
+                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const NutritionPage(),
                         ),
@@ -3612,8 +3751,8 @@ onTap: () => Navigator.of(context).push(
                       eyebrow: 'ACTIVIDAD',
                       title: 'Actividades',
                       subtitle: 'Progreso y constancia',
-                                            backgroundAsset: _additionalPhotoAsset('actividades.png'),
-onTap: () => Navigator.of(context).push(
+                      backgroundAsset: _additionalPhotoAsset('actividades.png'),
+                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const ActivityPage()),
                       ),
                     ),
@@ -3622,8 +3761,8 @@ onTap: () => Navigator.of(context).push(
                       eyebrow: 'MOVIMIENTO',
                       title: 'Ejercicios',
                       subtitle: 'Explora por zona corporal',
-                                            backgroundAsset: _additionalPhotoAsset('ejercicios.png'),
-onTap: () => Navigator.of(context).push(
+                      backgroundAsset: _additionalPhotoAsset('ejercicios.png'),
+                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const ExercisesHubPage(),
                         ),
@@ -3634,8 +3773,10 @@ onTap: () => Navigator.of(context).push(
                       eyebrow: 'PLANES',
                       title: 'Mi plan',
                       subtitle: 'Estado y beneficios',
-                                            backgroundAsset: _additionalPhotoAsset('pesas - fuerza - disciplina.png'),
-onTap: () => Navigator.of(context).push(
+                      backgroundAsset: _additionalPhotoAsset(
+                        'pesas - fuerza - disciplina.png',
+                      ),
+                      onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const MembershipPage(),
                         ),
@@ -3672,10 +3813,7 @@ Widget _homeTopLabel(String label) {
   );
 }
 
-Widget _homeStatChip({
-  required IconData icon,
-  required String label,
-}) {
+Widget _homeStatChip({required IconData icon, required String label}) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(
@@ -3733,7 +3871,9 @@ String _classVisualAsset(String name) {
   if (normalized.contains('yoga') || normalized.contains('movilidad')) {
     return _additionalPhotoAsset('yoga-movilidad.png');
   }
-  if (normalized.contains('spin') || normalized.contains('ciclo') || normalized.contains('bike')) {
+  if (normalized.contains('spin') ||
+      normalized.contains('ciclo') ||
+      normalized.contains('bike')) {
     return _additionalPhotoAsset('spinning.png');
   }
   if (normalized.contains('cardio')) {
@@ -3826,11 +3966,7 @@ class _HomeFeatureHero extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
-            Positioned(
-              left: 18,
-              top: 18,
-              child: _homeTopLabel(imageLabel),
-            ),
+            Positioned(left: 18, top: 18, child: _homeTopLabel(imageLabel)),
             Positioned(
               left: 18,
               right: 18,
@@ -3926,9 +4062,9 @@ class _HomeFeatureTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
@@ -3941,6 +4077,7 @@ class _HomeFeatureTile extends StatelessWidget {
     );
   }
 }
+
 class BranchesPage extends StatelessWidget {
   const BranchesPage({super.key});
   @override
@@ -3948,9 +4085,10 @@ class BranchesPage extends StatelessWidget {
     return FutureBuilder<List<GymBranch>>(
       future: context.read<BranchApi>().listBranches(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done)
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: Text(
               presentUiError(
@@ -3959,6 +4097,7 @@ class BranchesPage extends StatelessWidget {
               ),
             ),
           );
+        }
         final items = snapshot.data!;
         if (items.isEmpty) {
           return ListView(
@@ -4072,10 +4211,12 @@ class ClassesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
       future: () async {
-        final catalog = await context.read<GroupClassApi>().listCatalog();
+        final groupClassApi = context.read<GroupClassApi>();
+        final classApi = context.read<ClassApi>();
+        final catalog = await groupClassApi.listCatalog();
         List<GymClass> items = const [];
         try {
-          items = await context.read<ClassApi>().listClasses();
+          items = await classApi.listClasses();
         } catch (_) {}
         return {'catalog': catalog, 'items': items};
       }(),
@@ -4181,9 +4322,9 @@ class ClassesPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Descubre el estilo de cada clase.',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 for (final item in catalog) ...[
@@ -4202,9 +4343,9 @@ class ClassesPage extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Elige una sesión y aparta tu cupo.',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 if (items.isEmpty) ...[
@@ -4311,9 +4452,9 @@ class GroupClassDetailPage extends StatelessWidget {
               children: [
                 Text(
                   'Beneficios',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 14),
                 for (final benefit in item.benefits) ...[
@@ -4352,9 +4493,9 @@ class GroupClassDetailPage extends StatelessWidget {
               children: [
                 Text(
                   'Reserva tu cupo',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -4450,9 +4591,9 @@ class ClassBookingPage extends StatelessWidget {
               children: [
                 Text(
                   'Antes de confirmar',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -4467,7 +4608,10 @@ class ClassBookingPage extends StatelessWidget {
             onPressed: gymClass.availableSpots <= 0
                 ? null
                 : () async {
-                    final customerId = context.read<SessionController>().profile!.id;
+                    final customerId = context
+                        .read<SessionController>()
+                        .profile!
+                        .id;
                     final bookingApi = context.read<BookingApi>();
                     await bookingApi.createBooking(gymClass.id, customerId);
                     if (!context.mounted) return;
@@ -4578,9 +4722,7 @@ class BookingsPage extends StatelessWidget {
                         await bookingApi.cancelBooking(booking.id);
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Reserva cancelada.'),
-                          ),
+                          const SnackBar(content: Text('Reserva cancelada.')),
                         );
                         Navigator.of(context).pushReplacement(
                           MaterialPageRoute(
@@ -4611,10 +4753,7 @@ Widget _sectionEyebrow(String label) {
 }
 
 class _ClassCatalogCard extends StatelessWidget {
-  const _ClassCatalogCard({
-    required this.item,
-    required this.onTap,
-  });
+  const _ClassCatalogCard({required this.item, required this.onTap});
 
   final GroupClassCatalogItem item;
   final VoidCallback onTap;
@@ -4629,10 +4768,7 @@ class _ClassCatalogCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          image: _premiumAssetImage(
-            _classVisualAsset(item.name),
-            darken: 0.62,
-          ),
+          image: _premiumAssetImage(_classVisualAsset(item.name), darken: 0.62),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -4683,10 +4819,7 @@ class _ClassCatalogCard extends StatelessWidget {
 }
 
 class _ClassScheduleCard extends StatelessWidget {
-  const _ClassScheduleCard({
-    required this.gymClass,
-    required this.onTap,
-  });
+  const _ClassScheduleCard({required this.gymClass, required this.onTap});
 
   final GymClass gymClass;
   final VoidCallback onTap;
@@ -4698,7 +4831,7 @@ class _ClassScheduleCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 220,
-                decoration: BoxDecoration(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           image: _premiumAssetImage(
@@ -4715,9 +4848,7 @@ class _ClassScheduleCard extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _homeTopLabel(
-                    gymClass.availableSpots > 0 ? 'HOY' : 'LLENO',
-                  ),
+                  _homeTopLabel(gymClass.availableSpots > 0 ? 'HOY' : 'LLENO'),
                   _homeStatChip(
                     icon: Icons.schedule_rounded,
                     label: formatDateTime(gymClass.startTime),
@@ -4751,10 +4882,7 @@ class _ClassScheduleCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  FilledButton(
-                    onPressed: onTap,
-                    child: const Text('Reservar'),
-                  ),
+                  FilledButton(onPressed: onTap, child: const Text('Reservar')),
                 ],
               ),
             ],
@@ -4802,9 +4930,9 @@ class _BookingSummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   gymClass?.name ?? 'Clase reservada',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               _BookingStatusChip(status: booking.status),
@@ -4876,6 +5004,7 @@ class _BookingStatusChip extends StatelessWidget {
     );
   }
 }
+
 class PromotionsPage extends StatelessWidget {
   const PromotionsPage({super.key});
 
@@ -4988,7 +5117,7 @@ class ProfilePage extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
           children: [
             Container(
-                            decoration: BoxDecoration(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 image: _premiumAssetImage(
@@ -5025,9 +5154,7 @@ class ProfilePage extends StatelessWidget {
                               const SizedBox(height: 10),
                               Text(
                                 profile.fullName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
+                                style: Theme.of(context).textTheme.headlineSmall
                                     ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                               const SizedBox(height: 6),
@@ -5106,9 +5233,9 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 18),
             Text(
               'Acceso rápido',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             GridView.count(
@@ -5117,19 +5244,18 @@ class ProfilePage extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio:
-                  MediaQuery.of(context).size.width >= 900 ? 1.18 : 1.0,
+              childAspectRatio: MediaQuery.of(context).size.width >= 900
+                  ? 1.18
+                  : 1.0,
               children: [
                 _HomeFeatureTile(
                   icon: Icons.monitor_weight_outlined,
                   eyebrow: 'CUERPO',
                   title: 'Mi cuerpo',
                   subtitle: 'Seguimiento corporal',
-                                    backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
-onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const BodyTrackingPage(),
-                    ),
+                  backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const BodyTrackingPage()),
                   ),
                 ),
                 _HomeFeatureTile(
@@ -5137,11 +5263,11 @@ onTap: () => Navigator.of(context).push(
                   eyebrow: 'ENTRENAMIENTO',
                   title: 'Mi plan',
                   subtitle: 'Ver fases y entrenamientos',
-                                    backgroundAsset: _additionalPhotoAsset('entrenamiento individual.png'),
-onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const TrainingPlanPage(),
-                    ),
+                  backgroundAsset: _additionalPhotoAsset(
+                    'entrenamiento individual.png',
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TrainingPlanPage()),
                   ),
                 ),
                 _HomeFeatureTile(
@@ -5151,8 +5277,8 @@ onTap: () => Navigator.of(context).push(
                   subtitle: fitnessProfile?.onboardingCompleted == true
                       ? 'Editar onboarding'
                       : 'Completar onboarding',
-                                    backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
-onTap: () => Navigator.of(context).push(
+                  backgroundAsset: _additionalPhotoAsset('cuerpo.png'),
+                  onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) =>
                           const FitnessOnboardingPage(editMode: true),
@@ -5191,11 +5317,12 @@ onTap: () => Navigator.of(context).push(
             const SizedBox(height: 12),
             _HomeFeatureHero(
               title: 'Mis reservas',
-              subtitle: 'Gestiona tus clases activas y revisa tus próximos entrenamientos.',
+              subtitle:
+                  'Gestiona tus clases activas y revisa tus próximos entrenamientos.',
               imageLabel: 'RESERVAS',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BookingsPage()),
-              ),
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const BookingsPage())),
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
@@ -5209,6 +5336,7 @@ onTap: () => Navigator.of(context).push(
     );
   }
 }
+
 class MembershipPage extends StatelessWidget {
   const MembershipPage({super.key});
 
@@ -5261,15 +5389,15 @@ class MembershipPage extends StatelessWidget {
                 Container(
                   height: 176,
                   width: double.infinity,
-                                decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
-                image: _premiumAssetImage(
-                  _additionalPhotoAsset('gente entrenando.png'),
-                  darken: 0.7,
-                ),
-              ),
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(30),
+                    ),
+                    image: _premiumAssetImage(
+                      _additionalPhotoAsset('gente entrenando.png'),
+                      darken: 0.7,
+                    ),
+                  ),
                   child: Stack(
                     children: [
                       Positioned(
@@ -5381,7 +5509,9 @@ class MembershipPage extends StatelessWidget {
                               'Fin',
                               profile.activeMembershipEndsAtUtc == null
                                   ? '-'
-                                  : formatDate(profile.activeMembershipEndsAtUtc!),
+                                  : formatDate(
+                                      profile.activeMembershipEndsAtUtc!,
+                                    ),
                             ),
                           ),
                         ],
@@ -5391,7 +5521,10 @@ class MembershipPage extends StatelessWidget {
                         profile.activeMembershipEndsAtUtc == null
                             ? 'Puedes elegir un plan y completar el pago de forma segura desde la app o acercarte al counter.'
                             : 'Cuando tu plan venza, podrás renovarlo desde la app mediante una pasarela segura. Dorian no guardará número de tarjeta ni CVV.',
-                        style: const TextStyle(color: Colors.white70, height: 1.5),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          height: 1.5,
+                        ),
                       ),
                       const SizedBox(height: 18),
                       ElevatedButton.icon(
@@ -5452,7 +5585,10 @@ class PlanCatalogPage extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  presentUiError(snapshot.error, 'No pudimos cargar los planes.'),
+                  presentUiError(
+                    snapshot.error,
+                    'No pudimos cargar los planes.',
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -5477,9 +5613,11 @@ class PlanCatalogPage extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(22),
-                                decoration: BoxDecoration(
+                decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
                   image: _premiumAssetImage(
                     _additionalPhotoAsset('pesas - fuerza - disciplina.png'),
                     darken: 0.72,
@@ -5492,10 +5630,8 @@ class PlanCatalogPage extends StatelessWidget {
                     const SizedBox(height: 14),
                     Text(
                       'Activa tu acceso y entrena con el estándar Dorian.',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        height: 1.1,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800, height: 1.1),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -5512,7 +5648,8 @@ class PlanCatalogPage extends StatelessWidget {
                   highlighted: _isRecommendedPlan(index, plans[index]),
                   onContinue: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => SecureCheckoutPreviewPage(plan: plans[index]),
+                      builder: (_) =>
+                          SecureCheckoutPreviewPage(plan: plans[index]),
                     ),
                   ),
                 ),
@@ -5540,7 +5677,7 @@ class SecureCheckoutPreviewPage extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
               image: _premiumAssetImage(
@@ -5782,7 +5919,7 @@ class _PlanShowcaseCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         color: highlighted ? const Color(0xFF191512) : const Color(0xFF111111),
         border: Border.all(
@@ -5814,9 +5951,9 @@ class _PlanShowcaseCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   plan.name.toUpperCase(),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               Column(
@@ -5848,7 +5985,10 @@ class _PlanShowcaseCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: dorianAccent,
                   borderRadius: BorderRadius.circular(999),
@@ -5884,7 +6024,10 @@ class _PlanShowcaseCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       item,
-                      style: const TextStyle(color: Colors.white70, height: 1.35),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],
@@ -6096,7 +6239,7 @@ class _TrainingPlanPageState extends State<TrainingPlanPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${plan.levelLabel} · ${focusMuscleGroupLabels[plan.focusMuscleGroup] ?? 'Balanceado'}',
+                          '${plan.levelLabel} · ${legacyFocusMuscleGroupLabels[plan.focusMuscleGroup] ?? 'Balanceado'}',
                           style: const TextStyle(color: dorianAccentSoft),
                         ),
                         const SizedBox(height: 12),
@@ -6702,7 +6845,9 @@ class _ExercisesHubPageState extends State<ExercisesHubPage> {
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
                   gradient: LinearGradient(
                     colors: [
                       const Color(0xFF090909),
@@ -6740,7 +6885,10 @@ class _ExercisesHubPageState extends State<ExercisesHubPage> {
                         isFrontView
                             ? 'Explora la parte frontal y abre ejercicios sugeridos por zona.'
                             : 'Revisa la cadena posterior y entra a los ejercicios de cada region.',
-                        style: const TextStyle(color: Colors.white70, height: 1.45),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          height: 1.45,
+                        ),
                       ),
                       const SizedBox(height: 14),
                       Wrap(
@@ -6784,9 +6932,9 @@ class _ExercisesHubPageState extends State<ExercisesHubPage> {
                 query.isEmpty
                     ? 'Elige una zona para continuar.'
                     : 'Coincidencias para tu busqueda.',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 12),
               if (visibleRegions.isEmpty)
@@ -6893,15 +7041,6 @@ class _ExerciseFigure extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          Text(
-            activeLabel ?? 'Selecciona una zona',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: dorianAccentSoft,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
       ),
     );
@@ -6975,127 +7114,173 @@ class _ExerciseRegionCard extends StatelessWidget {
   }
 }
 
-class ExerciseRegionPage extends StatelessWidget {
+class ExerciseRegionPage extends StatefulWidget {
   const ExerciseRegionPage({super.key, required this.region});
 
   final DemoExerciseRegion region;
 
   @override
+  State<ExerciseRegionPage> createState() => _ExerciseRegionPageState();
+}
+
+class _ExerciseRegionPageState extends State<ExerciseRegionPage> {
+  late Future<ExerciseRegionContent> _contentFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentFuture = ExerciseDbRepository.instance.loadRegion(widget.region);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PremiumScaffold(
-      title: region.name,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF0A0A0A),
-                  const Color(0xFF141414),
-                  dorianAccent.withValues(alpha: 0.16),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _homeTopLabel('EXPLORAR'),
-                const SizedBox(height: 12),
-                Text(
-                  region.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+      title: widget.region.name,
+      child: FutureBuilder<ExerciseRegionContent>(
+        future: _contentFuture,
+        builder: (context, snapshot) {
+          final content =
+              snapshot.data ??
+              ExerciseRegionContent(
+                exercises: widget.region.exercises,
+                usesRemoteSource: false,
+              );
+          final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF0A0A0A),
+                      const Color(0xFF141414),
+                      dorianAccent.withValues(alpha: 0.16),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Selecciona un ejercicio para ver la ejecucion guiada y el enfoque muscular.',
-                  style: const TextStyle(color: Colors.white70, height: 1.45),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...region.exercises.map(
-            (exercise) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(26),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ExerciseDetailPage(
-                        regionName: region.name,
-                        exercise: exercise,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _homeTopLabel(
+                      content.usesRemoteSource
+                          ? 'EXPLORAR · DEMO API'
+                          : 'EXPLORAR',
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      widget.region.name,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      content.usesRemoteSource
+                          ? 'Mostrando ejercicios demo desde ExerciseDB para esta zona muscular.'
+                          : 'Selecciona un ejercicio para ver la ejecucion guiada y el enfoque muscular.',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        height: 1.45,
                       ),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(26),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF0C0C0C),
-                        const Color(0xFF151515),
-                        dorianAccent.withValues(alpha: 0.14),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _ExerciseMediaThumb(exercise: exercise),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                ...content.exercises.map(
+                  (exercise) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(26),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ExerciseDetailPage(
+                              regionName: widget.region.name,
+                              exercise: exercise,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(26),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF0C0C0C),
+                              const Color(0xFF151515),
+                              dorianAccent.withValues(alpha: 0.14),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              exercise.name,
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              exercise.description,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                height: 1.45,
+                            _ExerciseMediaThumb(exercise: exercise),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    exercise.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    exercise.description,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      height: 1.45,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _ExerciseInfoChip(text: exercise.focus),
+                                      _ExerciseInfoChip(
+                                        text: exercise.equipment,
+                                      ),
+                                      _ExerciseInfoChip(text: exercise.level),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _ExerciseInfoChip(text: exercise.focus),
-                                _ExerciseInfoChip(text: exercise.equipment),
-                                _ExerciseInfoChip(text: exercise.level),
-                              ],
                             ),
                           ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -7110,6 +7295,13 @@ class ExerciseDetailPage extends StatelessWidget {
 
   final String regionName;
   final DemoExercise exercise;
+
+  String _localizedRemoteText(String value) {
+    if (exercise.level != 'Demo API') {
+      return value;
+    }
+    return ExerciseDbRepository.instance.translateRemoteTextForUi(value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -7141,7 +7333,7 @@ class ExerciseDetailPage extends StatelessWidget {
                 _homeTopLabel('ZONA: ${regionName.toUpperCase()}'),
                 const SizedBox(height: 12),
                 Text(
-                  exercise.description,
+                  _localizedRemoteText(exercise.description),
                   style: const TextStyle(color: Colors.white70, height: 1.5),
                 ),
                 const SizedBox(height: 14),
@@ -7164,9 +7356,9 @@ class ExerciseDetailPage extends StatelessWidget {
               children: [
                 Text(
                   'Como realizarlo',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 ...exercise.steps.asMap().entries.map(
@@ -7194,7 +7386,7 @@ class ExerciseDetailPage extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            entry.value,
+                            _localizedRemoteText(entry.value),
                             style: const TextStyle(
                               color: Colors.white70,
                               height: 1.5,
@@ -7264,6 +7456,7 @@ class _ExerciseMediaThumb extends StatelessWidget {
           : Image.network(
               exercise.gifUrl!,
               fit: BoxFit.cover,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
               errorBuilder: (_, _, _) => const Icon(
                 Icons.ondemand_video_rounded,
                 size: 34,
@@ -7282,10 +7475,10 @@ class _ExerciseHeroMedia extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 240,
+      height: 252,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white,
+        color: const Color(0xFFF5F5F5),
       ),
       clipBehavior: Clip.antiAlias,
       child: exercise.gifUrl == null
@@ -7299,20 +7492,26 @@ class _ExerciseHeroMedia extends StatelessWidget {
           : Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  exercise.gifUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const Center(
-                    child: Icon(
-                      Icons.play_circle_outline_rounded,
-                      size: 62,
-                      color: dorianAccent,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 54),
+                  child: Image.network(
+                    exercise.gifUrl!,
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Icon(
+                        Icons.play_circle_outline_rounded,
+                        size: 62,
+                        color: dorianAccent,
+                      ),
                     ),
                   ),
                 ),
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 10,
@@ -7330,15 +7529,434 @@ class _ExerciseHeroMedia extends StatelessWidget {
   }
 }
 
+class ExerciseRegionContent {
+  const ExerciseRegionContent({
+    required this.exercises,
+    required this.usesRemoteSource,
+  });
+
+  final List<DemoExercise> exercises;
+  final bool usesRemoteSource;
+}
+
+class ExerciseDbRepository {
+  ExerciseDbRepository._();
+
+  static final ExerciseDbRepository instance = ExerciseDbRepository._();
+  static const _baseUrl = 'https://oss.exercisedb.dev';
+  static const _remoteLabelTranslations = <String, String>{
+    'Abs': 'Abdomen',
+    'Abdominals': 'Abdomen',
+    'Adductors': 'Aductores',
+    'Ankles': 'Tobillos',
+    'Assisted': 'Asistido',
+    'Back': 'Espalda',
+    'Band': 'Banda',
+    'Barbell': 'Barra',
+    'Biceps': 'Bíceps',
+    'Body Weight': 'Peso corporal',
+    'Cable': 'Polea',
+    'Calves': 'Pantorrillas',
+    'Cardiovascular System': 'Sistema cardiovascular',
+    'Chest': 'Pecho',
+    'Core': 'Core',
+    'Deltoids': 'Deltoides',
+    'Delts': 'Deltoides',
+    'Dumbbell': 'Mancuernas',
+    'Ez Barbell': 'Barra EZ',
+    'Feet': 'Pies',
+    'Forearms': 'Antebrazo',
+    'Glutes': 'Glúteos',
+    'Grip Muscles': 'Agarre',
+    'Hamstrings': 'Isquiotibiales',
+    'Hip Flexors': 'Flexores de cadera',
+    'Inner Thighs': 'Muslo interno',
+    'Lats': 'Dorsales',
+    'Lower Back': 'Lumbares',
+    'Machine': 'Máquina',
+    'Obliques': 'Oblicuos',
+    'Pectorals': 'Pectorales',
+    'Quadriceps': 'Cuádriceps',
+    'Rear Deltoids': 'Deltoides posteriores',
+    'Roller': 'Rodillo',
+    'Shoulders': 'Hombros',
+    'Shins': 'Tibiales',
+    'Sled Machine': 'Prensa de trineo',
+    'Spine': 'Columna',
+    'Trapezius': 'Trapecio',
+    'Traps': 'Trapecio',
+    'Triceps': 'Tríceps',
+    'Upper Back': 'Espalda alta',
+    'Waist': 'Core',
+    'Wrists': 'Muñecas',
+  };
+
+  final Map<String, Future<ExerciseRegionContent>> _cache = {};
+
+  Future<ExerciseRegionContent> loadRegion(DemoExerciseRegion region) {
+    final cacheKey =
+        '${region.name}|${region.remoteBodyPart ?? ''}|${region.remoteTargetMuscle ?? ''}';
+    return _cache.putIfAbsent(cacheKey, () => _loadRegionInternal(region));
+  }
+
+  String translateRemoteTextForUi(String value) {
+    return _translateInstruction(value);
+  }
+
+  Future<ExerciseRegionContent> _loadRegionInternal(
+    DemoExerciseRegion region,
+  ) async {
+    if ((region.remoteBodyPart == null || region.remoteBodyPart!.isEmpty) &&
+        (region.remoteTargetMuscle == null ||
+            region.remoteTargetMuscle!.isEmpty)) {
+      return ExerciseRegionContent(
+        exercises: region.exercises,
+        usesRemoteSource: false,
+      );
+    }
+
+    try {
+      final query = <String, String>{
+        'limit': '10',
+        if (region.remoteBodyPart != null && region.remoteBodyPart!.isNotEmpty)
+          'bodyParts': region.remoteBodyPart!,
+        if (region.remoteTargetMuscle != null &&
+            region.remoteTargetMuscle!.isNotEmpty)
+          'targetMuscles': region.remoteTargetMuscle!,
+      };
+      final uri = Uri.parse(
+        '$_baseUrl/api/v1/exercises',
+      ).replace(queryParameters: query);
+      final response = await http.get(uri);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return ExerciseRegionContent(
+          exercises: region.exercises,
+          usesRemoteSource: false,
+        );
+      }
+
+      final payload = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = (payload['data'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(_mapRemoteExercise)
+          .whereType<DemoExercise>()
+          .toList();
+
+      if (data.isEmpty) {
+        return ExerciseRegionContent(
+          exercises: region.exercises,
+          usesRemoteSource: false,
+        );
+      }
+
+      return ExerciseRegionContent(exercises: data, usesRemoteSource: true);
+    } catch (_) {
+      return ExerciseRegionContent(
+        exercises: region.exercises,
+        usesRemoteSource: false,
+      );
+    }
+  }
+
+  DemoExercise? _mapRemoteExercise(Map<String, dynamic> item) {
+    final name = _translateRemoteLabel(
+      _normalizeRemoteText(item['name']?.toString() ?? ''),
+    );
+    final gifUrl = item['gifUrl']?.toString();
+    final equipments = (item['equipments'] as List<dynamic>? ?? const [])
+        .map(
+          (value) =>
+              _translateRemoteLabel(_normalizeRemoteText(value.toString())),
+        )
+        .where((value) => value.isNotEmpty)
+        .toList();
+    final targetMuscles = (item['targetMuscles'] as List<dynamic>? ?? const [])
+        .map(
+          (value) =>
+              _translateRemoteLabel(_normalizeRemoteText(value.toString())),
+        )
+        .where((value) => value.isNotEmpty)
+        .toList();
+    final instructions = (item['instructions'] as List<dynamic>? ?? const [])
+        .map(
+          (value) => _translateInstruction(
+            value.toString().replaceFirst(RegExp(r'^Step:\d+\s*'), '').trim(),
+          ),
+        )
+        .where((value) => value.isNotEmpty)
+        .toList();
+
+    if (name.isEmpty || instructions.isEmpty) {
+      return null;
+    }
+
+    return DemoExercise(
+      name: name,
+      focus: targetMuscles.isNotEmpty ? targetMuscles.first : 'Zona principal',
+      equipment: equipments.isNotEmpty ? equipments.first : 'Sin equipo',
+      level: 'Demo API',
+      description: instructions.first,
+      steps: instructions,
+      gifUrl: gifUrl,
+    );
+  }
+
+  String _normalizeRemoteText(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+
+    final words = trimmed
+        .split(RegExp(r'[\s_-]+'))
+        .where((word) => word.isNotEmpty)
+        .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
+        .toList();
+    return words.join(' ');
+  }
+
+  String _translateRemoteLabel(String value) {
+    if (value.isEmpty) {
+      return value;
+    }
+
+    final direct = _remoteLabelTranslations[value];
+    if (direct != null) {
+      return direct;
+    }
+
+    var translated = value;
+    _remoteLabelTranslations.forEach((english, spanish) {
+      translated = translated.replaceAll(
+        RegExp('\\b${RegExp.escape(english)}\\b', caseSensitive: false),
+        spanish,
+      );
+    });
+    return translated;
+  }
+
+  String _translateInstruction(String value) {
+    if (value.isEmpty) {
+      return value;
+    }
+
+    var translated = value.trim();
+    final replacements = <String, String>{
+      'Lie face down on the floor with your legs extended behind you.':
+          'Acuéstate boca abajo en el suelo con las piernas extendidas hacia atrás.',
+      'Place your hands on the floor next to your lower ribs, fingers pointing forward.':
+          'Coloca las manos en el suelo junto a las costillas inferiores, con los dedos apuntando hacia adelante.',
+      'Press your hands firmly into the floor and straighten your arms, lifting your torso and thighs off the ground.':
+          'Presiona las manos contra el suelo y estira los brazos, elevando el torso y los muslos.',
+      'Roll your shoulders back and down, opening your chest and lifting your gaze towards the ceiling.':
+          'Lleva los hombros hacia atrás y abajo, abre el pecho y dirige la mirada hacia arriba.',
+      'Hold this position for a few breaths, then slowly lower your body back down to the starting position.':
+          'Mantén la posición por unas respiraciones y luego baja lentamente al inicio.',
+      'Repeat for the desired number of repetitions.':
+          'Repite durante el número de repeticiones deseado.',
+      'Start in a push-up position with your hands slightly wider than shoulder-width apart and your feet together.':
+          'Comienza en posición de flexión con las manos un poco más abiertas que los hombros y los pies juntos.',
+      'Lower your body towards the ground by bending your elbows, keeping your back straight and your core engaged.':
+          'Baja el cuerpo flexionando los codos, manteniendo la espalda recta y el abdomen activo.',
+      'As you push back up, lift one leg off the ground and kick it out to the side, keeping it straight.':
+          'Mientras vuelves a subir, eleva una pierna y llévala hacia el costado manteniéndola recta.',
+      'Lower your leg back down and repeat the push-up, then switch to the other leg.':
+          'Baja la pierna, repite la flexión y luego cambia a la otra pierna.',
+      'Continue alternating leg kicks with each push-up repetition.':
+          'Continúa alternando la patada lateral en cada repetición.',
+      'Stand up straight with your feet shoulder-width apart and hold a dumbbell in each hand, palms facing your body.':
+          'Párate erguido con los pies al ancho de hombros y una mancuerna en cada mano, con las palmas hacia el cuerpo.',
+      'Keeping your upper arms stationary, exhale and curl the weights while contracting your biceps. Continue to raise the weights until your biceps are fully contracted and the dumbbells are at shoulder level.':
+          'Mantén los brazos pegados al cuerpo, exhala y flexiona las mancuernas contrayendo los bíceps hasta llevarlas a la altura de los hombros.',
+      'Hold the contracted position for a brief pause as you squeeze your biceps.':
+          'Haz una breve pausa arriba mientras aprietas los bíceps.',
+      'Inhale and slowly begin to lower the dumbbells back to the starting position.':
+          'Inhala y baja las mancuernas lentamente hasta la posición inicial.',
+      'Sit on a bench with your back straight and feet flat on the ground.':
+          'Siéntate en un banco con la espalda recta y los pies bien apoyados.',
+      'Hold the barbell with an overhand grip, slightly wider than shoulder-width apart.':
+          'Sujeta la barra con agarre prono, un poco más ancho que los hombros.',
+      'Lift the barbell to shoulder height, keeping your elbows slightly bent and pointing forward.':
+          'Lleva la barra a la altura de los hombros, con los codos ligeramente flexionados y hacia adelante.',
+      'Press the barbell overhead, fully extending your arms.':
+          'Empuja la barra por encima de la cabeza hasta extender por completo los brazos.',
+      'Lower the barbell back to shoulder height and repeat for the desired number of repetitions.':
+          'Baja la barra de nuevo a la altura de los hombros y repite.',
+      'Adjust the cable pulleys to chest height.':
+          'Ajusta las poleas a la altura del pecho.',
+      'Stand in the center of the cable machine with one foot in front of the other.':
+          'Colócate al centro de la polea con un pie delante del otro.',
+      'Grasp the handles with your palms facing down and your arms extended out to the sides.':
+          'Toma las manijas con las palmas hacia abajo y los brazos extendidos hacia los lados.',
+      'Take a step forward, keeping your arms slightly bent.':
+          'Da un paso al frente manteniendo los brazos ligeramente flexionados.',
+      'With a slight bend in your elbows, bring your hands together in front of your chest.':
+          'Con una ligera flexión de codos, junta las manos frente al pecho.',
+      'Pause for a moment, then slowly return your arms back to the starting position.':
+          'Haz una breve pausa y vuelve lentamente a la posición inicial.',
+      'Stand with your feet shoulder-width apart, holding a dumbbell in each hand with your palms facing your thighs.':
+          'Párate con los pies al ancho de los hombros, sosteniendo una mancuerna en cada mano con las palmas mirando hacia los muslos.',
+      'Lie face down on a flat bench with a dumbbell in each hand, palms facing each other.':
+          'Acuéstate boca abajo sobre un banco plano con una mancuerna en cada mano y las palmas mirándose.',
+      'Extend your arms straight down towards the floor, keeping a slight bend in your elbows.':
+          'Extiende los brazos hacia abajo en dirección al suelo, manteniendo una ligera flexión en los codos.',
+      'Engaging your shoulder muscles, lift your arms out to the sides until they are parallel to the floor.':
+          'Activa los músculos de los hombros y eleva los brazos hacia los lados hasta que queden paralelos al suelo.',
+      'Pause at the top for a moment, then slowly lower your arms back down to the starting position.':
+          'Haz una breve pausa arriba y luego baja los brazos lentamente hasta la posición inicial.',
+      'Lie face down on a flat bench with a dumbbell in each hand, palms facing your body.':
+          'Acuéstate boca abajo sobre un banco plano con una mancuerna en cada mano y las palmas mirando al cuerpo.',
+      'Keep your arms straight and lift them out to the sides until they are parallel to the floor.':
+          'Mantén los brazos rectos y elévalos hacia los lados hasta que queden paralelos al suelo.',
+      'Pause for a moment at the top, then slowly lower the dumbbells back down to the starting position.':
+          'Haz una breve pausa arriba y luego baja las mancuernas lentamente hasta la posición inicial.',
+      'Lie face down on an incline bench set at a 45-degree angle with a dumbbell in each hand.':
+          'Acuéstate boca abajo en un banco inclinado a 45 grados con una mancuerna en cada mano.',
+      'Let your arms hang straight down with your palms facing each other.':
+          'Deja los brazos colgando hacia abajo con las palmas mirándose.',
+      'Raise your arms out to the sides until they are parallel to the floor, squeezing your shoulder blades together at the top.':
+          'Eleva los brazos hacia los lados hasta que queden paralelos al suelo, juntando las escápulas en la parte alta.',
+      'Slowly lower the dumbbells back to the starting position.':
+          'Baja las mancuernas lentamente hasta la posición inicial.',
+    };
+
+    final direct = replacements[translated];
+    if (direct != null) {
+      return direct;
+    }
+
+    translated = translated
+        .replaceAll('Lie face down on ', 'Acuéstate boca abajo sobre ')
+        .replaceAll('Lie face down with ', 'Acuéstate boca abajo con ')
+        .replaceAll('Lie flat on ', 'Acuéstate sobre ')
+        .replaceAll(
+          'Extend your arms straight down towards the floor',
+          'Extiende los brazos hacia abajo en dirección al suelo',
+        )
+        .replaceAll(
+          'keeping a slight bend in your elbows',
+          'manteniendo una ligera flexión en los codos',
+        )
+        .replaceAll(
+          'Engaging your shoulder muscles',
+          'Activa los músculos de los hombros',
+        )
+        .replaceAll(
+          'lift your arms out to the sides',
+          'eleva los brazos hacia los lados',
+        )
+        .replaceAll(
+          'lift your arms to the sides',
+          'eleva los brazos hacia los lados',
+        )
+        .replaceAll(
+          'until they are parallel to the floor',
+          'hasta que queden paralelos al suelo',
+        )
+        .replaceAll(
+          'Pause at the top for a moment',
+          'Haz una breve pausa arriba',
+        )
+        .replaceAll(
+          'Pause for a moment at the top',
+          'Haz una breve pausa arriba',
+        )
+        .replaceAll(
+          'then slowly lower your arms back down to the starting position',
+          'y luego baja los brazos lentamente hasta la posición inicial',
+        )
+        .replaceAll(
+          'then slowly lower the dumbbells back down to the starting position',
+          'y luego baja las mancuernas lentamente hasta la posición inicial',
+        )
+        .replaceAll('palms facing each other', 'con las palmas mirándose')
+        .replaceAll(
+          'palms facing your body',
+          'con las palmas mirando al cuerpo',
+        )
+        .replaceAll(
+          'Let your arms hang straight down',
+          'Deja los brazos colgando hacia abajo',
+        )
+        .replaceAll(
+          'squeezing your shoulder blades together at the top',
+          'juntando las escápulas en la parte alta',
+        )
+        .replaceAll(
+          'Slowly lower the dumbbells back to the starting position.',
+          'Baja las mancuernas lentamente hasta la posición inicial.',
+        )
+        .replaceAll('Start in ', 'Comienza en ')
+        .replaceAll('Start by ', 'Comienza ')
+        .replaceAll('Stand with ', 'Párate con ')
+        .replaceAll(
+          'holding a dumbbell in each hand',
+          'sosteniendo una mancuerna en cada mano',
+        )
+        .replaceAll(
+          'with your palms facing your thighs',
+          'con las palmas mirando hacia los muslos',
+        )
+        .replaceAll('Stand up straight', 'Párate erguido')
+        .replaceAll('Sit on a bench', 'Siéntate en un banco')
+        .replaceAll('Adjust ', 'Ajusta ')
+        .replaceAll('Hold the ', 'Sujeta la ')
+        .replaceAll('Hold this position', 'Mantén esta posición')
+        .replaceAll('Place your ', 'Coloca tus ')
+        .replaceAll('Press your ', 'Presiona tus ')
+        .replaceAll('Press the ', 'Empuja la ')
+        .replaceAll('Lower your ', 'Baja ')
+        .replaceAll('Lower the ', 'Baja la ')
+        .replaceAll('Lift your ', 'Eleva ')
+        .replaceAll('Lift the ', 'Eleva la ')
+        .replaceAll('Raise the ', 'Eleva la ')
+        .replaceAll(
+          'Repeat for the desired number of repetitions.',
+          'Repite durante el número de repeticiones deseado.',
+        )
+        .replaceAll('shoulder-width apart', 'al ancho de los hombros')
+        .replaceAll('starting position', 'posición inicial')
+        .replaceAll('push-up position', 'posición de flexión')
+        .replaceAll('body weight', 'peso corporal')
+        .replaceAll('dumbbell', 'mancuerna')
+        .replaceAll('dumbbells', 'mancuernas')
+        .replaceAll('barbell', 'barra')
+        .replaceAll('bench', 'banco')
+        .replaceAll('chest', 'pecho')
+        .replaceAll('shoulders', 'hombros')
+        .replaceAll('core', 'core')
+        .replaceAll('glutes', 'glúteos')
+        .replaceAll('biceps', 'bíceps')
+        .replaceAll('triceps', 'tríceps')
+        .replaceAll('forearms', 'antebrazos')
+        .replaceAll('calves', 'pantorrillas')
+        .replaceAll('hips', 'caderas')
+        .replaceAll('floor', 'suelo')
+        .replaceAll('arms', 'brazos')
+        .replaceAll('hands', 'manos')
+        .replaceAll('palms', 'palmas')
+        .replaceAll('elbows', 'codos')
+        .replaceAll('straight', 'rectos')
+        .replaceAll('slowly', 'lentamente')
+        .replaceAll('towards', 'hacia')
+        .replaceAll('other', 'sí')
+        .replaceAll('each sí.', 'entre sí.');
+
+    return translated;
+  }
+}
+
 class DemoExerciseRegion {
   const DemoExerciseRegion({
     required this.name,
-    required this.remoteBodyPart,
+    this.remoteBodyPart,
+    this.remoteTargetMuscle,
     required this.exercises,
   });
 
   final String name;
-  final String remoteBodyPart;
+  final String? remoteBodyPart;
+  final String? remoteTargetMuscle;
   final List<DemoExercise> exercises;
 }
 
@@ -7372,7 +7990,8 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
         focus: 'Deltoides',
         equipment: 'Mancuernas',
         level: 'Principiante',
-        description: 'Ideal para desarrollar amplitud y control en los hombros.',
+        description:
+            'Ideal para desarrollar amplitud y control en los hombros.',
         steps: [
           'Sujeta las mancuernas a cada lado del cuerpo.',
           'Eleva los brazos hasta la altura de los hombros.',
@@ -7396,13 +8015,15 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Biceps',
     remoteBodyPart: 'upper arms',
+    remoteTargetMuscle: 'biceps',
     exercises: [
       DemoExercise(
         name: 'Curl alterno',
         focus: 'Braquial',
         equipment: 'Mancuernas',
         level: 'Principiante',
-        description: 'Ejercicio básico para fortalecer la parte frontal del brazo.',
+        description:
+            'Ejercicio básico para fortalecer la parte frontal del brazo.',
         steps: [
           'Mantén los codos pegados al torso.',
           'Flexiona un brazo llevando la mancuerna al hombro.',
@@ -7414,6 +8035,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Antebrazo',
     remoteBodyPart: 'lower arms',
+    remoteTargetMuscle: 'forearms',
     exercises: [
       DemoExercise(
         name: 'Curl de muneca',
@@ -7432,6 +8054,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Pectorales',
     remoteBodyPart: 'chest',
+    remoteTargetMuscle: 'pectorals',
     exercises: [
       DemoExercise(
         name: 'Press de pecho',
@@ -7450,6 +8073,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Abdomen',
     remoteBodyPart: 'waist',
+    remoteTargetMuscle: 'abs',
     exercises: [
       DemoExercise(
         name: 'Crunch en maquina',
@@ -7468,6 +8092,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Oblicuos',
     remoteBodyPart: 'waist',
+    remoteTargetMuscle: 'obliques',
     exercises: [
       DemoExercise(
         name: 'Rotaciones con polea',
@@ -7486,6 +8111,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Abductores',
     remoteBodyPart: 'upper legs',
+    remoteTargetMuscle: 'abductors',
     exercises: [
       DemoExercise(
         name: 'Abduccion en maquina',
@@ -7504,6 +8130,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Aductores',
     remoteBodyPart: 'upper legs',
+    remoteTargetMuscle: 'adductors',
     exercises: [
       DemoExercise(
         name: 'Aduccion en maquina',
@@ -7522,6 +8149,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Cuadriceps',
     remoteBodyPart: 'upper legs',
+    remoteTargetMuscle: 'quadriceps',
     exercises: [
       DemoExercise(
         name: 'Extension de pierna',
@@ -7540,6 +8168,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Tibiales',
     remoteBodyPart: 'lower legs',
+    remoteTargetMuscle: 'shins',
     exercises: [
       DemoExercise(
         name: 'Elevacion de puntas',
@@ -7558,6 +8187,7 @@ const demoFrontExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Pantorrillas',
     remoteBodyPart: 'lower legs',
+    remoteTargetMuscle: 'calves',
     exercises: [
       DemoExercise(
         name: 'Elevacion de talones',
@@ -7579,6 +8209,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Trapecio',
     remoteBodyPart: 'back',
+    remoteTargetMuscle: 'trapezius',
     exercises: [
       DemoExercise(
         name: 'Encogimientos',
@@ -7597,6 +8228,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Dorsales',
     remoteBodyPart: 'back',
+    remoteTargetMuscle: 'lats',
     exercises: [
       DemoExercise(
         name: 'Jalon al pecho',
@@ -7627,6 +8259,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Triceps',
     remoteBodyPart: 'upper arms',
+    remoteTargetMuscle: 'triceps',
     exercises: [
       DemoExercise(
         name: 'Jalon en cuerda',
@@ -7645,13 +8278,15 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Lumbares',
     remoteBodyPart: 'back',
+    remoteTargetMuscle: 'lower back',
     exercises: [
       DemoExercise(
         name: 'Hiperextension',
         focus: 'Zona lumbar',
         equipment: 'Banco romano',
         level: 'Intermedio',
-        description: 'Fortalece la parte baja de la espalda y la cadena posterior.',
+        description:
+            'Fortalece la parte baja de la espalda y la cadena posterior.',
         steps: [
           'Alinea la cadera con el soporte del banco.',
           'Desciende con control manteniendo la espalda neutra.',
@@ -7663,6 +8298,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Gluteos',
     remoteBodyPart: 'upper legs',
+    remoteTargetMuscle: 'glutes',
     exercises: [
       DemoExercise(
         name: 'Hip thrust',
@@ -7681,6 +8317,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Isquiotibiales',
     remoteBodyPart: 'upper legs',
+    remoteTargetMuscle: 'hamstrings',
     exercises: [
       DemoExercise(
         name: 'Curl femoral acostado',
@@ -7699,6 +8336,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   DemoExerciseRegion(
     name: 'Pantorrillas',
     remoteBodyPart: 'lower legs',
+    remoteTargetMuscle: 'calves',
     exercises: [
       DemoExercise(
         name: 'Elevacion de talones',
@@ -7716,14 +8354,16 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
   ),
   DemoExerciseRegion(
     name: 'Cardio',
-    remoteBodyPart: '',
+    remoteBodyPart: 'cardio',
+    remoteTargetMuscle: 'cardiovascular system',
     exercises: [
       DemoExercise(
         name: 'Caminata en inclinacion',
         focus: 'Acondicionamiento',
         equipment: 'Caminadora',
         level: 'Principiante',
-        description: 'Buena opcion para mejorar resistencia sin impacto excesivo.',
+        description:
+            'Buena opcion para mejorar resistencia sin impacto excesivo.',
         steps: [
           'Ajusta una inclinacion moderada.',
           'Camina con postura erguida y braceo natural.',
@@ -7745,6 +8385,7 @@ const demoBackExerciseRegions = <DemoExerciseRegion>[
     ],
   ),
 ];
+
 class _ActivitySummaryTab extends StatelessWidget {
   const _ActivitySummaryTab({required this.bundle, required this.onAdd});
 
@@ -10503,11 +11144,3 @@ class QuickActionCard extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-

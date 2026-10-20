@@ -92,8 +92,10 @@ export default function StaffPage() {
   const [error, setError] = useState<string | null>(null);
 
   const sessionQuery = useQuery({ queryKey: ["admin-session"], queryFn: authApi.session });
-  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list });
-  const staffQuery = useQuery({ queryKey: ["staff"], queryFn: staffApi.list });
+  const session = sessionQuery.data;
+  const canManageStaffModule = (session?.user.roles.includes("SuperAdmin") ?? false) || (session?.user.roles.includes("BranchAdmin") ?? false);
+  const branchesQuery = useQuery({ queryKey: ["branches"], queryFn: branchesApi.list, enabled: canManageStaffModule });
+  const staffQuery = useQuery({ queryKey: ["staff"], queryFn: staffApi.list, enabled: canManageStaffModule });
 
   const createMutation = useMutation({
     mutationFn: staffApi.create,
@@ -126,7 +128,6 @@ export default function StaffPage() {
     onError: (mutationError) => setError(getErrorMessage(mutationError)),
   });
 
-  const session = sessionQuery.data;
   const allowedRoles = getAllowedRoles(session);
   const branches = branchesQuery.data ?? [];
   const visibleBranches = useMemo(() => {
@@ -147,11 +148,11 @@ export default function StaffPage() {
     };
   }, [sortedStaff]);
 
-  const isLoading = sessionQuery.isLoading || branchesQuery.isLoading || staffQuery.isLoading;
+  const isLoading = sessionQuery.isLoading || (canManageStaffModule && (branchesQuery.isLoading || staffQuery.isLoading));
   if (isLoading) return <LoadingState label="Cargando estructura de personal..." />;
   if (sessionQuery.error) return <Alert>{getErrorMessage(sessionQuery.error)}</Alert>;
-  if (branchesQuery.error) return <Alert>{getErrorMessage(branchesQuery.error)}</Alert>;
-  if (staffQuery.error) return <Alert>{getErrorMessage(staffQuery.error)}</Alert>;
+  if (canManageStaffModule && branchesQuery.error) return <Alert>{getErrorMessage(branchesQuery.error)}</Alert>;
+  if (canManageStaffModule && staffQuery.error) return <Alert>{getErrorMessage(staffQuery.error)}</Alert>;
 
   if (!session || allowedRoles.length === 0) {
     return (
